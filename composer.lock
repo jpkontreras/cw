@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "75ae85948940961cfe4aa23b582128c7",
+    "content-hash": "58968bede87938efcfd5b65c849dd07c",
     "packages": [
         {
             "name": "amphp/amp",
@@ -942,6 +942,38 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "colame/order",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/order",
+                "reference": "8ea6172be8f14a72ba26a9296b692871ffa00e53"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Colame\\Order\\Providers\\OrderServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Colame\\Order\\": "src/",
+                    "Colame\\Order\\Tests\\": "tests/",
+                    "Colame\\Order\\Database\\Factories\\": "database/factories/",
+                    "Colame\\Order\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "composer/ca-bundle",

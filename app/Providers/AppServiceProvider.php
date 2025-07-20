@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Core\Contracts\FeatureFlagInterface;
+use App\Core\Services\FeatureFlagService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Core service bindings
+        $this->app->singleton(FeatureFlagInterface::class, FeatureFlagService::class);
     }
 
     /**

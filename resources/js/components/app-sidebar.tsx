@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, ShoppingCart, ChefHat, FileText, Users, Package, MapPin, Tag, Settings } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -12,6 +12,64 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Orders',
+        href: '/orders',
+        icon: ShoppingCart,
+        items: [
+            {
+                title: 'All Orders',
+                href: '/orders',
+            },
+            {
+                title: 'Create Order',
+                href: '/orders/create',
+            },
+            {
+                title: 'Dashboard',
+                href: '/orders/dashboard',
+            },
+            {
+                title: 'Operations Center',
+                href: '/orders/operations',
+            },
+            {
+                title: 'Kitchen Display',
+                href: '/orders/kitchen',
+                icon: ChefHat,
+            },
+        ],
+    },
+    {
+        title: 'Menu',
+        href: '/menu',
+        icon: FileText,
+    },
+    {
+        title: 'Items',
+        href: '/items',
+        icon: Package,
+    },
+    {
+        title: 'Staff',
+        href: '/staff',
+        icon: Users,
+    },
+    {
+        title: 'Locations',
+        href: '/locations',
+        icon: MapPin,
+    },
+    {
+        title: 'Offers',
+        href: '/offers',
+        icon: Tag,
+    },
+    {
+        title: 'Settings',
+        href: '/settings',
+        icon: Settings,
     },
 ];
 

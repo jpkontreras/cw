@@ -1,0 +1,24 @@
+{
+	"name": "colame/order",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Order\\": "src/",
+			"Colame\\Order\\Tests\\": "tests/",
+			"Colame\\Order\\Database\\Factories\\": "database/factories/",
+			"Colame\\Order\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Order\\Providers\\OrderServiceProvider"
+			]
+		}
+	}
+}
