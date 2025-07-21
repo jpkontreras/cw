@@ -67,7 +67,7 @@ const OrderTimeline = ({
                 const isPast = index <= currentStatusIndex;
                 const isCurrent = status === order.status;
                 const statusInfo = ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG];
-                const timestamp = order[`${status}_at` as keyof Order] as string | undefined;
+                const timestamp = order[`${status}At` as keyof Order] as string | undefined;
 
                 return (
                     <div key={status} className="flex items-start mb-4 last:mb-0">
@@ -117,9 +117,9 @@ const OrderTimeline = ({
                     </div>
                     <div className="ml-4 flex-1">
                         <h4 className="font-medium text-red-600">Cancelled</h4>
-                        {order.cancelled_at && (
+                        {order.cancelledAt && (
                             <p className="text-sm text-gray-500">
-                                {new Date(order.cancelled_at).toLocaleString()}
+                                {new Date(order.cancelledAt).toLocaleString()}
                             </p>
                         )}
                     </div>
@@ -154,7 +154,7 @@ const PaymentHistory = ({ payments }: { payments: PaymentTransaction[] }) => {
                             <div>
                                 <p className="font-medium">{methodConfig?.label || payment.method}</p>
                                 <p className="text-sm text-gray-500">
-                                    {payment.reference_number || 'No reference'}
+                                    {payment.referenceNumber || 'No reference'}
                                 </p>
                             </div>
                         </div>
@@ -185,6 +185,8 @@ export default function ShowOrder({
     statusHistory = []
 }: OrderDetailPageProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
+    
+    // Use the order data directly since it's now properly typed
     const order = orderData as Order;
 
     const handleStatusUpdate = (action: string) => {
@@ -202,7 +204,7 @@ export default function ShowOrder({
     };
 
     const handleCopyOrderNumber = () => {
-        navigator.clipboard.writeText(order.order_number);
+        navigator.clipboard.writeText(order.orderNumber || '');
         // TODO: Show toast notification
     };
 
@@ -213,12 +215,12 @@ export default function ShowOrder({
 
     return (
         <AppLayout>
-            <Head title={`Order ${formatOrderNumber(order.order_number)}`} />
+            <Head title={`Order ${formatOrderNumber(order.orderNumber)}`} />
 
-            <div className="container mx-auto p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="container mx-auto px-4 py-4 max-w-7xl">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-4">
                         {/* Header */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -227,25 +229,25 @@ export default function ShowOrder({
                                 </Link>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h1 className="text-2xl font-bold">
-                                            {formatOrderNumber(order.order_number)}
+                                        <h1 className="text-xl font-semibold">
+                                            {formatOrderNumber(order.orderNumber)}
                                         </h1>
                                         <button
                                             onClick={handleCopyOrderNumber}
                                             className="text-gray-400 hover:text-gray-600"
                                             title="Copy order number"
                                         >
-                                            <Copy className="w-4 h-4" />
+                                            <Copy className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                                         <span>{getTypeLabel(order.type)}</span>
                                         <span>•</span>
                                         <span>{getOrderAge(order)}</span>
                                         {order.priority === 'high' && (
                                             <>
                                                 <span>•</span>
-                                                <Badge variant="destructive" className="text-xs">
+                                                <Badge variant="destructive" className="text-xs h-5">
                                                     <AlertCircle className="w-3 h-3 mr-1" />
                                                     High Priority
                                                 </Badge>
@@ -274,7 +276,7 @@ export default function ShowOrder({
 
                         {/* Order Details Card */}
                         <Card>
-                            <CardHeader className="px-6 pt-6">
+                            <CardHeader className="p-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Order Details</CardTitle>
                                     <Badge className={getStatusColor(order.status)}>
@@ -282,7 +284,7 @@ export default function ShowOrder({
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-4">
+                            <CardContent className="p-4 space-y-4">
                                 {/* Customer Information */}
                                 <div>
                                     <h3 className="font-medium mb-3">Customer Information</h3>
@@ -290,33 +292,33 @@ export default function ShowOrder({
                                         <div className="flex items-start gap-3">
                                             <User className="w-4 h-4 text-gray-400 mt-0.5" />
                                             <div>
-                                                <p className="font-medium">{order.customer_name || 'Walk-in Customer'}</p>
+                                                <p className="font-medium">{order.customerName || 'Walk-in Customer'}</p>
                                                 <p className="text-sm text-gray-500">Customer</p>
                                             </div>
                                         </div>
-                                        {order.customer_phone && (
+                                        {order.customerPhone && (
                                             <div className="flex items-start gap-3">
                                                 <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
                                                 <div>
-                                                    <p className="font-medium">{formatPhone(order.customer_phone)}</p>
+                                                    <p className="font-medium">{formatPhone(order.customerPhone)}</p>
                                                     <p className="text-sm text-gray-500">Phone</p>
                                                 </div>
                                             </div>
                                         )}
-                                        {order.customer_email && (
+                                        {order.customerEmail && (
                                             <div className="flex items-start gap-3">
                                                 <Mail className="w-4 h-4 text-gray-400 mt-0.5" />
                                                 <div>
-                                                    <p className="font-medium">{order.customer_email}</p>
+                                                    <p className="font-medium">{order.customerEmail}</p>
                                                     <p className="text-sm text-gray-500">Email</p>
                                                 </div>
                                             </div>
                                         )}
-                                        {showTableInfo && order.table_number && (
+                                        {showTableInfo && order.tableNumber && (
                                             <div className="flex items-start gap-3">
                                                 <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
                                                 <div>
-                                                    <p className="font-medium">Table {order.table_number}</p>
+                                                    <p className="font-medium">Table {order.tableNumber}</p>
                                                     <p className="text-sm text-gray-500">Seating</p>
                                                 </div>
                                             </div>
@@ -325,7 +327,7 @@ export default function ShowOrder({
                                 </div>
 
                                 {/* Delivery Address */}
-                                {showDeliveryInfo && order.delivery_address && (
+                                {showDeliveryInfo && order.deliveryAddress && (
                                     <>
                                         <Separator />
                                         <div>
@@ -335,7 +337,7 @@ export default function ShowOrder({
                                                 <div>
                                                     <p className="font-medium">Delivery Address</p>
                                                     <p className="text-sm text-gray-600 mt-1">
-                                                        {order.delivery_address}
+                                                        {order.deliveryAddress}
                                                     </p>
                                                 </div>
                                             </div>
@@ -344,7 +346,7 @@ export default function ShowOrder({
                                 )}
 
                                 {/* Notes */}
-                                {(order.notes || order.special_instructions) && (
+                                {(order.notes || order.specialInstructions) && (
                                     <>
                                         <Separator />
                                         <div>
@@ -355,7 +357,7 @@ export default function ShowOrder({
                                                     <p className="text-sm mt-1">{order.notes}</p>
                                                 </div>
                                             )}
-                                            {order.special_instructions && (
+                                            {order.specialInstructions && (
                                                 <div className="p-3 bg-yellow-50 rounded-lg">
                                                     <div className="flex items-start gap-2">
                                                         <ChefHat className="w-4 h-4 text-yellow-600 mt-0.5" />
@@ -364,7 +366,7 @@ export default function ShowOrder({
                                                                 Kitchen Instructions
                                                             </p>
                                                             <p className="text-sm text-yellow-700 mt-1">
-                                                                {order.special_instructions}
+                                                                {order.specialInstructions}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -378,30 +380,36 @@ export default function ShowOrder({
 
                         {/* Order Items */}
                         <Card>
-                            <CardHeader className="px-6 pt-6">
+                            <CardHeader className="p-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Order Items</CardTitle>
                                     <span className="text-sm text-gray-500">
-                                        {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                                        {order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'items'}
                                     </span>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6">
-                                <div className="space-y-4">
-                                    {order.items.map((item, index) => (
+                            <CardContent className="p-4">
+                                {!order.items || order.items.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                                        <p>No items in this order</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {order.items.map((item, index) => (
                                         <div key={item.id}>
                                             {index > 0 && <Separator className="mb-4" />}
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3">
                                                         <span className="font-medium">
-                                                            {item.quantity}x {item.item_name}
+                                                            {item.quantity}x {item.itemName}
                                                         </span>
                                                         <Badge 
                                                             variant="outline"
-                                                            className={getKitchenStatusColor(item.kitchen_status)}
+                                                            className={getKitchenStatusColor(item.kitchenStatus)}
                                                         >
-                                                            {getKitchenStatusLabel(item.kitchen_status)}
+                                                            {getKitchenStatusLabel(item.kitchenStatus)}
                                                         </Badge>
                                                         {item.course && (
                                                             <Badge variant="secondary" className="text-xs">
@@ -414,7 +422,7 @@ export default function ShowOrder({
                                                             <span className="font-medium">Modifiers:</span>{' '}
                                                             {item.modifiers.map((mod, idx) => (
                                                                 <span key={idx}>
-                                                                    {mod.modifier_name} (+{formatCurrency(mod.price)})
+                                                                    {mod.modifierName} (+{formatCurrency(mod.price)})
                                                                     {idx < item.modifiers.length - 1 && ', '}
                                                                 </span>
                                                             ))}
@@ -427,15 +435,16 @@ export default function ShowOrder({
                                                     )}
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-medium">{formatCurrency(item.total_price)}</p>
+                                                    <p className="font-medium">{formatCurrency(item.totalPrice)}</p>
                                                     <p className="text-sm text-gray-500">
-                                                        {formatCurrency(item.unit_price)} each
+                                                        {formatCurrency(item.unitPrice)} each
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Financial Summary */}
                                 <Separator className="my-4" />
@@ -444,28 +453,28 @@ export default function ShowOrder({
                                         <span>Subtotal</span>
                                         <span>{formatCurrency(order.subtotal)}</span>
                                     </div>
-                                    {order.tax_amount > 0 && (
+                                    {order.taxAmount > 0 && (
                                         <div className="flex justify-between text-sm">
                                             <span>Tax (19%)</span>
-                                            <span>{formatCurrency(order.tax_amount)}</span>
+                                            <span>{formatCurrency(order.taxAmount)}</span>
                                         </div>
                                     )}
-                                    {order.tip_amount > 0 && (
+                                    {order.tipAmount > 0 && (
                                         <div className="flex justify-between text-sm">
                                             <span>Tip</span>
-                                            <span>{formatCurrency(order.tip_amount)}</span>
+                                            <span>{formatCurrency(order.tipAmount)}</span>
                                         </div>
                                     )}
-                                    {order.discount_amount > 0 && (
+                                    {order.discountAmount > 0 && (
                                         <div className="flex justify-between text-sm text-green-600">
                                             <span>Discount</span>
-                                            <span>-{formatCurrency(order.discount_amount)}</span>
+                                            <span>-{formatCurrency(order.discountAmount)}</span>
                                         </div>
                                     )}
                                     <Separator />
                                     <div className="flex justify-between font-semibold text-lg">
                                         <span>Total</span>
-                                        <span>{formatCurrency(order.total_amount)}</span>
+                                        <span>{formatCurrency(order.totalAmount)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -473,15 +482,15 @@ export default function ShowOrder({
 
                         {/* Payment History */}
                         <Card>
-                            <CardHeader className="px-6 pt-6">
+                            <CardHeader className="p-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Payment Information</CardTitle>
-                                    <Badge className={getPaymentStatusColor(order.payment_status)}>
-                                        {getPaymentStatusLabel(order.payment_status)}
+                                    <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                                        {getPaymentStatusLabel(order.paymentStatus)}
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4">
                                 {!isPaid && (
                                     <div className="mb-4 p-4 bg-yellow-50 rounded-lg">
                                         <div className="flex items-center justify-between">
@@ -508,23 +517,23 @@ export default function ShowOrder({
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         {/* Status Timeline */}
                         <Card>
-                            <CardHeader className="px-6 pt-6">
+                            <CardHeader className="p-4">
                                 <CardTitle>Order Timeline</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4">
                                 <OrderTimeline order={order} statusHistory={statusHistory} />
                             </CardContent>
                         </Card>
 
                         {/* Quick Actions */}
                         <Card>
-                            <CardHeader className="px-6 pt-6">
+                            <CardHeader className="p-4">
                                 <CardTitle>Quick Actions</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-2">
+                            <CardContent className="p-4 space-y-2">
                                 {/* Status Update Actions */}
                                 {order.status === 'draft' && (
                                     <Button 
@@ -641,7 +650,7 @@ export default function ShowOrder({
                             <CardContent className="space-y-3 text-sm">
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">Order Number</span>
-                                    <span className="font-medium">{order.order_number}</span>
+                                    <span className="font-medium">{order.orderNumber}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">Location</span>
@@ -656,14 +665,14 @@ export default function ShowOrder({
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">Created</span>
                                     <span className="font-medium">
-                                        {new Date(order.created_at).toLocaleString()}
+                                        {new Date(order.createdAt).toLocaleString()}
                                     </span>
                                 </div>
-                                {order.scheduled_at && (
+                                {order.scheduledAt && (
                                     <div className="flex justify-between">
                                         <span className="text-gray-500">Scheduled For</span>
                                         <span className="font-medium">
-                                            {new Date(order.scheduled_at).toLocaleString()}
+                                            {new Date(order.scheduledAt).toLocaleString()}
                                         </span>
                                     </div>
                                 )}

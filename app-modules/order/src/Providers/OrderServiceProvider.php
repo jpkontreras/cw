@@ -2,12 +2,15 @@
 
 namespace Colame\Order\Providers;
 
+use Colame\Order\Console\Commands\GenerateSampleOrdersCommand;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Contracts\OrderServiceInterface;
+use Colame\Order\Models\Order;
 use Colame\Order\Repositories\OrderItemRepository;
 use Colame\Order\Repositories\OrderRepository;
 use Colame\Order\Services\OrderService;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class OrderServiceProvider extends ServiceProvider
@@ -36,6 +39,9 @@ class OrderServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register route model bindings
+        Route::model('order', Order::class);
+        
         // Load migrations
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         
@@ -50,6 +56,11 @@ class OrderServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../../config/features.php' => config_path('features/order.php'),
             ], 'order-config');
+            
+            // Register commands
+            $this->commands([
+                GenerateSampleOrdersCommand::class,
+            ]);
         }
     }
     

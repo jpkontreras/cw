@@ -98,7 +98,7 @@ export function OrderFilters({
             status: '',
             type: '',
             location_id: '',
-            date: '',
+            date: undefined,
             payment_status: '',
             priority: ''
         };

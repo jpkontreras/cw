@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Colame\Order\Models\OrderItem;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Mappers\SnakeCaseMapper;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Order item data transfer object
  */
+#[TypeScript]
+#[MapInputName(SnakeCaseMapper::class)]
 class OrderItemData extends BaseData
 {
     public function __construct(
@@ -29,8 +35,8 @@ class OrderItemData extends BaseData
         public readonly ?array $metadata = null,
         public readonly ?\DateTimeInterface $preparedAt = null,
         public readonly ?\DateTimeInterface $servedAt = null,
-        public readonly \DateTimeInterface $createdAt = new \DateTime(),
-        public readonly \DateTimeInterface $updatedAt = new \DateTime(),
+        public readonly ?\DateTimeInterface $createdAt = null,
+        public readonly ?\DateTimeInterface $updatedAt = null,
     ) {}
 
     /**
@@ -135,4 +141,5 @@ class OrderItemData extends BaseData
     {
         return $this->kitchenStatus === 'served' || $this->servedAt !== null;
     }
+
 }

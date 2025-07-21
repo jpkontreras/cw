@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Order status history data transfer object
  */
+#[TypeScript]
 class OrderStatusHistoryData extends BaseData
 {
     public function __construct(
@@ -19,7 +21,7 @@ class OrderStatusHistoryData extends BaseData
         public readonly ?int $userId = null,
         public readonly ?string $reason = null,
         public readonly ?array $metadata = null,
-        public readonly \DateTimeInterface $createdAt = new \DateTime(),
+        public readonly ?\DateTimeInterface $createdAt = null,
     ) {}
 
     /**

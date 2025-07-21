@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, ShoppingCart, ChefHat, FileText, Users, Package, MapPin, Tag, Settings } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, ShoppingCart, ChefHat, FileText, Users, Package, MapPin, Tag, Settings, List, Plus, Monitor } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -21,18 +21,17 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'All Orders',
                 href: '/orders',
+                icon: List,
             },
             {
                 title: 'Create Order',
                 href: '/orders/create',
-            },
-            {
-                title: 'Dashboard',
-                href: '/orders/dashboard',
+                icon: Plus,
             },
             {
                 title: 'Operations Center',
                 href: '/orders/operations',
+                icon: Monitor,
             },
             {
                 title: 'Kitchen Display',

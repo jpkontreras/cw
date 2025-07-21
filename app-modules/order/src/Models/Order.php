@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Order\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -15,12 +16,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Order extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     /**
      * The table associated with the model
      */
     protected $table = 'orders';
+    
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory()
+    {
+        return \Colame\Order\Database\Factories\OrderFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable
@@ -208,11 +217,13 @@ class Order extends Model
 
     /**
      * Get the waiter for the order.
+     * Note: This relationship is commented out to follow strict module boundaries
+     * Use UserRepositoryInterface in services to get waiter details
      */
-    public function waiter()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'waiter_id');
-    }
+    // public function waiter()
+    // {
+    //     return $this->belongsTo(\App\Models\User::class, 'waiter_id');
+    // }
 
     /**
      * Check if order can be modified

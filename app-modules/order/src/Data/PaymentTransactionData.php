@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Payment transaction data transfer object
  */
+#[TypeScript]
 class PaymentTransactionData extends BaseData
 {
     public function __construct(
@@ -20,8 +22,8 @@ class PaymentTransactionData extends BaseData
         public readonly ?string $referenceNumber = null,
         public readonly ?array $processorResponse = null,
         public readonly ?\DateTimeInterface $processedAt = null,
-        public readonly \DateTimeInterface $createdAt = new \DateTime(),
-        public readonly \DateTimeInterface $updatedAt = new \DateTime(),
+        public readonly ?\DateTimeInterface $createdAt = null,
+        public readonly ?\DateTimeInterface $updatedAt = null,
     ) {}
 
     /**

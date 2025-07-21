@@ -8,10 +8,12 @@ use App\Core\Data\BaseData;
 use Spatie\LaravelData\Attributes\Validation\ArrayType;
 use Spatie\LaravelData\Attributes\Validation\StringType;
 use Spatie\LaravelData\Optional;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Data transfer object for updating orders
  */
+#[TypeScript]
 class UpdateOrderData extends BaseData
 {
     public function __construct(

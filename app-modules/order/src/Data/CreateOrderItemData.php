@@ -10,10 +10,12 @@ use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\StringType;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Data transfer object for creating order items
  */
+#[TypeScript]
 class CreateOrderItemData extends BaseData
 {
     public function __construct(

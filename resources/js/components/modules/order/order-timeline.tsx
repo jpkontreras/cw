@@ -45,7 +45,7 @@ export function OrderTimeline({
     };
 
     const getStatusTime = (status: string): string | undefined => {
-        const timeField = `${status}_at` as keyof Order;
+        const timeField = `${status}At` as keyof Order;
         return order[timeField] as string | undefined;
     };
 
@@ -116,9 +116,9 @@ export function OrderTimeline({
                     <Badge className={`${ORDER_STATUS_CONFIG[order.status]?.color || 'bg-gray-500'}`}>
                         {getStatusLabel(order.status)}
                     </Badge>
-                    {showTimestamps && order.updated_at && (
+                    {showTimestamps && order.updatedAt && (
                         <span className="text-xs text-gray-500">
-                            Last updated: {formatTime(order.updated_at)}
+                            Last updated: {formatTime(order.updatedAt)}
                         </span>
                     )}
                 </div>
@@ -174,10 +174,10 @@ export function OrderTimeline({
                             {statusHistory && (
                                 <div className="mt-2 space-y-1">
                                     {statusHistory
-                                        .filter(h => h.status === status)
+                                        .filter(h => h.toStatus === status)
                                         .map((history, idx) => (
                                             <p key={idx} className="text-xs text-gray-500">
-                                                {history.notes || `Updated by ${history.updated_by}`}
+                                                {history.reason || `Status changed`}
                                             </p>
                                         ))}
                                 </div>
@@ -195,18 +195,18 @@ export function OrderTimeline({
                     </div>
                     <div className="ml-4 flex-1">
                         <h4 className="font-medium text-red-600">Cancelled</h4>
-                        {order.cancelled_at && showTimestamps && (
+                        {order.cancelledAt && showTimestamps && (
                             <p className="text-sm text-gray-500">
-                                {formatTime(order.cancelled_at)}
+                                {formatTime(order.cancelledAt)}
                             </p>
                         )}
                         {statusHistory && (
                             <div className="mt-2">
                                 {statusHistory
-                                    .filter(h => h.status === 'cancelled')
+                                    .filter(h => h.toStatus === 'cancelled')
                                     .map((history, idx) => (
                                         <p key={idx} className="text-xs text-gray-500">
-                                            Reason: {history.notes || 'No reason provided'}
+                                            Reason: {history.reason || 'No reason provided'}
                                         </p>
                                     ))}
                             </div>

@@ -1,0 +1,117 @@
+declare namespace Colame.Order.Data {
+    export type CreateOrderData = {
+        userId: number | null;
+        locationId: number;
+        type: string;
+        tableNumber: number | null;
+        customerName: string | null;
+        customerPhone: string | null;
+        customerEmail: string | null;
+        deliveryAddress: string | null;
+        items: any;
+        notes: string | null;
+        specialInstructions: string | null;
+        offerCodes: Array<any> | null;
+        metadata: Array<any> | null;
+    };
+    export type CreateOrderItemData = {
+        item_id: number;
+        quantity: number;
+        unit_price: number;
+        notes: string | null;
+        modifiers: Array<any> | null;
+        metadata: Array<any> | null;
+    };
+    export type OrderData = {
+        id: number;
+        orderNumber: string;
+        userId: number | null;
+        locationId: number;
+        status: string;
+        type: string;
+        priority: string;
+        subtotal: number;
+        taxAmount: number;
+        tipAmount: number;
+        discountAmount: number;
+        totalAmount: number;
+        paymentStatus: string;
+        customerName: string | null;
+        customerPhone: string | null;
+        customerEmail: string | null;
+        deliveryAddress: string | null;
+        tableNumber: number | null;
+        waiterId: number | null;
+        notes: string | null;
+        specialInstructions: string | null;
+        cancelReason: string | null;
+        metadata: Array<any> | null;
+        items: any | null;
+        placedAt: string | null;
+        confirmedAt: string | null;
+        preparingAt: string | null;
+        readyAt: string | null;
+        deliveringAt: string | null;
+        deliveredAt: string | null;
+        completedAt: string | null;
+        cancelledAt: string | null;
+        scheduledAt: string | null;
+        createdAt: string | null;
+        updatedAt: string | null;
+    };
+    export type OrderItemData = {
+        id: number;
+        orderId: number;
+        itemId: number;
+        itemName: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        status: string;
+        kitchenStatus: string;
+        course: string | null;
+        notes: string | null;
+        modifiers: Array<any> | null;
+        metadata: Array<any> | null;
+        preparedAt: string | null;
+        servedAt: string | null;
+        createdAt: string | null;
+        updatedAt: string | null;
+    };
+    export type OrderStatusHistoryData = {
+        id: number;
+        orderId: number;
+        fromStatus: string;
+        toStatus: string;
+        userId: number | null;
+        reason: string | null;
+        metadata: Array<any> | null;
+        createdAt: string | null;
+    };
+    export type OrderWithRelationsData = {
+        order: Colame.Order.Data.OrderData;
+        user: object | null;
+        location: object | null;
+        payments: Array<any> | null;
+        offers: Array<any> | null;
+    };
+    export type PaymentTransactionData = {
+        id: number;
+        orderId: number;
+        method: string;
+        amount: number;
+        status: string;
+        referenceNumber: string | null;
+        processorResponse: Array<any> | null;
+        processedAt: string | null;
+        createdAt: string | null;
+        updatedAt: string | null;
+    };
+    export type UpdateOrderData = {
+        notes: any | string;
+        customerName: any | string;
+        customerPhone: any | string;
+        metadata: any | Array<any>;
+        items: any | Array<any>;
+    };
+}

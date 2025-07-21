@@ -24,6 +24,7 @@ import {
     Phone,
     RefreshCw,
     Settings,
+    ShoppingCart,
     Timer,
     Truck,
     Users,
@@ -81,13 +82,13 @@ const OrderCard = ({
                     <div className={`w-2 h-12 rounded-full ${urgencyColor}`} />
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-medium">{formatOrderNumber(order.order_number)}</span>
+                            <span className="font-medium">{formatOrderNumber(order.orderNumber)}</span>
                             <Badge variant="outline" className="text-xs">
                                 {getTypeLabel(order.type)}
                             </Badge>
                         </div>
                         <p className="text-sm text-gray-500">
-                            {order.customer_name || 'Walk-in'} • {getOrderAge(order)}
+                            {order.customerName || 'Walk-in'} • {getOrderAge(order)}
                         </p>
                     </div>
                 </div>
@@ -95,11 +96,11 @@ const OrderCard = ({
                     <Badge className={getStatusColor(order.status)}>
                         {getStatusLabel(order.status)}
                     </Badge>
-                    <span className="font-medium">{formatCurrency(order.total_amount)}</span>
+                    <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
                     <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => onAction?.(order.id, 'view')}
+                        onClick={() => onAction?.(String(order.id), 'view')}
                     >
                         View
                     </Button>
@@ -114,7 +115,7 @@ const OrderCard = ({
                 <div className="flex items-start justify-between">
                     <div>
                         <CardTitle className="text-lg">
-                            {formatOrderNumber(order.order_number)}
+                            {formatOrderNumber(order.orderNumber)}
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline" className="text-xs">
@@ -135,13 +136,13 @@ const OrderCard = ({
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Customer</span>
                     <span className="text-sm font-medium">
-                        {order.customer_name || 'Walk-in'}
+                        {order.customerName || 'Walk-in'}
                     </span>
                 </div>
-                {order.table_number && (
+                {order.tableNumber && (
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-500">Table</span>
-                        <span className="text-sm font-medium">{order.table_number}</span>
+                        <span className="text-sm font-medium">{order.tableNumber}</span>
                     </div>
                 )}
                 <div className="flex items-center justify-between">
@@ -662,7 +663,7 @@ export default function OperationsCenter({
                                                 <div className="flex-1">
                                                     <p className="font-medium">Order Delayed</p>
                                                     <p className="text-sm text-gray-600">
-                                                        {formatOrderNumber(order.order_number)} - {getOrderAge(order)} old
+                                                        {formatOrderNumber(order.orderNumber)} - {getOrderAge(order)} old
                                                     </p>
                                                 </div>
                                                 <Button size="sm" variant="outline" onClick={() => handleOrderAction(order.id, 'view')}>
@@ -680,7 +681,7 @@ export default function OperationsCenter({
                                                 <div className="flex-1">
                                                     <p className="font-medium">High Priority Order</p>
                                                     <p className="text-sm text-gray-600">
-                                                        {formatOrderNumber(order.order_number)} - {getStatusLabel(order.status)}
+                                                        {formatOrderNumber(order.orderNumber)} - {getStatusLabel(order.status)}
                                                     </p>
                                                 </div>
                                                 <Button size="sm" variant="outline" onClick={() => handleOrderAction(order.id, 'view')}>

@@ -47,7 +47,7 @@ export function OrderCard({
     const TypeIcon = typeIcons[order.type] || Package;
 
     const handleAction = (action: string) => {
-        onAction?.(action, order.id);
+        onAction?.(action, String(order.id));
     };
 
     if (variant === 'compact') {
@@ -58,9 +58,9 @@ export function OrderCard({
                         <div className="flex items-center gap-3">
                             <TypeIcon className="w-5 h-5 text-gray-500" />
                             <div>
-                                <p className="font-medium">{formatOrderNumber(order.order_number)}</p>
+                                <p className="font-medium">{formatOrderNumber(order.orderNumber)}</p>
                                 <p className="text-sm text-gray-500">
-                                    {order.customer_name || 'Walk-in'} • {getOrderAge(order)}
+                                    {order.customerName || 'Walk-in'} • {getOrderAge(order)}
                                 </p>
                             </div>
                         </div>
@@ -68,7 +68,7 @@ export function OrderCard({
                             <Badge className={getStatusColor(order.status)}>
                                 {getStatusLabel(order.status)}
                             </Badge>
-                            <span className="font-medium">{formatCurrency(order.total_amount)}</span>
+                            <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
                         </div>
                     </div>
                 </CardContent>
@@ -83,7 +83,7 @@ export function OrderCard({
                     <div className="flex items-start justify-between">
                         <div>
                             <CardTitle className="text-lg flex items-center gap-2">
-                                {formatOrderNumber(order.order_number)}
+                                {formatOrderNumber(order.orderNumber)}
                                 <TypeIcon className="w-5 h-5 text-gray-500" />
                             </CardTitle>
                             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -100,7 +100,7 @@ export function OrderCard({
                             </div>
                         </div>
                         <span className="text-lg font-semibold">
-                            {formatCurrency(order.total_amount)}
+                            {formatCurrency(order.totalAmount)}
                         </span>
                     </div>
                 </CardHeader>
@@ -109,42 +109,42 @@ export function OrderCard({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex items-center gap-2">
                             <User className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm">{order.customer_name || 'Walk-in'}</span>
+                            <span className="text-sm">{order.customerName || 'Walk-in'}</span>
                         </div>
-                        {order.customer_phone && (
+                        {order.customerPhone && (
                             <div className="flex items-center gap-2">
                                 <Phone className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm">{order.customer_phone}</span>
+                                <span className="text-sm">{order.customerPhone}</span>
                             </div>
                         )}
                     </div>
 
                     {/* Location Info */}
-                    {order.table_number && (
+                    {order.tableNumber && (
                         <div className="flex items-center gap-2">
                             <Home className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm">Table {order.table_number}</span>
+                            <span className="text-sm">Table {order.tableNumber}</span>
                         </div>
                     )}
-                    {order.delivery_address && (
+                    {order.deliveryAddress && (
                         <div className="flex items-start gap-2">
                             <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                            <span className="text-sm">{order.delivery_address}</span>
+                            <span className="text-sm">{order.deliveryAddress}</span>
                         </div>
                     )}
 
                     {/* Order Items */}
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Items ({order.items.length})</p>
+                        <p className="text-sm font-medium">Items ({order.items?.length || 0})</p>
                         <div className="space-y-1">
-                            {order.items.slice(0, 3).map((item, idx) => (
+                            {order.items?.slice(0, 3).map((item: any, idx: number) => (
                                 <div key={idx} className="text-sm text-gray-600">
-                                    {item.quantity}x {item.item_name}
+                                    {item.quantity}x {item.itemName}
                                 </div>
                             ))}
-                            {order.items.length > 3 && (
+                            {(order.items?.length || 0) > 3 && (
                                 <p className="text-sm text-gray-500">
-                                    +{order.items.length - 3} more items
+                                    +{(order.items?.length || 0) - 3} more items
                                 </p>
                             )}
                         </div>
@@ -177,10 +177,10 @@ export function OrderCard({
                 <div className="flex items-start justify-between">
                     <div>
                         <CardTitle className="text-base">
-                            {formatOrderNumber(order.order_number)}
+                            {formatOrderNumber(order.orderNumber)}
                         </CardTitle>
                         <p className="text-sm text-gray-500 mt-1">
-                            {order.customer_name || 'Walk-in'}
+                            {order.customerName || 'Walk-in'}
                         </p>
                     </div>
                     <Badge className={getStatusColor(order.status)}>
@@ -197,15 +197,15 @@ export function OrderCard({
                             <span>{getTypeLabel(order.type)}</span>
                         </div>
                     </div>
-                    {order.table_number && (
+                    {order.tableNumber && (
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-500">Table</span>
-                            <span>{order.table_number}</span>
+                            <span>{order.tableNumber}</span>
                         </div>
                     )}
                     <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Items</span>
-                        <span>{order.items.length}</span>
+                        <span>{order.items?.length || 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Time</span>
@@ -213,7 +213,7 @@ export function OrderCard({
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t">
                         <span className="font-semibold">
-                            {formatCurrency(order.total_amount)}
+                            {formatCurrency(order.totalAmount)}
                         </span>
                         {showActions && (
                             <Button 

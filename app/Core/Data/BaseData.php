@@ -21,20 +21,4 @@ abstract class BaseData extends Data
     {
         return parent::toArray();
     }
-
-    /**
-     * Create instance from Eloquent model
-     */
-    public static function fromModel($model): static
-    {
-        return static::from($model);
-    }
-
-    /**
-     * Create collection from Eloquent collection
-     */
-    public static function fromCollection($collection): array
-    {
-        return $collection->map(fn($model) => static::fromModel($model))->toArray();
-    }
 }

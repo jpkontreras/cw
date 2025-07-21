@@ -26,30 +26,32 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         Route::get('/create', [WebOrderController::class, 'create'])->name('create');
         Route::post('/', [WebOrderController::class, 'store'])->name('store');
         
-        // Single Order Operations
-        Route::get('/{id}', [WebOrderController::class, 'show'])->name('show');
-        Route::get('/{id}/edit', [WebOrderController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [WebOrderController::class, 'update'])->name('update');
+        // NOTE: All specific routes must be defined BEFORE the dynamic {order} routes
+        
+        // Single Order Operations - with numeric constraint to prevent conflicts
+        Route::get('/{order}', [WebOrderController::class, 'show'])->name('show')->where('order', '[0-9]+');
+        Route::get('/{order}/edit', [WebOrderController::class, 'edit'])->name('edit')->where('order', '[0-9]+');
+        Route::put('/{order}', [WebOrderController::class, 'update'])->name('update')->where('order', '[0-9]+');
         
         // Status Updates
-        Route::post('/{id}/place', [WebOrderController::class, 'store'])->name('place');
-        Route::post('/{id}/confirm', [WebOrderController::class, 'confirm'])->name('confirm');
-        Route::post('/{id}/start-preparing', [WebOrderController::class, 'startPreparing'])->name('start-preparing');
-        Route::post('/{id}/mark-ready', [WebOrderController::class, 'markReady'])->name('mark-ready');
-        Route::post('/{id}/start-delivery', [WebOrderController::class, 'startDelivery'])->name('start-delivery');
-        Route::post('/{id}/mark-delivered', [WebOrderController::class, 'markDelivered'])->name('mark-delivered');
-        Route::post('/{id}/complete', [WebOrderController::class, 'complete'])->name('complete');
+        Route::post('/{order}/place', [WebOrderController::class, 'store'])->name('place')->where('order', '[0-9]+');
+        Route::post('/{order}/confirm', [WebOrderController::class, 'confirm'])->name('confirm')->where('order', '[0-9]+');
+        Route::post('/{order}/start-preparing', [WebOrderController::class, 'startPreparing'])->name('start-preparing')->where('order', '[0-9]+');
+        Route::post('/{order}/mark-ready', [WebOrderController::class, 'markReady'])->name('mark-ready')->where('order', '[0-9]+');
+        Route::post('/{order}/start-delivery', [WebOrderController::class, 'startDelivery'])->name('start-delivery')->where('order', '[0-9]+');
+        Route::post('/{order}/mark-delivered', [WebOrderController::class, 'markDelivered'])->name('mark-delivered')->where('order', '[0-9]+');
+        Route::post('/{order}/complete', [WebOrderController::class, 'complete'])->name('complete')->where('order', '[0-9]+');
         
         // Cancellation
-        Route::get('/{id}/cancel', [WebOrderController::class, 'showCancelForm'])->name('cancel.form');
-        Route::post('/{id}/cancel', [WebOrderController::class, 'cancel'])->name('cancel');
+        Route::get('/{order}/cancel', [WebOrderController::class, 'showCancelForm'])->name('cancel.form')->where('order', '[0-9]+');
+        Route::post('/{order}/cancel', [WebOrderController::class, 'cancel'])->name('cancel')->where('order', '[0-9]+');
         
         // Payment
-        Route::get('/{id}/payment', [WebOrderController::class, 'payment'])->name('payment');
-        Route::post('/{id}/payment/process', [WebOrderController::class, 'processPayment'])->name('payment.process');
+        Route::get('/{order}/payment', [WebOrderController::class, 'payment'])->name('payment')->where('order', '[0-9]+');
+        Route::post('/{order}/payment/process', [WebOrderController::class, 'processPayment'])->name('payment.process')->where('order', '[0-9]+');
         
         // Receipt
-        Route::get('/{id}/receipt', [WebOrderController::class, 'receipt'])->name('receipt');
+        Route::get('/{order}/receipt', [WebOrderController::class, 'receipt'])->name('receipt')->where('order', '[0-9]+');
     });
 });
 

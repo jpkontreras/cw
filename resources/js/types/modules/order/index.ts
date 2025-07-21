@@ -1,67 +1,36 @@
 // resources/js/types/modules/order/index.ts
 
-export interface Order {
-  id: string;
-  order_number: string;
+// Import generated types
+import '@/types/generated';
+
+// Re-export the generated types with proper typing
+export type Order = Colame.Order.Data.OrderData & {
+  // Additional properties or overrides if needed
+  id: string | number; // Allow both string and number for compatibility
   status: OrderStatus;
   type: OrderType;
   priority: 'normal' | 'high';
-  
-  // Customer Information
-  customer_name?: string;
-  customer_phone?: string;
-  customer_email?: string;
-  delivery_address?: string;
-  
-  // Order Details
-  location_id: number;
-  table_number?: number;
-  waiter?: {
-    id: number;
-    name: string;
-  };
-  
-  // Items
-  items: OrderItem[];
-  
-  // Financial
-  subtotal: number;
-  tax_amount: number;
-  tip_amount: number;
-  discount_amount: number;
-  total_amount: number;
-  payment_status: PaymentStatus;
-  
-  // Additional Info
-  notes?: string;
-  special_instructions?: string;
-  
-  // Timestamps
-  created_at: string;
-  placed_at?: string;
-  confirmed_at?: string;
-  prepared_at?: string;
-  ready_at?: string;
-  delivered_at?: string;
-  completed_at?: string;
-  cancelled_at?: string;
-  scheduled_at?: string;
-}
+  paymentStatus: PaymentStatus;
+  items?: OrderItem[];
+  paidAmount?: number;
+};
 
-export interface OrderItem {
-  id: string;
-  item_id: number;
-  item_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  notes?: string;
-  kitchen_status: KitchenStatus;
-  course?: 'starter' | 'main' | 'dessert' | 'beverage';
-  modifiers?: OrderItemModifier[];
-  prepared_at?: string;
-  served_at?: string;
-}
+export type OrderItem = Colame.Order.Data.OrderItemData & {
+  // Override properties that have different names in our codebase
+  itemId: number;
+  itemName: string;
+  unitPrice: number;
+  totalPrice: number;
+  kitchenStatus: KitchenStatus;
+  preparedAt?: string;
+  servedAt?: string;
+};
+
+export type CreateOrderData = Colame.Order.Data.CreateOrderData;
+export type UpdateOrderData = Colame.Order.Data.UpdateOrderData;
+export type OrderWithRelations = Colame.Order.Data.OrderWithRelationsData;
+export type PaymentTransaction = Colame.Order.Data.PaymentTransactionData;
+export type OrderStatusHistory = Colame.Order.Data.OrderStatusHistoryData;
 
 export interface OrderItemModifier {
   id: string;
@@ -101,114 +70,49 @@ export type KitchenStatus =
   | 'ready'
   | 'served';
 
-export interface OrderStatusHistory {
-  id: string;
-  order_id: string;
-  status: OrderStatus;
-  changed_by: {
-    id: number;
-    name: string;
-  };
-  changed_at: string;
-  notes?: string;
-}
-
-export interface PaymentTransaction {
-  id: string;
-  order_id: string;
-  method: PaymentMethod;
-  amount: number;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  reference_number?: string;
-  processed_at?: string;
-  processor_response?: any;
-}
-
 export type PaymentMethod = 
   | 'cash'
-  | 'credit_card'
-  | 'debit_card'
-  | 'mobile_payment'
-  | 'gift_card'
+  | 'card'
+  | 'transfer'
   | 'other';
 
-// Request/Response Types
-export interface CreateOrderRequest {
-  location_id: number;
-  type: OrderType;
-  table_number?: number;
-  customer_name?: string;
-  customer_phone?: string;
-  customer_email?: string;
-  delivery_address?: string;
-  items: Array<{
-    item_id: number;
-    quantity: number;
-    modifiers?: number[];
-    notes?: string;
-  }>;
-  notes?: string;
-  special_instructions?: string;
-}
-
-export interface OrderResponse {
-  data: Order;
-  meta?: {
-    available_actions: string[];
-    next_status?: OrderStatus;
+// Component prop types
+export interface OrderListPageProps {
+  orders: {
+    data: Order[];
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+    total: number;
+    current_page?: number; // for backwards compatibility
+    last_page?: number; // for backwards compatibility
+    per_page?: number; // for backwards compatibility
+  };
+  locations: Array<{ id: number; name: string }>;
+  filters: Record<string, any>;
+  statuses: string[];
+  types: string[];
+  stats?: {
+    totalOrders: number;
+    activeOrders: number;
+    readyToServe: number;
+    revenueToday: number;
+    total_orders?: number; // for backwards compatibility
+    active_orders?: number; // for backwards compatibility
+    ready_to_serve?: number; // for backwards compatibility
+    revenue_today?: number; // for backwards compatibility
   };
 }
 
-export interface OrderListResponse {
-  data: Order[];
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-}
-
-export interface OrderFilters {
-  status?: string;
-  type?: string;
-  date?: string;
-  location_id?: string;
-  search?: string;
-}
-
-export interface OrderStats {
-  total_orders: number;
-  active_orders: number;
-  ready_to_serve: number;
-  revenue_today: number;
-  average_order_value: number;
-  completion_rate: number;
-}
-
-// Update types for real-time updates
-export interface OrderUpdate {
-  order_id: string;
-  type: 'status_changed' | 'item_updated' | 'payment_received' | 'cancelled';
-  data: any;
-  timestamp: string;
-}
-
-export interface KitchenOrderUpdate {
-  order_id: string;
-  items: Array<{
-    item_id: string;
-    status: KitchenStatus;
-  }>;
-  timestamp: string;
-}
-
-// Props interfaces for pages
-export interface OrderListPageProps {
-  orders: OrderListResponse;
-  locations: Array<{ id: number; name: string }>;
-  filters: OrderFilters;
-  statuses: string[];
-  types: string[];
-  stats?: OrderStats;
+export interface OrderDetailPageProps {
+  order: Order;
+  user?: any;
+  location?: any;
+  payments?: PaymentTransaction[];
+  offers?: any[];
+  isPaid: boolean;
+  remainingAmount: number;
+  statusHistory?: OrderStatusHistory[];
 }
 
 export interface OrderCreatePageProps {
@@ -227,17 +131,6 @@ export interface OrderCreatePageProps {
   }>;
 }
 
-export interface OrderDetailPageProps {
-  order: Order;
-  user?: any;
-  location?: any;
-  payments?: PaymentTransaction[];
-  offers?: any[];
-  isPaid: boolean;
-  remainingAmount: number;
-  statusHistory?: OrderStatusHistory[];
-}
-
 export interface KitchenDisplayPageProps {
   orders: Order[];
   locationId: number;
@@ -248,8 +141,41 @@ export interface KitchenDisplayPageProps {
   };
 }
 
-// Dashboard Types
-export interface OrderMetrics {
+export interface OrderFilters {
+  status?: string;
+  type?: string;
+  date?: string;
+  location_id?: string;
+  search?: string;
+}
+
+// Additional types for operations
+export interface OrderOperationsPageProps {
+  orders: Order[];
+  locations: Array<{ id: number; name: string }>;
+  stats: {
+    active: number;
+    preparing: number;
+    ready: number;
+    avgWaitTime: number;
+  };
+}
+
+export interface OrderPaymentPageProps {
+  order: Order;
+  payments: PaymentTransaction[];
+  remainingAmount: number;
+  suggestedTip: number;
+  paymentMethods: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    enabled: boolean;
+  }>;
+}
+
+export interface OrderDashboardData {
+  metrics: {
     totalRevenue: number;
     totalOrders: number;
     averageOrderValue: number;
@@ -258,69 +184,46 @@ export interface OrderMetrics {
     satisfactionRate?: number;
     activeOrders: number;
     pendingOrders: number;
-}
-
-export interface HourlyOrderData {
+  };
+  hourlyOrders: Array<{
     hour: number;
     count: number;
     revenue: number;
-}
-
-export interface OrderTypeDistribution {
+  }>;
+  ordersByType: Array<{
     type: OrderType;
     count: number;
     revenue: number;
-}
-
-export interface OrderStatusDistribution {
+  }>;
+  ordersByStatus: Array<{
     status: OrderStatus;
     count: number;
-}
-
-export interface TopItem {
+  }>;
+  topItems: Array<{
     id: string;
     name: string;
     quantity: number;
     revenue: number;
     category?: string;
-}
-
-export interface LocationPerformance {
+  }>;
+  locationPerformance?: Array<{
     id: string;
     name: string;
     orders: number;
     revenue: number;
     avgTime: number;
     rating: number;
-}
-
-export interface StaffPerformance {
+  }>;
+  staffPerformance?: Array<{
     id: string;
     name: string;
-    role: string;
     orders: number;
     revenue: number;
-    avgTime?: number;
+    avgTime: number;
+    rating: number;
+  }>;
+  recentOrders?: Order[];
 }
 
-export interface DashboardFilters {
-    period?: 'today' | 'yesterday' | 'week' | 'month' | 'quarter';
-    location_id?: string;
-}
-
-export interface OrderDashboardPageProps {
-    metrics: OrderMetrics;
-    hourlyOrders: HourlyOrderData[];
-    ordersByType: OrderTypeDistribution[];
-    ordersByStatus: OrderStatusDistribution[];
-    topItems: TopItem[];
-    locationPerformance?: LocationPerformance[];
-    staffPerformance?: StaffPerformance[];
-    recentOrders?: Order[];
-    filters?: DashboardFilters;
-}
-
-// Cancel Order Page Props
-export interface CancelOrderPageProps {
-    order: OrderWithRelationsData;
-}
+// Export utility type for form data
+export type OrderFormData = Partial<Order>;

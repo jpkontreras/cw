@@ -167,25 +167,32 @@ class OrderController extends Controller
     /**
      * Display the specified order
      */
-    public function show(int $id): Response
+    public function show(Order $order): Response
     {
-        $orderWithRelations = $this->orderService->getOrderWithRelations($id);
+        // The order is already loaded via route model binding
+        $orderWithRelations = $this->orderService->getOrderWithRelations($order->id);
 
-        if (!$orderWithRelations) {
-            abort(404, 'Order not found');
-        }
-
+        // Extract the order data and other relations
+        $orderData = $orderWithRelations?->order;
+        
         return Inertia::render('order/show', [
-            'order' => $orderWithRelations,
+            'order' => $orderData,
+            'user' => $orderWithRelations?->user,
+            'location' => $orderWithRelations?->location,
+            'payments' => $orderWithRelations?->payments ?? [],
+            'offers' => $orderWithRelations?->offers ?? [],
+            'isPaid' => $orderData?->paymentStatus === 'paid',
+            'remainingAmount' => $orderData?->totalAmount - ($orderData?->paidAmount ?? 0),
+            'statusHistory' => [], // TODO: Implement status history
         ]);
     }
 
     /**
      * Show the form for editing the order
      */
-    public function edit(int $id): Response|RedirectResponse
+    public function edit(Order $order): Response|RedirectResponse
     {
-        $orderWithRelations = $this->orderService->getOrderWithRelations($id);
+        $orderWithRelations = $this->orderService->getOrderWithRelations($order->id);
 
         if (!$orderWithRelations) {
             abort(404, 'Order not found');
@@ -193,7 +200,7 @@ class OrderController extends Controller
 
         if (!$orderWithRelations->order->canBeModified()) {
             return redirect()
-                ->route('orders.show', $id)
+                ->route('orders.show', $order->id)
                 ->with('error', 'Order cannot be modified');
         }
 
@@ -205,14 +212,14 @@ class OrderController extends Controller
     /**
      * Update the specified order
      */
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(Request $request, Order $order): RedirectResponse
     {
         try {
             $data = UpdateOrderData::from($request->all());
-            $order = $this->orderService->updateOrder($id, $data);
+            $updatedOrder = $this->orderService->updateOrder($order->id, $data);
 
             return redirect()
-                ->route('orders.show', $order->id)
+                ->route('orders.show', $updatedOrder->id)
                 ->with('success', 'Order updated successfully');
         } catch (OrderException $e) {
             return redirect()
@@ -225,10 +232,10 @@ class OrderController extends Controller
     /**
      * Confirm the order
      */
-    public function confirm(int $id): RedirectResponse
+    public function confirm(Order $order): RedirectResponse
     {
         try {
-            $this->orderService->confirmOrder($id);
+            $this->orderService->confirmOrder($order->id);
 
             return redirect()
                 ->back()
@@ -243,10 +250,10 @@ class OrderController extends Controller
     /**
      * Start preparing the order
      */
-    public function startPreparing(int $id): RedirectResponse
+    public function startPreparing(Order $order): RedirectResponse
     {
         try {
-            $this->orderService->startPreparingOrder($id);
+            $this->orderService->startPreparingOrder($order->id);
 
             return redirect()
                 ->back()
@@ -261,10 +268,10 @@ class OrderController extends Controller
     /**
      * Mark order as ready
      */
-    public function markReady(int $id): RedirectResponse
+    public function markReady(Order $order): RedirectResponse
     {
         try {
-            $this->orderService->markOrderReady($id);
+            $this->orderService->markOrderReady($order->id);
 
             return redirect()
                 ->back()
@@ -279,10 +286,10 @@ class OrderController extends Controller
     /**
      * Complete the order
      */
-    public function complete(int $id): RedirectResponse
+    public function complete(Order $order): RedirectResponse
     {
         try {
-            $this->orderService->completeOrder($id);
+            $this->orderService->completeOrder($order->id);
 
             return redirect()
                 ->back()
@@ -297,14 +304,9 @@ class OrderController extends Controller
     /**
      * Start delivery
      */
-    public function startDelivery(int $id): RedirectResponse
+    public function startDelivery(Order $order): RedirectResponse
     {
         try {
-            $order = Order::find($id);
-            if (!$order) {
-                abort(404, 'Order not found');
-            }
-
             if ($order->status !== 'ready' || $order->type !== 'delivery') {
                 return redirect()
                     ->back()
@@ -329,14 +331,9 @@ class OrderController extends Controller
     /**
      * Mark as delivered
      */
-    public function markDelivered(int $id): RedirectResponse
+    public function markDelivered(Order $order): RedirectResponse
     {
         try {
-            $order = Order::find($id);
-            if (!$order) {
-                abort(404, 'Order not found');
-            }
-
             if ($order->status !== 'delivering') {
                 return redirect()
                     ->back()
@@ -361,13 +358,9 @@ class OrderController extends Controller
     /**
      * Display receipt
      */
-    public function receipt(int $id): Response
+    public function receipt(Order $order): Response
     {
-        $order = Order::with(['items', 'payments'])->find($id);
-
-        if (!$order) {
-            abort(404, 'Order not found');
-        }
+        $order->load(['items', 'payments']);
 
         // TODO: Implement receipt view
         return Inertia::render('order/receipt', [
@@ -378,33 +371,33 @@ class OrderController extends Controller
     /**
      * Show cancel order form
      */
-    public function showCancelForm(int $id): Response
+    public function showCancelForm(Order $order): Response
     {
-        $order = $this->orderService->getOrderWithRelations($id);
+        $orderWithRelations = $this->orderService->getOrderWithRelations($order->id);
 
-        if (!$order || !$order->order->canBeCancelled()) {
+        if (!$orderWithRelations || !$orderWithRelations->order->canBeCancelled()) {
             abort(403, 'Order cannot be cancelled');
         }
 
         return Inertia::render('order/cancel', [
-            'order' => $order,
+            'order' => $orderWithRelations,
         ]);
     }
 
     /**
      * Cancel the order
      */
-    public function cancel(Request $request, int $id): RedirectResponse
+    public function cancel(Request $request, Order $order): RedirectResponse
     {
         $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
 
         try {
-            $this->orderService->cancelOrder($id, $request->input('reason'));
+            $this->orderService->cancelOrder($order->id, $request->input('reason'));
 
             return redirect()
-                ->route('orders.show', $id)
+                ->route('orders.show', $order->id)
                 ->with('success', 'Order cancelled');
         } catch (OrderException $e) {
             return redirect()
@@ -447,21 +440,24 @@ class OrderController extends Controller
         $locationId = $request->input('location_id');
         
         // Get active orders
-        $orders = Order::query()
+        $ordersQuery = Order::query()
             ->with(['items', 'waiter'])
             ->whereNotIn('status', ['completed', 'cancelled', 'refunded'])
             ->when($locationId, fn($q) => $q->where('location_id', $locationId))
-            ->orderBy('created_at', 'asc')
-            ->get()
-            ->map(fn($order) => OrderData::from($order));
-
-        // Calculate stats
+            ->orderBy('created_at', 'asc');
+            
+        $ordersCollection = $ordersQuery->get();
+        
+        // Calculate stats first
         $stats = [
-            'active' => $orders->count(),
-            'preparing' => $orders->where('status', 'preparing')->count(),
-            'ready' => $orders->where('status', 'ready')->count(),
+            'active' => $ordersCollection->count(),
+            'preparing' => $ordersCollection->where('status', 'preparing')->count(),
+            'ready' => $ordersCollection->where('status', 'ready')->count(),
             'avgWaitTime' => 25, // Mock data - would calculate from actual times
         ];
+        
+        // Convert to DTOs
+        $orders = $ordersCollection->map(fn($order) => OrderData::from($order));
 
         // Get locations
         $locations = [

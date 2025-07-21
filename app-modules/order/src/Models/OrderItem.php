@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Order\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,10 +15,20 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OrderItem extends Model
 {
+    use HasFactory;
+    
     /**
      * The table associated with the model
      */
     protected $table = 'order_items';
+    
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory()
+    {
+        return \Colame\Order\Database\Factories\OrderItemFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable

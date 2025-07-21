@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Colame\Order\Models\Order;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Lazy;
+use Spatie\LaravelData\Mappers\SnakeCaseMapper;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Order data transfer object
  */
+#[TypeScript]
+#[MapInputName(SnakeCaseMapper::class)]
 class OrderData extends BaseData
 {
     public function __construct(
@@ -21,18 +28,18 @@ class OrderData extends BaseData
         public readonly string $status,
         public readonly string $type,
         public readonly string $priority,
-        public readonly ?string $customerName = null,
-        public readonly ?string $customerPhone = null,
-        public readonly ?string $customerEmail = null,
-        public readonly ?string $deliveryAddress = null,
-        public readonly ?int $tableNumber = null,
-        public readonly ?int $waiterId = null,
         public readonly float $subtotal,
         public readonly float $taxAmount,
         public readonly float $tipAmount,
         public readonly float $discountAmount,
         public readonly float $totalAmount,
         public readonly string $paymentStatus,
+        public readonly ?string $customerName = null,
+        public readonly ?string $customerPhone = null,
+        public readonly ?string $customerEmail = null,
+        public readonly ?string $deliveryAddress = null,
+        public readonly ?int $tableNumber = null,
+        public readonly ?int $waiterId = null,
         public readonly ?string $notes = null,
         public readonly ?string $specialInstructions = null,
         public readonly ?string $cancelReason = null,
@@ -48,8 +55,8 @@ class OrderData extends BaseData
         public readonly ?\DateTimeInterface $completedAt = null,
         public readonly ?\DateTimeInterface $cancelledAt = null,
         public readonly ?\DateTimeInterface $scheduledAt = null,
-        public readonly \DateTimeInterface $createdAt = new \DateTime(),
-        public readonly \DateTimeInterface $updatedAt = new \DateTime(),
+        public readonly ?\DateTimeInterface $createdAt = null,
+        public readonly ?\DateTimeInterface $updatedAt = null,
     ) {}
 
     /**
@@ -177,4 +184,5 @@ class OrderData extends BaseData
         // For now, return total if not paid
         return $this->isPaid() ? 0.0 : $this->totalAmount;
     }
+
 }

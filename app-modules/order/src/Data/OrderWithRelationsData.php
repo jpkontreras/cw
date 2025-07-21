@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Order data with related entities
  */
+#[TypeScript]
 class OrderWithRelationsData extends BaseData
 {
     public function __construct(

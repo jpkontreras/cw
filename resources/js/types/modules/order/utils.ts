@@ -102,7 +102,7 @@ export const isOrderCancellable = (order: Order): boolean => {
 };
 
 export const isOrderPaid = (order: Order): boolean => {
-  return order.payment_status === 'paid';
+  return order.paymentStatus === 'paid';
 };
 
 export const isOrderHighPriority = (order: Order): boolean => {
@@ -111,7 +111,11 @@ export const isOrderHighPriority = (order: Order): boolean => {
 
 // Time utilities
 export const getOrderAge = (order: Order): string => {
-  const createdDate = new Date(order.created_at);
+  if (!order.createdAt) return 'Unknown';
+  
+  const createdDate = new Date(order.createdAt);
+  if (isNaN(createdDate.getTime())) return 'Unknown';
+  
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -127,10 +131,10 @@ export const getOrderAge = (order: Order): string => {
 };
 
 export const getPreparationTime = (order: Order): number | null => {
-  if (!order.placed_at || !order.ready_at) return null;
+  if (!order.placedAt || !order.readyAt) return null;
   
-  const placedDate = new Date(order.placed_at);
-  const readyDate = new Date(order.ready_at);
+  const placedDate = new Date(order.placedAt);
+  const readyDate = new Date(order.readyAt);
   return Math.floor((readyDate.getTime() - placedDate.getTime()) / 60000);
 };
 
@@ -143,11 +147,15 @@ export const formatDuration = (minutes: number): string => {
 };
 
 // Formatting utilities
-export const formatOrderNumber = (orderNumber: string): string => {
+export const formatOrderNumber = (orderNumber: string | undefined): string => {
+  if (!orderNumber) return '#undefined';
   return `#${orderNumber}`;
 };
 
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | undefined | null): string => {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '$0';
+  }
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
@@ -202,7 +210,7 @@ export const getKitchenOrderPriority = (order: Order): number => {
   if (order.priority === 'high') priority += 100;
   
   // Order age (older orders get higher priority)
-  const ageMinutes = Math.floor((Date.now() - new Date(order.placed_at || order.created_at).getTime()) / 60000);
+  const ageMinutes = Math.floor((Date.now() - new Date(order.placedAt || order.createdAt).getTime()) / 60000);
   priority += Math.min(ageMinutes, 60); // Cap at 60 minutes
   
   // Status priority

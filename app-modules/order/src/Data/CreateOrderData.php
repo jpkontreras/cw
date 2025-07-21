@@ -12,10 +12,12 @@ use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
 use Spatie\LaravelData\Attributes\Validation\StringType;
 use Spatie\LaravelData\DataCollection;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * Data transfer object for creating orders
  */
+#[TypeScript]
 class CreateOrderData extends BaseData
 {
     public function __construct(

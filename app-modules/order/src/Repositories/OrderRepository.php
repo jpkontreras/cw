@@ -219,35 +219,10 @@ class OrderRepository implements OrderRepositoryInterface
      */
     private function modelToData(Order $order, bool $includeItems = false): OrderData
     {
-        $data = [
-            'id' => $order->id,
-            'userId' => $order->user_id,
-            'locationId' => $order->location_id,
-            'status' => $order->status,
-            'subtotal' => $order->subtotal,
-            'taxAmount' => $order->tax_amount,
-            'discountAmount' => $order->discount_amount,
-            'totalAmount' => $order->total_amount,
-            'notes' => $order->notes,
-            'cancelReason' => $order->cancel_reason,
-            'customerName' => $order->customer_name,
-            'customerPhone' => $order->customer_phone,
-            'metadata' => $order->metadata,
-            'placedAt' => $order->placed_at,
-            'confirmedAt' => $order->confirmed_at,
-            'preparingAt' => $order->preparing_at,
-            'readyAt' => $order->ready_at,
-            'completedAt' => $order->completed_at,
-            'cancelledAt' => $order->cancelled_at,
-            'createdAt' => $order->created_at,
-            'updatedAt' => $order->updated_at,
-        ];
-
-        if ($includeItems) {
-            $items = OrderItem::where('order_id', $order->id)->get();
-            $data['items'] = OrderItemData::collection($items);
+        if ($includeItems && !$order->relationLoaded('items')) {
+            $order->load('items');
         }
-
-        return OrderData::from($data);
+        
+        return OrderData::from($order);
     }
 }

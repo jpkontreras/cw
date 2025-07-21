@@ -124,15 +124,15 @@ const SplitItemAssignment = ({
         <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
             <div className="flex-1">
                 <p className="font-medium">
-                    {item.quantity}x {item.item_name}
+                    {item.quantity}x {item.itemName}
                 </p>
                 {item.modifiers && item.modifiers.length > 0 && (
                     <p className="text-sm text-gray-500">
-                        {item.modifiers.map(m => m.modifier_name).join(', ')}
+                        {item.modifiers.map(m => m.modifierName).join(', ')}
                     </p>
                 )}
                 <p className="text-sm font-medium mt-1">
-                    {formatCurrency(item.total_price)}
+                    {formatCurrency(item.totalPrice)}
                 </p>
             </div>
             <Select 
@@ -196,8 +196,8 @@ export default function PaymentPage({
 
     // Calculate total with tip
     const totalWithTip = useMemo(() => {
-        return order.total_amount + tipAmount;
-    }, [order.total_amount, tipAmount]);
+        return order.totalAmount + tipAmount;
+    }, [order.totalAmount, tipAmount]);
 
     // Update form data when payment method or amounts change
     useMemo(() => {
@@ -266,8 +266,8 @@ export default function PaymentPage({
             const personItems = assignments[person.userId] || [];
             const items = order.items.filter(item => personItems.includes(item.id));
             
-            const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
-            const taxRate = order.tax_amount / order.subtotal;
+            const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+            const taxRate = order.taxAmount / order.subtotal;
             const tax = subtotal * taxRate;
             const tipShare = (subtotal / order.subtotal) * tipAmount;
             
@@ -339,7 +339,7 @@ export default function PaymentPage({
 
     return (
         <AppLayout>
-            <Head title={`Payment - ${formatOrderNumber(order.order_number)}`} />
+            <Head title={`Payment - ${formatOrderNumber(order.orderNumber)}`} />
 
             <div className="container mx-auto p-6 max-w-6xl">
                 {/* Header */}
@@ -350,11 +350,11 @@ export default function PaymentPage({
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold">Process Payment</h1>
-                            <p className="text-gray-600">Order {formatOrderNumber(order.order_number)}</p>
+                            <p className="text-gray-600">Order {formatOrderNumber(order.orderNumber)}</p>
                         </div>
                     </div>
-                    <Badge className={getPaymentStatusColor(order.payment_status)}>
-                        {getPaymentStatusLabel(order.payment_status)}
+                    <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                        {getPaymentStatusLabel(order.paymentStatus)}
                     </Badge>
                 </div>
 
@@ -649,12 +649,12 @@ export default function PaymentPage({
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span>Tax (19%)</span>
-                                        <span>{formatCurrency(order.tax_amount)}</span>
+                                        <span>{formatCurrency(order.taxAmount)}</span>
                                     </div>
-                                    {order.discount_amount > 0 && (
+                                    {order.discountAmount > 0 && (
                                         <div className="flex justify-between text-sm text-green-600">
                                             <span>Discount</span>
-                                            <span>-{formatCurrency(order.discount_amount)}</span>
+                                            <span>-{formatCurrency(order.discountAmount)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between text-sm">
