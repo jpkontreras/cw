@@ -1,6 +1,7 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEventHandler, useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { PageLayout, PageHeader, PageContent } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -199,17 +200,31 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
         }
     };
 
+    const breadcrumbs = [
+        { label: 'Orders', href: '/orders' },
+        { label: 'Create Order' }
+    ];
+
     return (
         <AppLayout>
             <Head title="Create Order" />
+            
+            <PageLayout>
+                <PageHeader
+                    title="Create New Order"
+                    description="Fill in the details to create a new order"
+                    breadcrumbs={breadcrumbs}
+                >
+                    <Link href="/orders">
+                        <Button variant="outline">
+                            <ChevronLeft className="w-4 h-4 mr-2" />
+                            Cancel
+                        </Button>
+                    </Link>
+                </PageHeader>
 
-            <div className="container mx-auto p-6 max-w-6xl">
-                <form onSubmit={handleSubmit}>
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold">Create New Order</h1>
-                        <p className="text-gray-600 mt-2">Fill in the details to create a new order</p>
-                    </div>
+                <PageContent>
+                    <form onSubmit={handleSubmit}>
 
                     {/* Progress Steps */}
                     <div className="mb-8 flex justify-center">
@@ -768,7 +783,8 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                         )}
                     </div>
                 </form>
-            </div>
+                </PageContent>
+            </PageLayout>
         </AppLayout>
     );
 }

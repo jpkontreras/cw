@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { PageLayout, PageHeader, PageContent } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -185,17 +186,13 @@ export default function OrderDashboard({
     return (
         <AppLayout>
             <Head title="Order Dashboard" />
-
-            <div className="container mx-auto p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold">Order Dashboard</h1>
-                        <p className="text-gray-600 mt-1">
-                            Real-time analytics and insights for your restaurant
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
+            
+            <PageLayout>
+                <PageHeader
+                    title="Order Dashboard"
+                    description="Real-time analytics and insights for your restaurant"
+                >
+                    <div className="flex items-center gap-2">
                         {/* Period Filter */}
                         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                             <SelectTrigger className="w-40">
@@ -231,10 +228,11 @@ export default function OrderDashboard({
                             Export
                         </Button>
                     </div>
-                </div>
+                </PageHeader>
 
-                {/* Key Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <PageContent>
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <MetricCard
                         title="Total Revenue"
                         value={metrics?.totalRevenue || 0}
@@ -699,7 +697,8 @@ export default function OrderDashboard({
                         </div>
                     </TabsContent>
                 </Tabs>
-            </div>
+                </PageContent>
+            </PageLayout>
         </AppLayout>
     );
 }

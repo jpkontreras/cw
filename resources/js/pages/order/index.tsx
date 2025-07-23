@@ -1,6 +1,7 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { PageLayout, PageHeader, PageContent } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -103,18 +104,21 @@ export default function OrderIndex({
     return (
         <AppLayout>
             <Head title="Orders" />
+            
+            <PageLayout>
+                <PageHeader
+                    title="Orders"
+                    description="Manage and track all your restaurant orders"
+                >
+                    <Link href="/orders/create">
+                        <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Order
+                        </Button>
+                    </Link>
+                </PageHeader>
 
-            <div className="min-h-screen bg-gray-50">
-                <div className="container mx-auto px-6 py-8">
-                    {/* Header Section */}
-                    <div className="mb-8">
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-                                <p className="text-gray-600 mt-1">Manage and track all your restaurant orders</p>
-                            </div>
-                        </div>
-                    </div>
+                <PageContent>
 
                     {/* Stats Cards - Minimal Design */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
@@ -244,8 +248,8 @@ export default function OrderIndex({
                             )}
                         </CardContent>
                     </Card>
-                </div>
-            </div>
+                </PageContent>
+            </PageLayout>
         </AppLayout>
     );
 }
