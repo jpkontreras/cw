@@ -11,6 +11,7 @@ use Colame\Order\Data\OrderData;
 use Colame\Order\Data\UpdateOrderData;
 use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
+use Colame\Order\Services\OrderStatusService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,7 +23,8 @@ use Inertia\Response;
 class OrderController extends Controller
 {
     public function __construct(
-        private OrderServiceInterface $orderService
+        private OrderServiceInterface $orderService,
+        private OrderStatusService $statusService
     ) {}
 
     /**
@@ -230,129 +232,129 @@ class OrderController extends Controller
     }
 
     /**
+     * Place order (move to placed status)
+     */
+    public function place(Request $request, Order $order): RedirectResponse
+    {
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'placed', 
+            $request->input('reason')
+        );
+
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
+        }
+
+        return redirect()->back()->with('success', $result['message']);
+    }
+
+    /**
      * Confirm the order
      */
-    public function confirm(Order $order): RedirectResponse
+    public function confirm(Request $request, Order $order): RedirectResponse
     {
-        try {
-            $this->orderService->confirmOrder($order->id);
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'confirmed', 
+            $request->input('reason')
+        );
 
-            return redirect()
-                ->back()
-                ->with('success', 'Order confirmed');
-        } catch (OrderException $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
      * Start preparing the order
      */
-    public function startPreparing(Order $order): RedirectResponse
+    public function startPreparing(Request $request, Order $order): RedirectResponse
     {
-        try {
-            $this->orderService->startPreparingOrder($order->id);
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'preparing', 
+            $request->input('reason')
+        );
 
-            return redirect()
-                ->back()
-                ->with('success', 'Order preparation started');
-        } catch (OrderException $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
      * Mark order as ready
      */
-    public function markReady(Order $order): RedirectResponse
+    public function markReady(Request $request, Order $order): RedirectResponse
     {
-        try {
-            $this->orderService->markOrderReady($order->id);
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'ready', 
+            $request->input('reason')
+        );
 
-            return redirect()
-                ->back()
-                ->with('success', 'Order marked as ready');
-        } catch (OrderException $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
      * Complete the order
      */
-    public function complete(Order $order): RedirectResponse
+    public function complete(Request $request, Order $order): RedirectResponse
     {
-        try {
-            $this->orderService->completeOrder($order->id);
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'completed', 
+            $request->input('reason')
+        );
 
-            return redirect()
-                ->back()
-                ->with('success', 'Order completed');
-        } catch (OrderException $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
      * Start delivery
      */
-    public function startDelivery(Order $order): RedirectResponse
+    public function startDelivery(Request $request, Order $order): RedirectResponse
     {
-        try {
-            if ($order->status !== 'ready' || $order->type !== 'delivery') {
-                return redirect()
-                    ->back()
-                    ->with('error', 'Order must be ready for delivery');
-            }
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'delivering', 
+            $request->input('reason')
+        );
 
-            $order->update([
-                'status' => 'delivering',
-                'delivering_at' => now()
-            ]);
-
-            return redirect()
-                ->back()
-                ->with('success', 'Delivery started');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', 'Failed to start delivery: ' . $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
      * Mark as delivered
      */
-    public function markDelivered(Order $order): RedirectResponse
+    public function markDelivered(Request $request, Order $order): RedirectResponse
     {
-        try {
-            if ($order->status !== 'delivering') {
-                return redirect()
-                    ->back()
-                    ->with('error', 'Order must be in delivery');
-            }
+        $result = $this->statusService->transitionStatus(
+            $order, 
+            'delivered', 
+            $request->input('reason')
+        );
 
-            $order->update([
-                'status' => 'delivered',
-                'delivered_at' => now()
-            ]);
-
-            return redirect()
-                ->back()
-                ->with('success', 'Order marked as delivered');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', 'Failed to mark as delivered: ' . $e->getMessage());
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['error']);
         }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**
@@ -415,7 +417,7 @@ class OrderController extends Controller
         $locationId = $user ? ($user->location_id ?? 1) : 1;
         $orders = $this->orderService->getKitchenOrders($locationId);
 
-        return Inertia::render('order/kitchen', [
+        return Inertia::render('order/kitchen-display', [
             'orders' => $orders,
             'locationId' => $locationId,
         ]);

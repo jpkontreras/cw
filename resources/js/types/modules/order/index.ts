@@ -27,6 +27,7 @@ export type OrderItem = Colame.Order.Data.OrderItemData & {
 };
 
 export type CreateOrderData = Colame.Order.Data.CreateOrderData;
+export type CreateOrderRequest = CreateOrderData; // Alias for consistency
 export type UpdateOrderData = Colame.Order.Data.UpdateOrderData;
 export type OrderWithRelations = Colame.Order.Data.OrderWithRelationsData;
 export type PaymentTransaction = Colame.Order.Data.PaymentTransactionData;

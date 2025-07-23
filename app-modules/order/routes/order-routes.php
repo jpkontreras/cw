@@ -34,7 +34,7 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         Route::put('/{order}', [WebOrderController::class, 'update'])->name('update')->where('order', '[0-9]+');
         
         // Status Updates
-        Route::post('/{order}/place', [WebOrderController::class, 'store'])->name('place')->where('order', '[0-9]+');
+        Route::post('/{order}/place', [WebOrderController::class, 'place'])->name('place')->where('order', '[0-9]+');
         Route::post('/{order}/confirm', [WebOrderController::class, 'confirm'])->name('confirm')->where('order', '[0-9]+');
         Route::post('/{order}/start-preparing', [WebOrderController::class, 'startPreparing'])->name('start-preparing')->where('order', '[0-9]+');
         Route::post('/{order}/mark-ready', [WebOrderController::class, 'markReady'])->name('mark-ready')->where('order', '[0-9]+');
