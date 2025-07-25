@@ -14,6 +14,17 @@ interface PageHeaderProps {
   onBack?: () => void;
 }
 
+interface PageContentProps {
+  children: React.ReactNode;
+  className?: string;
+  noPadding?: boolean;
+}
+
+interface PageLayoutProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
 export function PageHeader({ title, description, children, className, showBackButton = false, backHref, onBack }: PageHeaderProps) {
   const handleBack = () => {
     if (onBack) {
@@ -49,19 +60,8 @@ export function PageHeader({ title, description, children, className, showBackBu
   );
 }
 
-interface PageContentProps {
-  children: React.ReactNode;
-  className?: string;
-  noPadding?: boolean;
-}
-
 export function PageContent({ children, className, noPadding = false }: PageContentProps) {
-  return <div className={cn('flex-1 overflow-hidden', !noPadding && 'px-4 py-6 sm:px-6 lg:px-8', className)}>{children}</div>;
-}
-
-interface PageLayoutProps {
-  children: React.ReactNode;
-  className?: string;
+  return <div className={cn('flex-1 overflow-hidden', !noPadding && 'px-4 py-6 sm:px-4 lg:px-4', className)}>{children}</div>;
 }
 
 export function PageLayout({ children, className }: PageLayoutProps) {

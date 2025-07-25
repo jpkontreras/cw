@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "colame/item": "*",
         "colame/order": "*",
         "inertiajs/inertia-laravel": "^2.0",
         "internachi/modular": "^2.3",

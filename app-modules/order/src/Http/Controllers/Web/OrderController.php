@@ -12,6 +12,7 @@ use Colame\Order\Data\UpdateOrderData;
 use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
 use Colame\Order\Services\OrderStatusService;
+use Colame\Item\Contracts\ItemRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,7 +25,8 @@ class OrderController extends Controller
 {
     public function __construct(
         private OrderServiceInterface $orderService,
-        private OrderStatusService $statusService
+        private OrderStatusService $statusService,
+        private ItemRepositoryInterface $itemRepository
     ) {}
 
     /**
@@ -34,21 +36,21 @@ class OrderController extends Controller
     {
         $user = $request->user();
         $filters = $request->only(['status', 'type', 'location_id', 'date', 'search']);
-        
+
         // Get paginated orders with filters
         $orders = $this->orderService->getPaginatedOrders($filters, 20);
-        
+
         // Get locations for filter dropdown
         $locations = [
             ['id' => 1, 'name' => 'Main Branch'],
             ['id' => 2, 'name' => 'Downtown Branch'],
             // TODO: Replace with actual location service
         ];
-        
+
         // Get available statuses and types
         $statuses = ['draft', 'placed', 'confirmed', 'preparing', 'ready', 'delivering', 'delivered', 'completed', 'cancelled', 'refunded'];
         $types = ['dine_in', 'takeout', 'delivery', 'catering'];
-        
+
         // Get stats for the dashboard cards
         $stats = $this->orderService->getOrderStats($filters);
 
@@ -68,14 +70,14 @@ class OrderController extends Controller
     public function create(Request $request): Response
     {
         $user = $request->user();
-        
+
         // Get locations for dropdown
         $locations = [
             ['id' => 1, 'name' => 'Main Branch'],
             ['id' => 2, 'name' => 'Downtown Branch'],
             // TODO: Replace with actual location service
         ];
-        
+
         // Get available tables for location
         $tables = [
             ['id' => 1, 'number' => 1, 'available' => true],
@@ -84,35 +86,23 @@ class OrderController extends Controller
             ['id' => 4, 'number' => 4, 'available' => true],
             // TODO: Replace with actual table service
         ];
+
+        // Get active items from the repository
+        $activeItems = $this->itemRepository->getActiveItems();
         
-        // Get menu items
-        $items = [
-            // Starters
-            ['id' => 1, 'name' => 'Empanada de Pino', 'price' => 2500, 'category' => 'Starters', 'modifiers' => [
-                ['id' => 1, 'name' => 'Extra Cheese', 'price' => 500],
-                ['id' => 2, 'name' => 'Spicy Sauce', 'price' => 0],
-            ]],
-            ['id' => 2, 'name' => 'Sopaipillas (4)', 'price' => 1500, 'category' => 'Starters', 'modifiers' => []],
-            
-            // Main Courses
-            ['id' => 3, 'name' => 'Completo Italiano', 'price' => 3500, 'category' => 'Main Courses', 'modifiers' => [
-                ['id' => 3, 'name' => 'Double Meat', 'price' => 1000],
-                ['id' => 4, 'name' => 'No Mayo', 'price' => 0],
-            ]],
-            ['id' => 4, 'name' => 'Churrasco', 'price' => 5500, 'category' => 'Main Courses', 'modifiers' => []],
-            ['id' => 5, 'name' => 'Pastel de Choclo', 'price' => 4500, 'category' => 'Main Courses', 'modifiers' => []],
-            
-            // Beverages
-            ['id' => 6, 'name' => 'Coca Cola 350ml', 'price' => 1500, 'category' => 'Beverages', 'modifiers' => []],
-            ['id' => 7, 'name' => 'Jugo Natural', 'price' => 2000, 'category' => 'Beverages', 'modifiers' => []],
-            ['id' => 8, 'name' => 'Pisco Sour', 'price' => 3500, 'category' => 'Beverages', 'modifiers' => []],
-            
-            // Desserts
-            ['id' => 9, 'name' => 'Leche Asada', 'price' => 2000, 'category' => 'Desserts', 'modifiers' => []],
-            ['id' => 10, 'name' => 'Mote con Huesillo', 'price' => 1800, 'category' => 'Desserts', 'modifiers' => []],
-            // TODO: Replace with actual item service
-        ];
-        
+        // Transform items for the frontend
+        $items = $activeItems->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'price' => $item->basePrice,
+                'category' => $item->categoryName ?? 'Uncategorized',
+                'description' => $item->description,
+                'isAvailable' => $item->isAvailable,
+                'modifiers' => [], // TODO: Add modifiers when needed
+            ];
+        })->toArray();
+
         return Inertia::render('order/create', [
             'locations' => $locations,
             'tables' => $tables,
@@ -128,7 +118,7 @@ class OrderController extends Controller
         try {
             // Convert camelCase to snake_case for Laravel data
             $requestData = $request->all();
-            
+
             // Map frontend field names to backend field names
             $mappedData = [
                 'user_id' => $request->user()?->id,
@@ -141,7 +131,7 @@ class OrderController extends Controller
                 'delivery_address' => $requestData['delivery_address'] ?? null,
                 'notes' => $requestData['notes'] ?? null,
                 'special_instructions' => $requestData['special_instructions'] ?? null,
-                'items' => array_map(function($item) {
+                'items' => array_map(function ($item) {
                     return [
                         'item_id' => $item['item_id'] ?? null,
                         'quantity' => $item['quantity'] ?? 1,
@@ -151,7 +141,7 @@ class OrderController extends Controller
                     ];
                 }, $requestData['items'] ?? []),
             ];
-            
+
             $data = CreateOrderData::from($mappedData);
             $order = $this->orderService->createOrder($data);
 
@@ -176,7 +166,7 @@ class OrderController extends Controller
 
         // Extract the order data and other relations
         $orderData = $orderWithRelations?->order;
-        
+
         return Inertia::render('order/show', [
             'order' => $orderData,
             'user' => $orderWithRelations?->user,
@@ -237,8 +227,8 @@ class OrderController extends Controller
     public function place(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'placed', 
+            $order,
+            'placed',
             $request->input('reason')
         );
 
@@ -255,8 +245,8 @@ class OrderController extends Controller
     public function confirm(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'confirmed', 
+            $order,
+            'confirmed',
             $request->input('reason')
         );
 
@@ -273,8 +263,8 @@ class OrderController extends Controller
     public function startPreparing(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'preparing', 
+            $order,
+            'preparing',
             $request->input('reason')
         );
 
@@ -291,8 +281,8 @@ class OrderController extends Controller
     public function markReady(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'ready', 
+            $order,
+            'ready',
             $request->input('reason')
         );
 
@@ -309,8 +299,8 @@ class OrderController extends Controller
     public function complete(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'completed', 
+            $order,
+            'completed',
             $request->input('reason')
         );
 
@@ -327,8 +317,8 @@ class OrderController extends Controller
     public function startDelivery(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'delivering', 
+            $order,
+            'delivering',
             $request->input('reason')
         );
 
@@ -345,8 +335,8 @@ class OrderController extends Controller
     public function markDelivered(Request $request, Order $order): RedirectResponse
     {
         $result = $this->statusService->transitionStatus(
-            $order, 
-            'delivered', 
+            $order,
+            'delivered',
             $request->input('reason')
         );
 
@@ -440,16 +430,16 @@ class OrderController extends Controller
     public function operations(Request $request): Response
     {
         $locationId = $request->input('location_id');
-        
+
         // Get active orders
         $ordersQuery = Order::query()
             ->with(['items', 'waiter'])
             ->whereNotIn('status', ['completed', 'cancelled', 'refunded'])
             ->when($locationId, fn($q) => $q->where('location_id', $locationId))
             ->orderBy('created_at', 'asc');
-            
+
         $ordersCollection = $ordersQuery->get();
-        
+
         // Calculate stats first
         $stats = [
             'active' => $ordersCollection->count(),
@@ -457,7 +447,7 @@ class OrderController extends Controller
             'ready' => $ordersCollection->where('status', 'ready')->count(),
             'avgWaitTime' => 25, // Mock data - would calculate from actual times
         ];
-        
+
         // Convert to DTOs
         $orders = $ordersCollection->map(fn($order) => OrderData::from($order));
 
@@ -538,7 +528,7 @@ class OrderController extends Controller
         try {
             // Process payment through service
             // In real implementation, this would handle payment gateway integration
-            
+
             // Update tip amount if provided
             if (isset($validated['tip_amount'])) {
                 $order->update([

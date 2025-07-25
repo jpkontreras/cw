@@ -6,6 +6,7 @@ namespace Colame\Order\Services;
 
 use App\Core\Contracts\FeatureFlagInterface;
 use App\Core\Services\BaseService;
+use Colame\Item\Contracts\ItemRepositoryInterface;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Contracts\OrderServiceInterface;
@@ -16,6 +17,7 @@ use Colame\Order\Data\OrderWithRelationsData;
 use Colame\Order\Data\UpdateOrderData;
 use Colame\Order\Events\OrderCreated;
 use Colame\Order\Events\OrderStatusChanged;
+use Colame\Order\Exceptions\InvalidOrderException;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Models\Order;
@@ -30,7 +32,8 @@ class OrderService extends BaseService implements OrderServiceInterface
     public function __construct(
         FeatureFlagInterface $features,
         private OrderRepositoryInterface $orderRepository,
-        private OrderItemRepositoryInterface $itemRepository,
+        private OrderItemRepositoryInterface $orderItemRepository,
+        private ItemRepositoryInterface $itemRepository,
         private OrderCalculationService $calculationService,
         private OrderValidationService $validationService,
     ) {
@@ -79,14 +82,22 @@ class OrderService extends BaseService implements OrderServiceInterface
 
             // Create order items
             foreach ($data->items as $itemData) {
-                // In a real implementation, we would fetch item details from item service
-                // For now, using placeholder values
-                $unitPrice = $itemData->unit_price ?: 10.00; // Default price
+                // Get item details from item repository
+                $item = $this->itemRepository->find($itemData->item_id);
+                if (!$item) {
+                    throw new InvalidOrderException("Item with ID {$itemData->item_id} not found");
+                }
                 
-                $this->itemRepository->create([
+                // Get price based on location if provided
+                $unitPrice = $itemData->unit_price ?: $this->itemRepository->getCurrentPrice(
+                    $itemData->item_id, 
+                    $data->locationId
+                );
+                
+                $this->orderItemRepository->create([
                     'order_id' => $order->id,
                     'item_id' => $itemData->item_id,
-                    'item_name' => $this->getItemName($itemData->item_id), // Would come from item service
+                    'item_name' => $item->name,
                     'quantity' => $itemData->quantity,
                     'unit_price' => $unitPrice,
                     'total_price' => $itemData->quantity * $unitPrice,
@@ -311,7 +322,7 @@ class OrderService extends BaseService implements OrderServiceInterface
             'status' => $status
         ]);
 
-        return $this->itemRepository->updateStatus($itemId, $status);
+        return $this->orderItemRepository->updateStatus($itemId, $status);
     }
 
     /**
@@ -382,21 +393,21 @@ class OrderService extends BaseService implements OrderServiceInterface
         foreach ($items as $item) {
             if (isset($item['id']) && isset($item['quantity'])) {
                 if ($item['quantity'] > 0) {
-                    $this->itemRepository->update($item['id'], ['quantity' => $item['quantity']]);
+                    $this->orderItemRepository->update($item['id'], ['quantity' => $item['quantity']]);
                 } else {
-                    $this->itemRepository->delete($item['id']);
+                    $this->orderItemRepository->delete($item['id']);
                 }
             }
         }
     }
 
     /**
-     * Get item name (placeholder - would come from item service)
+     * Get item name from item repository
      */
     private function getItemName(int $itemId): string
     {
-        // In real implementation, this would call item service
-        return "Item #{$itemId}";
+        $item = $this->itemRepository->find($itemId);
+        return $item ? $item->name : "Unknown Item #{$itemId}";
     }
 
     /**

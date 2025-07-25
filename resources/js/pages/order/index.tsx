@@ -101,7 +101,7 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
         <PageContent>
           {/* Stats Cards - Minimal Design */}
           <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {statsCards.map((stat, index) => {
+            {/* {statsCards.map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <div key={index} className="rounded-lg border border-gray-100 bg-white p-3 transition-colors hover:border-gray-200">
@@ -125,12 +125,20 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
                   </div>
                 </div>
               );
-            })}
+            })} */}
+          </div>
+
+          <div className="grid grid-cols-4">
+            {statsCards.map((stat, index) => (
+              <Card key={index} className="rounded-none p-0">
+                <stat.icon />
+              </Card>
+            ))}
           </div>
 
           {/* Orders Data Table */}
-          <Card className="border-gray-200 shadow-sm">
-            <CardContent className="p-6">
+          <Card className="p border-gray-200 shadow-sm">
+            <CardContent>
               {orders.data.length === 0 ? (
                 <div className="flex flex-col items-center justify-center px-4 py-24">
                   <div className="relative mb-6">
