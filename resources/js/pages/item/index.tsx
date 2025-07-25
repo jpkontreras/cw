@@ -1,28 +1,15 @@
-import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/page';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
+import { Head, Link, router } from '@inertiajs/react';
+import { Edit, Filter, MoreVertical, Plus, Search, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface ItemData {
   id: number;
@@ -98,13 +85,8 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
               <div className="flex items-center gap-2">
                 <form onSubmit={handleSearch} className="flex items-center gap-2">
                   <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search items..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-8 w-[250px]"
-                    />
+                    <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search items..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-[250px] pl-8" />
                   </div>
                 </form>
                 <Button variant="outline" size="icon">
@@ -129,15 +111,13 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
               </TableHeader>
               <TableBody>
                 {items.data.map((item) => {
-                  const category = categories.find(c => c.id === item.category_id);
+                  const category = categories.find((c) => c.id === item.category_id);
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         <div>
                           <div>{item.name}</div>
-                          {item.description && (
-                            <div className="text-sm text-muted-foreground">{item.description}</div>
-                          )}
+                          {item.description && <div className="text-sm text-muted-foreground">{item.description}</div>}
                         </div>
                       </TableCell>
                       <TableCell>{item.sku || '-'}</TableCell>
@@ -150,7 +130,9 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
                             <div className="flex items-center gap-2">
                               <span>{item.stock_quantity}</span>
                               {item.low_stock_threshold && item.stock_quantity <= item.low_stock_threshold && (
-                                <Badge variant="destructive" className="text-xs">Low Stock</Badge>
+                                <Badge variant="destructive" className="text-xs">
+                                  Low Stock
+                                </Badge>
                               )}
                             </div>
                           ) : (
@@ -159,9 +141,7 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
                         </TableCell>
                       )}
                       <TableCell>
-                        <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                          {item.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <Badge variant={item.is_active ? 'default' : 'secondary'}>{item.is_active ? 'Active' : 'Inactive'}</Badge>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -172,9 +152,7 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                              <Link href={`/items/${item.id}`}>
-                                View Details
-                              </Link>
+                              <Link href={`/items/${item.id}`}>View Details</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/items/${item.id}/edit`}>
@@ -184,23 +162,16 @@ export default function ItemIndex({ items, categories, features }: PageProps) {
                             </DropdownMenuItem>
                             {features.variants && (
                               <DropdownMenuItem asChild>
-                                <Link href={`/items/${item.id}/variants`}>
-                                  Manage Variants
-                                </Link>
+                                <Link href={`/items/${item.id}/variants`}>Manage Variants</Link>
                               </DropdownMenuItem>
                             )}
                             {features.modifiers && (
                               <DropdownMenuItem asChild>
-                                <Link href={`/items/${item.id}/modifiers`}>
-                                  Manage Modifiers
-                                </Link>
+                                <Link href={`/items/${item.id}/modifiers`}>Manage Modifiers</Link>
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onSelect={() => handleDelete(item.id)}
-                            >
+                            <DropdownMenuItem className="text-destructive" onSelect={() => handleDelete(item.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>

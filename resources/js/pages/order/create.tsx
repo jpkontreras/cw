@@ -1,5 +1,5 @@
 import { BottomActionBar, MenuItemCard, ViewModeToggle, type ViewMode } from '@/components/modules/order';
-import { PageContent, PageHeader, PageLayout } from '@/components/page-header';
+import { PageContent, PageHeader, PageLayout } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

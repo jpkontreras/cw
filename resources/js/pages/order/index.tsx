@@ -1,5 +1,5 @@
 import { OrderDataTable } from '@/components/modules/order/order-data-table';
-import { PageContent, PageHeader, PageLayout } from '@/components/page-header';
+import { PageContent, PageHeader, PageLayout } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';

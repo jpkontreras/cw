@@ -1,4 +1,4 @@
-import { PageContent, PageHeader } from '@/components/page-header';
+import { PageContent, PageHeader } from '@/components/page';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 import React from 'react';

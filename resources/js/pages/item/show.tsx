@@ -1,12 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/page';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, Package, DollarSign, Tag, Layers } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft, DollarSign, Edit, Layers, Package, Tag } from 'lucide-react';
 
 interface ItemData {
   id: number;
@@ -102,9 +102,7 @@ export default function ItemShow({ item, features }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(item.base_price)}</div>
-              <p className="text-xs text-muted-foreground">
-                Cost: {formatCurrency(item.cost)}
-              </p>
+              <p className="text-xs text-muted-foreground">Cost: {formatCurrency(item.cost)}</p>
             </CardContent>
           </Card>
 
@@ -115,9 +113,7 @@ export default function ItemShow({ item, features }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{profitMargin.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground">
-                {formatCurrency(profit)} per item
-              </p>
+              <p className="text-xs text-muted-foreground">{formatCurrency(profit)} per item</p>
             </CardContent>
           </Card>
 
@@ -128,13 +124,9 @@ export default function ItemShow({ item, features }: PageProps) {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {item.stock_quantity !== null ? item.stock_quantity : 'N/A'}
-                </div>
+                <div className="text-2xl font-bold">{item.stock_quantity !== null ? item.stock_quantity : 'N/A'}</div>
                 {item.low_stock_threshold && item.stock_quantity !== null && (
-                  <p className="text-xs text-muted-foreground">
-                    Low stock at: {item.low_stock_threshold}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Low stock at: {item.low_stock_threshold}</p>
                 )}
               </CardContent>
             </Card>
@@ -144,15 +136,9 @@ export default function ItemShow({ item, features }: PageProps) {
         <Tabs defaultValue="details" className="space-y-4">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            {features.variants && item.variants && item.variants.length > 0 && (
-              <TabsTrigger value="variants">Variants</TabsTrigger>
-            )}
-            {features.modifiers && item.modifierGroups && item.modifierGroups.length > 0 && (
-              <TabsTrigger value="modifiers">Modifiers</TabsTrigger>
-            )}
-            {features.location_pricing && item.pricing && item.pricing.length > 0 && (
-              <TabsTrigger value="pricing">Location Pricing</TabsTrigger>
-            )}
+            {features.variants && item.variants && item.variants.length > 0 && <TabsTrigger value="variants">Variants</TabsTrigger>}
+            {features.modifiers && item.modifierGroups && item.modifierGroups.length > 0 && <TabsTrigger value="modifiers">Modifiers</TabsTrigger>}
+            {features.location_pricing && item.pricing && item.pricing.length > 0 && <TabsTrigger value="pricing">Location Pricing</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="details" className="space-y-4">
@@ -164,9 +150,7 @@ export default function ItemShow({ item, features }: PageProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <Badge variant={item.is_active ? 'default' : 'secondary'}>{item.is_active ? 'Active' : 'Inactive'}</Badge>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Category</p>
@@ -195,9 +179,7 @@ export default function ItemShow({ item, features }: PageProps) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Created</p>
-                    <p className="text-sm">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </p>
+                    <p className="text-sm">{new Date(item.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -209,9 +191,7 @@ export default function ItemShow({ item, features }: PageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Product Variants</CardTitle>
-                  <CardDescription>
-                    Different variations of this item
-                  </CardDescription>
+                  <CardDescription>Different variations of this item</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -219,18 +199,14 @@ export default function ItemShow({ item, features }: PageProps) {
                       <div key={variant.id} className="flex items-center justify-between border-b pb-4 last:border-0">
                         <div>
                           <p className="font-medium">{variant.name}</p>
-                          {variant.sku && (
-                            <p className="text-sm text-muted-foreground">SKU: {variant.sku}</p>
-                          )}
+                          {variant.sku && <p className="text-sm text-muted-foreground">SKU: {variant.sku}</p>}
                         </div>
                         <div className="flex items-center gap-4">
                           <p className="text-sm">
                             {variant.price_adjustment > 0 ? '+' : ''}
                             {formatCurrency(variant.price_adjustment)}
                           </p>
-                          <Badge variant={variant.is_active ? 'default' : 'secondary'}>
-                            {variant.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
+                          <Badge variant={variant.is_active ? 'default' : 'secondary'}>{variant.is_active ? 'Active' : 'Inactive'}</Badge>
                         </div>
                       </div>
                     ))}
@@ -250,8 +226,8 @@ export default function ItemShow({ item, features }: PageProps) {
                       {group.min_selections === group.max_selections
                         ? `Select exactly ${group.min_selections}`
                         : group.min_selections > 0
-                        ? `Select ${group.min_selections} to ${group.max_selections}`
-                        : `Select up to ${group.max_selections}`}
+                          ? `Select ${group.min_selections} to ${group.max_selections}`
+                          : `Select up to ${group.max_selections}`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -261,7 +237,9 @@ export default function ItemShow({ item, features }: PageProps) {
                           <div className="flex items-center gap-2">
                             <span>{modifier.name}</span>
                             {modifier.is_default && (
-                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                Default
+                              </Badge>
                             )}
                           </div>
                           {modifier.price_adjustment !== 0 && (
@@ -284,9 +262,7 @@ export default function ItemShow({ item, features }: PageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Location-Specific Pricing</CardTitle>
-                  <CardDescription>
-                    Custom pricing for different locations
-                  </CardDescription>
+                  <CardDescription>Custom pricing for different locations</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -297,9 +273,7 @@ export default function ItemShow({ item, features }: PageProps) {
                         </div>
                         <div className="flex items-center gap-4">
                           <p className="font-medium">{formatCurrency(price.price)}</p>
-                          <Badge variant={price.is_active ? 'default' : 'secondary'}>
-                            {price.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
+                          <Badge variant={price.is_active ? 'default' : 'secondary'}>{price.is_active ? 'Active' : 'Inactive'}</Badge>
                         </div>
                       </div>
                     ))}

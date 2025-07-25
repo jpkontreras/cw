@@ -1,19 +1,13 @@
-import { Head, Link, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 
 interface PageProps {
@@ -69,32 +63,19 @@ export default function ItemCreate({ categories, features }: PageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Enter the basic details for your new item
-              </CardDescription>
+              <CardDescription>Enter the basic details for your new item</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                    placeholder="e.g., Cheeseburger"
-                    required
-                  />
-                  {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name}</p>
-                  )}
+                  <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="e.g., Cheeseburger" required />
+                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="category_id">Category</Label>
-                  <Select
-                    value={data.category_id}
-                    onValueChange={(value) => setData('category_id', value)}
-                  >
+                  <Select value={data.category_id} onValueChange={(value) => setData('category_id', value)}>
                     <SelectTrigger id="category_id">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -106,9 +87,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.category_id && (
-                    <p className="text-sm text-destructive">{errors.category_id}</p>
-                  )}
+                  {errors.category_id && <p className="text-sm text-destructive">{errors.category_id}</p>}
                 </div>
               </div>
 
@@ -121,36 +100,20 @@ export default function ItemCreate({ categories, features }: PageProps) {
                   placeholder="Describe your item..."
                   rows={3}
                 />
-                {errors.description && (
-                  <p className="text-sm text-destructive">{errors.description}</p>
-                )}
+                {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    value={data.sku}
-                    onChange={(e) => setData('sku', e.target.value)}
-                    placeholder="e.g., BURG-001"
-                  />
-                  {errors.sku && (
-                    <p className="text-sm text-destructive">{errors.sku}</p>
-                  )}
+                  <Input id="sku" value={data.sku} onChange={(e) => setData('sku', e.target.value)} placeholder="e.g., BURG-001" />
+                  {errors.sku && <p className="text-sm text-destructive">{errors.sku}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="barcode">Barcode</Label>
-                  <Input
-                    id="barcode"
-                    value={data.barcode}
-                    onChange={(e) => setData('barcode', e.target.value)}
-                    placeholder="e.g., 1234567890123"
-                  />
-                  {errors.barcode && (
-                    <p className="text-sm text-destructive">{errors.barcode}</p>
-                  )}
+                  <Input id="barcode" value={data.barcode} onChange={(e) => setData('barcode', e.target.value)} placeholder="e.g., 1234567890123" />
+                  {errors.barcode && <p className="text-sm text-destructive">{errors.barcode}</p>}
                 </div>
               </div>
             </CardContent>
@@ -159,9 +122,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Pricing</CardTitle>
-              <CardDescription>
-                Set the pricing information for this item
-              </CardDescription>
+              <CardDescription>Set the pricing information for this item</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -176,9 +137,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
                     placeholder="0.00"
                     required
                   />
-                  {errors.base_price && (
-                    <p className="text-sm text-destructive">{errors.base_price}</p>
-                  )}
+                  {errors.base_price && <p className="text-sm text-destructive">{errors.base_price}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -192,9 +151,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
                     placeholder="0.00"
                     required
                   />
-                  {errors.cost && (
-                    <p className="text-sm text-destructive">{errors.cost}</p>
-                  )}
+                  {errors.cost && <p className="text-sm text-destructive">{errors.cost}</p>}
                 </div>
               </div>
             </CardContent>
@@ -204,9 +161,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Inventory</CardTitle>
-                <CardDescription>
-                  Manage stock levels for this item
-                </CardDescription>
+                <CardDescription>Manage stock levels for this item</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -219,9 +174,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
                       onChange={(e) => setData('stock_quantity', e.target.value)}
                       placeholder="0"
                     />
-                    {errors.stock_quantity && (
-                      <p className="text-sm text-destructive">{errors.stock_quantity}</p>
-                    )}
+                    {errors.stock_quantity && <p className="text-sm text-destructive">{errors.stock_quantity}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -233,9 +186,7 @@ export default function ItemCreate({ categories, features }: PageProps) {
                       onChange={(e) => setData('low_stock_threshold', e.target.value)}
                       placeholder="10"
                     />
-                    {errors.low_stock_threshold && (
-                      <p className="text-sm text-destructive">{errors.low_stock_threshold}</p>
-                    )}
+                    {errors.low_stock_threshold && <p className="text-sm text-destructive">{errors.low_stock_threshold}</p>}
                   </div>
                 </div>
               </CardContent>
@@ -245,38 +196,24 @@ export default function ItemCreate({ categories, features }: PageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Settings</CardTitle>
-              <CardDescription>
-                Configure additional options for this item
-              </CardDescription>
+              <CardDescription>Configure additional options for this item</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="is_active">Active</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Make this item available for ordering
-                  </p>
+                  <p className="text-sm text-muted-foreground">Make this item available for ordering</p>
                 </div>
-                <Switch
-                  id="is_active"
-                  checked={data.is_active}
-                  onCheckedChange={(checked) => setData('is_active', checked)}
-                />
+                <Switch id="is_active" checked={data.is_active} onCheckedChange={(checked) => setData('is_active', checked)} />
               </div>
 
               {features.recipes && (
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="is_compound">Compound Item</Label>
-                    <p className="text-sm text-muted-foreground">
-                      This item is made from other items (recipe)
-                    </p>
+                    <p className="text-sm text-muted-foreground">This item is made from other items (recipe)</p>
                   </div>
-                  <Switch
-                    id="is_compound"
-                    checked={data.is_compound}
-                    onCheckedChange={(checked) => setData('is_compound', checked)}
-                  />
+                  <Switch id="is_compound" checked={data.is_compound} onCheckedChange={(checked) => setData('is_compound', checked)} />
                 </div>
               )}
             </CardContent>
