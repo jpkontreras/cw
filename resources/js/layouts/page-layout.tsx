@@ -236,15 +236,14 @@ const PageHeader = React.forwardRef<HTMLDivElement, InternalPageHeaderProps>(
         className={cn(
           'absolute top-0 left-0 right-0 z-50 border-b bg-background/95',
           'backdrop-blur supports-[backdrop-filter]:bg-background/60',
-          'transition-all duration-300 ease-in-out',
           className
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div 
             className={cn(
-              'flex items-center justify-between transition-all duration-200',
-              isCompact ? 'py-2' : 'py-4 sm:py-6'
+              'flex items-center justify-between',
+              isCompact ? 'h-[45px]' : 'py-4 sm:py-6'
             )}
           >
             {/* Title Section */}
@@ -253,9 +252,8 @@ const PageHeader = React.forwardRef<HTMLDivElement, InternalPageHeaderProps>(
                 <h1 
                   className={cn(
                     'truncate font-semibold tracking-tight',
-                    'transition-all duration-200 ease-out',
                     isCompact 
-                      ? 'text-base sm:text-lg' 
+                      ? 'text-lg leading-none' 
                       : 'text-2xl sm:text-3xl'
                   )}
                 >
@@ -266,7 +264,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, InternalPageHeaderProps>(
               {finalSubtitle && (
                 <p 
                   className={cn(
-                    'text-muted-foreground transition-all duration-200',
+                    'text-muted-foreground',
                     'overflow-hidden',
                     isCompact
                       ? 'invisible max-h-0 opacity-0'
@@ -321,7 +319,7 @@ const PageActions = React.forwardRef<HTMLDivElement, PageActionsProps>(
       <div 
         ref={ref} 
         className={cn(
-          'flex items-center gap-2 transition-all duration-200',
+          'flex items-center gap-2',
           // Use CSS selectors to target buttons within the actions
           isCompact && [
             '[&_button]:h-8',
@@ -390,6 +388,7 @@ interface InternalPageBottomProps extends PageBottomProps {
 const PageBottom = React.forwardRef<HTMLDivElement, InternalPageBottomProps>(
   ({ children, className, onHeightChange }, ref) => {
     const [bottomRef, { height }] = useMeasure<HTMLDivElement>();
+    const { isCompact } = usePageContext();
 
     React.useEffect(() => {
       onHeightChange?.(height);
@@ -409,8 +408,23 @@ const PageBottom = React.forwardRef<HTMLDivElement, InternalPageBottomProps>(
           className
         )}
       >
-        <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          {children}
+        <div className={cn(
+          'container mx-auto px-4 sm:px-6 lg:px-8',
+          isCompact ? 'h-[45px] flex items-center' : 'py-4'
+        )}>
+          <div className={cn(
+            'w-full',
+            isCompact && [
+              '[&_button]:h-8',
+              '[&_button]:px-3',
+              '[&_button]:text-xs',
+              '[&_button_svg]:h-4',
+              '[&_button_svg]:w-4',
+              'text-xs',
+            ].join(' ')
+          )}>
+            {children}
+          </div>
         </div>
       </div>
     );

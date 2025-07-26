@@ -1,7 +1,7 @@
 import { OrderDataTable } from '@/components/modules/order/order-data-table';
-import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import type { OrderFilters, OrderListPageProps } from '@/types/modules/order';
 import { formatCurrency } from '@/types/modules/order/utils';
 import { Head, Link, router } from '@inertiajs/react';
@@ -103,12 +103,6 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
 
         <Page.Content>
           <div className="space-y-6">
-            {/* Demo content to show scrolling */}
-            <div className="rounded-lg bg-gray-100 p-6">
-              <h2 className="mb-2 text-lg font-semibold">Scrollable Content Area</h2>
-              <p>This area will scroll when content exceeds the viewport height.</p>
-            </div>
-
             {/* Stats Cards - Minimal Design */}
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {statsCards.map((stat, index) => {
@@ -136,9 +130,10 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
             </div>
 
             {/* Orders Data Table */}
-            <div className="rounded-lg border bg-card">
+            <div>
               {orders.data.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-4 py-24">
+                <div className="rounded-lg border bg-card">
+                  <div className="flex flex-col items-center justify-center px-4 py-24">
                   <div className="relative mb-6">
                     <div className="absolute inset-0 animate-pulse rounded-full bg-blue-100 opacity-30 blur-3xl" />
                     <div className="relative rounded-full bg-white p-6 shadow-lg">
@@ -157,21 +152,20 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
                       Create First Order
                     </Button>
                   </div>
+                  </div>
                 </div>
               ) : (
-                <div className="p-6">
-                  <OrderDataTable
-                    orders={orders.data}
-                    locations={locations}
-                    statuses={statuses}
-                    types={types}
-                    filters={filters}
-                    onExport={handleExport}
-                    onFilterChange={handleFilterChange}
-                    onSearch={handleSearch}
-                    searchQuery={searchQuery}
-                  />
-                </div>
+                <OrderDataTable
+                  orders={orders.data}
+                  locations={locations}
+                  statuses={statuses}
+                  types={types}
+                  filters={filters}
+                  onExport={handleExport}
+                  onFilterChange={handleFilterChange}
+                  onSearch={handleSearch}
+                  searchQuery={searchQuery}
+                />
               )}
             </div>
           </div>

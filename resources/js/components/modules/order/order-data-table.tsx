@@ -359,6 +359,7 @@ export function OrderDataTable({
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={(visibility) => setColumnVisibility(visibility as any)}
         onRowClick={(order) => router.visit(`/orders/${order.id}`)}
+        stickyHeader={true}
       />
     </div>
   );
