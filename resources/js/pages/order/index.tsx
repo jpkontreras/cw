@@ -8,7 +8,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-export default function OrderIndex({ orders, locations, filters: initialFilters = {}, statuses, types, stats }: OrderListPageProps) {
+function OrderIndexContent({ orders, locations, filters: initialFilters = {}, statuses, types, stats }: OrderListPageProps) {
   const [filters, setFilters] = useState<OrderFilters>(initialFilters);
   const [searchQuery, setSearchQuery] = useState(initialFilters.search || '');
 
@@ -84,56 +84,53 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
   };
 
   return (
-    <AppLayout>
-      <Head title="Orders" />
+    <>
+      <Page.Header
+        title="Orders"
+        subtitle="Manage and track all your restaurant orders"
+        actions={
+          <Link href="/orders/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Order
+            </Button>
+          </Link>
+        }
+      />
 
-      <Page>
-        <Page.Header>
-          <Page.Title>Orders</Page.Title>
-          <Page.Subtitle>Manage and track all your restaurant orders</Page.Subtitle>
-          <Page.Actions>
-            <Link href="/orders/create">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Order
-              </Button>
-            </Link>
-          </Page.Actions>
-        </Page.Header>
-
-        <Page.Content>
-          <div className="space-y-6">
-            {/* Stats Cards - Minimal Design */}
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-              {statsCards.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <div key={index} className="rounded-lg border px-3 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`h-4 w-4 ${stat.color} flex-shrink-0`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] leading-none font-medium text-muted-foreground">{stat.title}</p>
-                        <div className="mt-0.5 flex items-baseline gap-2">
-                          <p className="text-lg leading-none font-semibold">{stat.value}</p>
-                          {stat.trend && (
-                            <span className={`flex items-center gap-0.5 text-[10px] font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
-                              <span>{stat.trendUp ? '↑' : '↓'}</span>
-                              {stat.trend}
-                            </span>
-                          )}
-                        </div>
+      <Page.Content>
+        <div className="space-y-6">
+          {/* Stats Cards - Minimal Design */}
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {statsCards.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <div key={index} className="rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`h-4 w-4 ${stat.color} flex-shrink-0`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] leading-none font-medium text-muted-foreground">{stat.title}</p>
+                      <div className="mt-0.5 flex items-baseline gap-2">
+                        <p className="text-lg leading-none font-semibold">{stat.value}</p>
+                        {stat.trend && (
+                          <span className={`flex items-center gap-0.5 text-[10px] font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
+                            <span>{stat.trendUp ? '↑' : '↓'}</span>
+                            {stat.trend}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Orders Data Table */}
-            <div>
-              {orders.data.length === 0 ? (
-                <div className="rounded-lg border bg-card">
-                  <div className="flex flex-col items-center justify-center px-4 py-24">
+          {/* Orders Data Table */}
+          <div>
+            {orders.data.length === 0 ? (
+              <div className="rounded-lg border bg-card">
+                <div className="flex flex-col items-center justify-center px-4 py-24">
                   <div className="relative mb-6">
                     <div className="absolute inset-0 animate-pulse rounded-full bg-blue-100 opacity-30 blur-3xl" />
                     <div className="relative rounded-full bg-white p-6 shadow-lg">
@@ -152,64 +149,74 @@ export default function OrderIndex({ orders, locations, filters: initialFilters 
                       Create First Order
                     </Button>
                   </div>
-                  </div>
                 </div>
-              ) : (
-                <OrderDataTable
-                  orders={orders.data}
-                  locations={locations}
-                  statuses={statuses}
-                  types={types}
-                  filters={filters}
-                  onExport={handleExport}
-                  onFilterChange={handleFilterChange}
-                  onSearch={handleSearch}
-                  searchQuery={searchQuery}
-                />
-              )}
+              </div>
+            ) : (
+              <OrderDataTable
+                orders={orders.data}
+                locations={locations}
+                statuses={statuses}
+                types={types}
+                filters={filters}
+                onExport={handleExport}
+                onFilterChange={handleFilterChange}
+                onSearch={handleSearch}
+                searchQuery={searchQuery}
+              />
+            )}
+          </div>
+        </div>
+      </Page.Content>
+
+      {/* Pagination in Page.Bottom */}
+      {orders.data.length > 0 && (
+        <Page.Bottom>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Showing {(orders.currentPage - 1) * orders.perPage + 1} to {Math.min(orders.currentPage * orders.perPage, orders.total)} of{' '}
+              {orders.total} orders (Page {orders.currentPage} of {orders.lastPage})
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handlePageChange(orders.currentPage - 1)} disabled={orders.currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              {Array.from({ length: orders.lastPage }, (_, i) => i + 1)
+                .filter((page) => {
+                  const current = orders.currentPage;
+                  return page === 1 || page === orders.lastPage || (page >= current - 1 && page <= current + 1);
+                })
+                .map((page, index, array) => (
+                  <div key={page} className="flex items-center gap-2">
+                    {index > 0 && array[index - 1] !== page - 1 && <span className="text-gray-400">...</span>}
+                    <Button variant={page === orders.currentPage ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)}>
+                      {page}
+                    </Button>
+                  </div>
+                ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(orders.currentPage + 1)}
+                disabled={orders.currentPage === orders.lastPage}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        </Page.Content>
+        </Page.Bottom>
+      )}
+    </>
+  );
+}
 
-        {/* Pagination in Page.Bottom */}
-        {orders.data.length > 0 && (
-          <Page.Bottom>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                Showing {(orders.currentPage - 1) * orders.perPage + 1} to {Math.min(orders.currentPage * orders.perPage, orders.total)} of{' '}
-                {orders.total} orders (Page {orders.currentPage} of {orders.lastPage})
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handlePageChange(orders.currentPage - 1)} disabled={orders.currentPage === 1}>
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                {Array.from({ length: orders.lastPage }, (_, i) => i + 1)
-                  .filter((page) => {
-                    const current = orders.currentPage;
-                    return page === 1 || page === orders.lastPage || (page >= current - 1 && page <= current + 1);
-                  })
-                  .map((page, index, array) => (
-                    <div key={page} className="flex items-center gap-2">
-                      {index > 0 && array[index - 1] !== page - 1 && <span className="text-gray-400">...</span>}
-                      <Button variant={page === orders.currentPage ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)}>
-                        {page}
-                      </Button>
-                    </div>
-                  ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(orders.currentPage + 1)}
-                  disabled={orders.currentPage === orders.lastPage}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </Page.Bottom>
-        )}
+export default function OrderIndex(props: OrderListPageProps) {
+  return (
+    <AppLayout>
+      <Head title="Orders" />
+      <Page>
+        <OrderIndexContent {...props} />
       </Page>
     </AppLayout>
   );
