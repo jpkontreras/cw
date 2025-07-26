@@ -1,11 +1,12 @@
 import { OrderDataTable } from '@/components/modules/order/order-data-table';
 import { Button } from '@/components/ui/button';
+import { LaravelPagination } from '@/components/laravel-pagination';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import type { OrderFilters, OrderListPageProps } from '@/types/modules/order';
 import { formatCurrency } from '@/types/modules/order/utils';
 import { Head, Link, router } from '@inertiajs/react';
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
+import { CheckCircle, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 function OrderIndexContent({ orders, locations, filters: initialFilters = {}, statuses, types, stats }: OrderListPageProps) {
@@ -74,13 +75,6 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
   const handleExport = () => {
     const params = new URLSearchParams(filters as any);
     window.location.href = `/orders/export?${params.toString()}`;
-  };
-
-  const handlePageChange = (page: number) => {
-    router.get(`/orders?page=${page}`, filters as any, {
-      preserveState: true,
-      preserveScroll: false,
-    });
   };
 
   return (
@@ -171,40 +165,12 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
       {/* Pagination in Page.Bottom */}
       {orders.data.length > 0 && (
         <Page.Bottom>
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing {(orders.currentPage - 1) * orders.perPage + 1} to {Math.min(orders.currentPage * orders.perPage, orders.total)} of{' '}
-              {orders.total} orders (Page {orders.currentPage} of {orders.lastPage})
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => handlePageChange(orders.currentPage - 1)} disabled={orders.currentPage === 1}>
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              {Array.from({ length: orders.lastPage }, (_, i) => i + 1)
-                .filter((page) => {
-                  const current = orders.currentPage;
-                  return page === 1 || page === orders.lastPage || (page >= current - 1 && page <= current + 1);
-                })
-                .map((page, index, array) => (
-                  <div key={page} className="flex items-center gap-2">
-                    {index > 0 && array[index - 1] !== page - 1 && <span className="text-gray-400">...</span>}
-                    <Button variant={page === orders.currentPage ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)}>
-                      {page}
-                    </Button>
-                  </div>
-                ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(orders.currentPage + 1)}
-                disabled={orders.currentPage === orders.lastPage}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <LaravelPagination 
+            pagination={orders} 
+            filters={filters}
+            preserveScroll={false}
+            preserveState={true}
+          />
         </Page.Bottom>
       )}
     </>

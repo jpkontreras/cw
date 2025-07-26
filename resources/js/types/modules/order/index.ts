@@ -2,6 +2,7 @@
 
 // Import generated types
 import '@/types/generated';
+import type { SimplePagination } from '@/types/pagination';
 
 // Re-export the generated types with proper typing
 export type Order = Colame.Order.Data.OrderData & {
@@ -79,18 +80,9 @@ export type PaymentMethod =
 
 // Component prop types
 export interface OrderListPageProps {
-  orders: {
-    data: Order[];
-    currentPage: number;
-    lastPage: number;
-    perPage: number;
-    total: number;
-    current_page?: number; // for backwards compatibility
-    last_page?: number; // for backwards compatibility
-    per_page?: number; // for backwards compatibility
-  };
+  orders: SimplePagination<Order>;
   locations: Array<{ id: number; name: string }>;
-  filters: Record<string, any>;
+  filters: OrderFilters;
   statuses: string[];
   types: string[];
   stats?: {
@@ -107,10 +99,10 @@ export interface OrderListPageProps {
 
 export interface OrderDetailPageProps {
   order: Order;
-  user?: any;
-  location?: any;
+  user?: unknown;
+  location?: unknown;
   payments?: PaymentTransaction[];
-  offers?: any[];
+  offers?: unknown[];
   isPaid: boolean;
   remainingAmount: number;
   statusHistory?: OrderStatusHistory[];
