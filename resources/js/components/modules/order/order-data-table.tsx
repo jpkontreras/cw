@@ -66,8 +66,8 @@ export function OrderDataTable({
       cell: ({ row }) => {
         const order = row.original;
         return (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-medium">{formatOrderNumber(order.orderNumber)}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium whitespace-nowrap">{formatOrderNumber(order.orderNumber)}</span>
             {order.priority === 'high' && (
               <Badge variant="destructive" className="shrink-0 text-xs">
                 Priority
@@ -83,9 +83,9 @@ export function OrderDataTable({
       cell: ({ row }) => {
         const order = row.original;
         return (
-          <div className="min-w-0">
-            <div className="truncate font-medium">{order.customerName || 'Walk-in'}</div>
-            {order.tableNumber && <div className="truncate text-sm text-gray-500">Table {order.tableNumber}</div>}
+          <div>
+            <div className="font-medium whitespace-nowrap">{order.customerName || 'Walk-in'}</div>
+            {order.tableNumber && <div className="text-sm text-gray-500 whitespace-nowrap">Table {order.tableNumber}</div>}
           </div>
         );
       },
@@ -153,7 +153,7 @@ export function OrderDataTable({
       header: 'Time',
       cell: ({ row }) => {
         const order = row.original;
-        return <span className="text-sm text-gray-500">{getOrderAge(order)}</span>;
+        return <span className="text-sm text-gray-500 whitespace-nowrap">{getOrderAge(order)}</span>;
       },
     },
     {

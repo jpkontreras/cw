@@ -135,10 +135,13 @@ export function DataTable<TData, TValue>({
           </DropdownMenu>
         )}
       </div>
-      <div className="rounded-md border">
+      <div className={cn(
+        "rounded-md border",
+        stickyHeader && "overflow-x-auto"
+      )}>
         <Table noWrapper={stickyHeader}>
           <TableHeader className={cn(
-            stickyHeader && "sticky top-0 z-10 bg-background"
+            stickyHeader && "sticky top-0 z-10 bg-background shadow-sm"
           )}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>

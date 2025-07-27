@@ -159,20 +159,20 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
               />
             )}
           </div>
+
+          {/* Pagination */}
+          {orders.data.length > 0 && (
+            <div className="mt-6">
+              <LaravelPagination 
+                pagination={orders} 
+                filters={filters}
+                preserveScroll={false}
+                preserveState={true}
+              />
+            </div>
+          )}
         </div>
       </Page.Content>
-
-      {/* Pagination in Page.Bottom */}
-      {orders.data.length > 0 && (
-        <Page.Bottom>
-          <LaravelPagination 
-            pagination={orders} 
-            filters={filters}
-            preserveScroll={false}
-            preserveState={true}
-          />
-        </Page.Bottom>
-      )}
     </>
   );
 }
