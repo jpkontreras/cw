@@ -1,15 +1,17 @@
-import { OrderDataTable } from '@/components/modules/order/order-data-table';
+// import { OrderDataTable } from '@/components/modules/order/order-data-table';
 import { Button } from '@/components/ui/button';
-import { LaravelPagination } from '@/components/laravel-pagination';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import type { OrderFilters, OrderListPageProps } from '@/types/modules/order';
+import type { OrderListPageProps } from '@/types/modules/order';
 import { formatCurrency } from '@/types/modules/order/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo } from 'react';
 
-function OrderIndexContent({ orders, pagination, metadata, locations, filters: initialFilters = {}, stats }: OrderListPageProps) {
+function OrderIndexContent(data) {
+  console.log({ data });
+
+  return;
   // Stats cards data
   const statsCards = useMemo(
     () => [
@@ -98,53 +100,28 @@ function OrderIndexContent({ orders, pagination, metadata, locations, filters: i
           </div>
 
           {/* Orders Data Table */}
-          <div>
-            {!orders || orders.length === 0 ? (
-              <div className="rounded-lg border bg-card">
-                <div className="flex flex-col items-center justify-center px-4 py-24">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-blue-100 opacity-30 blur-3xl" />
-                    <div className="relative rounded-full bg-white p-6 shadow-lg">
-                      <Package className="h-16 w-16 text-gray-400" />
-                    </div>
-                  </div>
-                  <h3 className="mb-2 text-xl font-semibold text-gray-900">No orders found</h3>
-                  <p className="mb-6 max-w-md text-center text-gray-600">
-                    {Object.keys(filters).length > 0
-                      ? 'No orders match your current filters. Try adjusting your search criteria.'
-                      : 'Your orders will appear here once customers start placing them.'}
-                  </p>
-                  <div className="flex gap-3">
-                    <Button onClick={() => router.visit('/orders/create')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Order
-                    </Button>
-                  </div>
+          <div className="rounded-lg border bg-card">
+            <div className="flex flex-col items-center justify-center px-4 py-24">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 animate-pulse rounded-full bg-blue-100 opacity-30 blur-3xl" />
+                <div className="relative rounded-full bg-white p-6 shadow-lg">
+                  <Package className="h-16 w-16 text-gray-400" />
                 </div>
               </div>
-            ) : (
-              <OrderDataTable
-                orders={orders}
-                pagination={pagination}
-                metadata={metadata}
-                locations={locations}
-                filters={initialFilters}
-                onExport={handleExport}
-              />
-            )}
-          </div>
-
-          {/* Pagination */}
-          {orders && orders.length > 0 && pagination && (
-            <div className="mt-6">
-              <LaravelPagination 
-                pagination={pagination} 
-                filters={initialFilters}
-                preserveScroll={false}
-                preserveState={true}
-              />
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">No orders found</h3>
+              <p className="mb-6 max-w-md text-center text-gray-600">
+                {Object.keys({}).length > 0
+                  ? 'No orders match your current filters. Try adjusting your search criteria.'
+                  : 'Your orders will appear here once customers start placing them.'}
+              </p>
+              <div className="flex gap-3">
+                <Button onClick={() => router.visit('/orders/create')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Order
+                </Button>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </Page.Content>
     </>
