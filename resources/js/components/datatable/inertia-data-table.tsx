@@ -104,10 +104,25 @@ export function InertiaDataTable<TData, TValue>({
   const [searchValue, setSearchValue] = React.useState(
     (activeFilters.search as string) || ''
   )
+  
+  // Sync search value when activeFilters change (e.g., from URL navigation)
+  React.useEffect(() => {
+    const newSearchValue = (activeFilters.search as string) || ''
+    if (newSearchValue !== searchValue) {
+      setSearchValue(newSearchValue)
+    }
+  }, [activeFilters.search])
 
   const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
+  const isFirstRender = React.useRef(true)
 
   React.useEffect(() => {
+    // Skip on first render to avoid initial sync
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
@@ -123,7 +138,7 @@ export function InertiaDataTable<TData, TValue>({
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [searchValue, activeFilters.search, setFilter])
+  }, [searchValue]) // Remove activeFilters.search dependency to avoid circular updates
 
   // Handle pagination
   const handlePageChange = React.useCallback(

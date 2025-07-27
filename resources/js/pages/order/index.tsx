@@ -7,18 +7,15 @@ import type { OrderFilters, OrderListPageProps } from '@/types/modules/order';
 import { formatCurrency } from '@/types/modules/order/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-function OrderIndexContent({ orders, locations, filters: initialFilters = {}, statuses, types, stats }: OrderListPageProps) {
-  const [filters, setFilters] = useState<OrderFilters>(initialFilters);
-  const [searchQuery, setSearchQuery] = useState(initialFilters.search || '');
-
+function OrderIndexContent({ orders, pagination, metadata, locations, filters: initialFilters = {}, stats }: OrderListPageProps) {
   // Stats cards data
   const statsCards = useMemo(
     () => [
       {
         title: 'Total Orders',
-        value: stats?.totalOrders || orders.total,
+        value: stats?.totalOrders || stats?.total_orders || 0,
         icon: ShoppingCart,
         color: 'text-blue-600',
         indicatorColor: 'bg-blue-500',
@@ -27,21 +24,21 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
       },
       {
         title: 'Active Orders',
-        value: stats?.activeOrders || 0,
+        value: stats?.activeOrders || stats?.active_orders || 0,
         icon: Clock,
         color: 'text-orange-600',
         indicatorColor: 'bg-orange-500',
       },
       {
         title: 'Ready to Serve',
-        value: stats?.readyToServe || 0,
+        value: stats?.readyToServe || stats?.ready_to_serve || 0,
         icon: CheckCircle,
         color: 'text-green-600',
         indicatorColor: 'bg-green-500',
       },
       {
         title: "Today's Revenue",
-        value: formatCurrency(stats?.revenueToday || 0),
+        value: formatCurrency(stats?.revenueToday || stats?.revenue_today || 0),
         icon: DollarSign,
         color: 'text-purple-600',
         indicatorColor: 'bg-purple-500',
@@ -49,31 +46,11 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
         trendUp: true,
       },
     ],
-    [stats, orders.total],
+    [stats],
   );
 
-  const handleFilterChange = (key: string, value: any) => {
-    const newFilters: any = { ...filters };
-    if (value && value !== 'all') {
-      newFilters[key] = value;
-    } else {
-      delete newFilters[key];
-    }
-    setFilters(newFilters);
-
-    router.get('/orders', newFilters, {
-      preserveState: true,
-      preserveScroll: true,
-    });
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    handleFilterChange('search', query || undefined);
-  };
-
   const handleExport = () => {
-    const params = new URLSearchParams(filters as any);
+    const params = new URLSearchParams(initialFilters as any);
     window.location.href = `/orders/export?${params.toString()}`;
   };
 
@@ -122,7 +99,7 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
 
           {/* Orders Data Table */}
           <div>
-            {orders.data.length === 0 ? (
+            {!orders || orders.length === 0 ? (
               <div className="rounded-lg border bg-card">
                 <div className="flex flex-col items-center justify-center px-4 py-24">
                   <div className="relative mb-6">
@@ -147,25 +124,22 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
               </div>
             ) : (
               <OrderDataTable
-                orders={orders.data}
+                orders={orders}
+                pagination={pagination}
+                metadata={metadata}
                 locations={locations}
-                statuses={statuses}
-                types={types}
-                filters={filters}
+                filters={initialFilters}
                 onExport={handleExport}
-                onFilterChange={handleFilterChange}
-                onSearch={handleSearch}
-                searchQuery={searchQuery}
               />
             )}
           </div>
 
           {/* Pagination */}
-          {orders.data.length > 0 && (
+          {orders && orders.length > 0 && pagination && (
             <div className="mt-6">
               <LaravelPagination 
-                pagination={orders} 
-                filters={filters}
+                pagination={pagination} 
+                filters={initialFilters}
                 preserveScroll={false}
                 preserveState={true}
               />

@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Colame\Order\Contracts;
 
+use App\Core\Contracts\FilterableRepositoryInterface;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Data\OrderWithRelationsData;
 
 /**
  * Order repository interface for domain operations
  */
-interface OrderRepositoryInterface
+interface OrderRepositoryInterface extends FilterableRepositoryInterface
 {
     /**
      * Find order by ID

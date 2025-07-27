@@ -108,6 +108,7 @@ export function useInertiaFilters(
   const syncToUrl = React.useCallback(
     (filterValues: Record<string, FilterValue>) => {
       const queryParams = new URLSearchParams(window.location.search)
+      const currentParams = Object.fromEntries(queryParams)
       
       // Update query params
       filterKeys.forEach((key) => {
@@ -119,49 +120,67 @@ export function useInertiaFilters(
         }
       })
 
-      // Use Inertia router for navigation
-      router.get(
-        window.location.pathname,
-        Object.fromEntries(queryParams),
-        {
-          preserveState: options.preserveState,
-          preserveScroll: options.preserveScroll,
-          only: options.only,
-          replace: true,
-        }
-      )
+      const newParams = Object.fromEntries(queryParams)
+      
+      // Check if params actually changed to avoid unnecessary navigation
+      const paramsChanged = JSON.stringify(currentParams) !== JSON.stringify(newParams)
+      
+      if (paramsChanged) {
+        // Use Inertia router for navigation
+        router.get(
+          window.location.pathname,
+          newParams,
+          {
+            preserveState: options.preserveState,
+            preserveScroll: options.preserveScroll,
+            only: options.only,
+            replace: true,
+          }
+        )
+      }
     },
     [filterKeys, options]
   )
 
+  // Use ref to avoid dependency issues
+  const valuesRef = React.useRef(values)
+  valuesRef.current = values
+
   // Override setValue to sync with URL
   const setValueWithSync = React.useCallback(
     (key: string, value: FilterValue) => {
+      const newValues = { ...valuesRef.current, [key]: value }
       setValue(key, value)
       if (options.onUpdate) {
-        options.onUpdate({ ...values, [key]: value })
+        options.onUpdate(newValues)
       } else {
-        syncToUrl({ ...values, [key]: value })
+        syncToUrl(newValues)
       }
     },
-    [setValue, values, options, syncToUrl]
+    [setValue, options, syncToUrl]
   )
 
   // Override setValues to sync with URL
   const setValuesWithSync = React.useCallback(
     (newValues: Record<string, FilterValue>) => {
+      const mergedValues = { ...valuesRef.current, ...newValues }
       setValues(newValues)
       if (options.onUpdate) {
-        options.onUpdate({ ...values, ...newValues })
+        options.onUpdate(mergedValues)
       } else {
-        syncToUrl({ ...values, ...newValues })
+        syncToUrl(mergedValues)
       }
     },
-    [setValues, values, options, syncToUrl]
+    [setValues, options, syncToUrl]
   )
 
-  // Initialize from URL on mount
+  // Initialize from URL on mount only if not already initialized
   React.useEffect(() => {
+    // Skip if already has initial values (to prevent infinite loop)
+    if (options.initialValues && Object.keys(options.initialValues).length > 0) {
+      return;
+    }
+    
     const queryParams = new URLSearchParams(window.location.search)
     const urlFilters: Record<string, FilterValue> = {}
     

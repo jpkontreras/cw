@@ -10,19 +10,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useResourceMetadata } from '@/hooks/use-resource-metadata';
 import type { Order } from '@/types/modules/order';
 import { formatCurrency, formatOrderNumber, getOrderAge, getStatusColor, getStatusLabel, getTypeLabel } from '@/types/modules/order/utils';
+import type { ResourceMetadata } from '@/types/resource-metadata';
 import { router } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, Calendar, Edit, Eye, MapPin, MoreHorizontal, Package, Receipt, Trash } from 'lucide-react';
 import * as React from 'react';
 
+// Actions cell component
+function OrderActionsCell({ order }: { order: Order }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => router.visit(`/orders/${order.id}`)}>
+          <Eye className="mr-2 h-4 w-4" />
+          View details
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.visit(`/orders/${order.id}/edit`)}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit order
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.visit(`/orders/${order.id}/receipt`)}>
+          <Receipt className="mr-2 h-4 w-4" />
+          Print receipt
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            if (confirm('Are you sure you want to cancel this order?')) {
+              router.post(`/orders/${order.id}/cancel`);
+            }
+          }}
+          className="text-red-600"
+        >
+          <Trash className="mr-2 h-4 w-4" />
+          Cancel order
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 interface OrderDataTableProps {
   orders: Order[];
   pagination?: PaginationData;
+  metadata?: ResourceMetadata;
   locations: Array<{ id: number; name: string }>;
-  statuses: string[];
-  types: string[];
   filters: Record<string, any>;
   onExport?: () => void;
   preserveQueryParams?: string[];
@@ -31,25 +73,125 @@ interface OrderDataTableProps {
 export function OrderDataTable({
   orders,
   pagination,
+  metadata,
   locations,
-  statuses,
-  types,
   filters,
   onExport,
   preserveQueryParams = [],
 }: OrderDataTableProps) {
-  const [columnVisibility, setColumnVisibility] = React.useState({
-    orderNumber: true,
-    customerName: true,
-    type: true,
-    status: true,
-    items: true,
-    totalAmount: true,
-    paymentStatus: true,
-    createdAt: true,
-    actions: true,
-  });
-  const columns: ColumnDef<Order>[] = [
+  // Generate column visibility state from metadata or use defaults
+  const defaultColumnVisibility = React.useMemo(() => {
+    if (metadata?.columns) {
+      const visibility: Record<string, boolean> = {};
+      Object.values(metadata.columns).forEach((col) => {
+        if (col.key !== 'search' && col.key !== 'location_id' && col.key !== 'date') {
+          visibility[col.key] = col.visible !== false;
+        }
+      });
+      visibility['actions'] = true;
+      return visibility;
+    }
+    return {
+      orderNumber: true,
+      customerName: true,
+      type: true,
+      status: true,
+      items: true,
+      totalAmount: true,
+      paymentStatus: true,
+      createdAt: true,
+      actions: true,
+    };
+  }, [metadata]);
+
+  const [columnVisibility, setColumnVisibility] = React.useState(defaultColumnVisibility);
+
+  // Generate columns from metadata or use hardcoded columns
+  const columns: ColumnDef<Order>[] = React.useMemo(() => {
+    if (metadata?.columns) {
+      const metadataColumns: ColumnDef<Order>[] = [];
+      
+      // Build columns from metadata
+      Object.values(metadata.columns).forEach((col) => {
+        // Skip non-display columns
+        if (col.key === 'search' || col.key === 'location_id' || col.key === 'date') {
+          return;
+        }
+        
+        const column: ColumnDef<Order> = {
+          accessorKey: col.key,
+          header: col.sortable 
+            ? ({ column }) => (
+                <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                  {col.label}
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              )
+            : col.label,
+          cell: ({ row }) => {
+            const value = row.getValue(col.key);
+            
+            // Custom cell rendering based on column type
+            switch (col.key) {
+              case 'orderNumber':
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium whitespace-nowrap">{formatOrderNumber(value as string)}</span>
+                    {row.original.priority === 'high' && (
+                      <Badge variant="destructive" className="shrink-0 text-xs">
+                        Priority
+                      </Badge>
+                    )}
+                  </div>
+                );
+              case 'customerName':
+                return (
+                  <div>
+                    <div className="font-medium whitespace-nowrap">{value || 'Walk-in'}</div>
+                    {row.original.tableNumber && <div className="text-sm text-gray-500 whitespace-nowrap">Table {row.original.tableNumber}</div>}
+                  </div>
+                );
+              case 'type':
+                return <Badge variant="outline">{getTypeLabel(value as any)}</Badge>;
+              case 'status':
+                return <Badge className={getStatusColor(value as any)}>{getStatusLabel(value as any)}</Badge>;
+              case 'items':
+                return <span className="text-center">{row.original.items?.length || 0}</span>;
+              case 'totalAmount':
+                return <div className="font-medium">{formatCurrency(value as number)}</div>;
+              case 'paymentStatus':
+                return <Badge variant={(value as string) === 'paid' ? 'default' : 'secondary'}>{value as string}</Badge>;
+              case 'createdAt':
+                return <span className="text-sm text-gray-500 whitespace-nowrap">{getOrderAge(row.original)}</span>;
+              default:
+                return <span>{String(value)}</span>;
+            }
+          },
+        };
+        
+        // Add filter function for enum types
+        if (col.type === 'enum' && col.filter) {
+          column.filterFn = (row, id, value) => {
+            return value === 'all' || row.getValue(id) === value;
+          };
+        }
+        
+        metadataColumns.push(column);
+      });
+      
+      // Add actions column
+      metadataColumns.push({
+        id: 'actions',
+        cell: ({ row }) => (
+          <OrderActionsCell order={row.original} />
+        ),
+      });
+      
+      return metadataColumns;
+    }
+    
+    // Fallback to hardcoded columns
+    return [
     {
       accessorKey: 'orderNumber',
       header: ({ column }) => {
@@ -198,62 +340,76 @@ export function OrderDataTable({
       },
     },
   ];
+  }, [metadata]);
 
-  // Configure filters with icons
-  const filterConfig: FilterConfig[] = React.useMemo(() => [
-    {
-      key: 'search',
-      label: 'Orders',
-      type: 'search',
-      placeholder: 'Search orders...',
-      width: 'w-[250px]',
-      debounceMs: 300,
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      type: 'multi-select',
-      placeholder: 'Filter by status',
-      width: 'w-[180px]',
-      icon: Package,
-      options: statuses.map((status) => ({
-        value: status,
-        label: getStatusLabel(status as any),
-      })),
-      maxItems: 3,
-    },
-    {
-      key: 'type',
-      label: 'Type',
-      type: 'select',
-      placeholder: 'All Types',
-      width: 'w-[140px]',
-      options: types.map((type) => ({
-        value: type,
-        label: getTypeLabel(type as any),
-      })),
-    },
-    {
-      key: 'location_id',
-      label: 'Location',
-      type: 'select',
-      placeholder: 'All Locations',
-      width: 'w-[180px]',
-      icon: MapPin,
-      options: locations.map((location) => ({
-        value: location.id.toString(),
-        label: location.name,
-      })),
-    },
-    {
-      key: 'date',
-      label: 'Date',
-      type: 'date',
-      placeholder: 'All Time',
-      width: 'w-[140px]',
-      icon: Calendar,
-    },
-  ], [statuses, types, locations]);
+  // Use resource metadata hook
+  const { filters: metadataFilters } = useResourceMetadata(metadata);
+  
+  // Build filter configuration from metadata or use fallback
+  const filterConfig: FilterConfig[] = React.useMemo(() => {
+    if (metadataFilters.length > 0) {
+      // Filter out the search filter as InertiaDataTable handles it internally
+      return metadataFilters.filter(filter => filter.key !== 'search');
+    }
+    
+    // Fallback to hardcoded configuration if no metadata (excluding search)
+    return [
+      {
+        key: 'status',
+        label: 'Status',
+        type: 'multi-select',
+        placeholder: 'Filter by status',
+        width: 'w-[180px]',
+        icon: Package,
+        options: [
+          { value: 'draft', label: 'Draft' },
+          { value: 'placed', label: 'Placed' },
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'preparing', label: 'Preparing' },
+          { value: 'ready', label: 'Ready' },
+          { value: 'delivering', label: 'Delivering' },
+          { value: 'delivered', label: 'Delivered' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'cancelled', label: 'Cancelled' },
+          { value: 'refunded', label: 'Refunded' },
+        ],
+        maxItems: 3,
+      },
+      {
+        key: 'type',
+        label: 'Type',
+        type: 'select',
+        placeholder: 'All Types',
+        width: 'w-[140px]',
+        options: [
+          { value: 'dine_in', label: 'Dine In' },
+          { value: 'takeout', label: 'Takeout' },
+          { value: 'delivery', label: 'Delivery' },
+          { value: 'catering', label: 'Catering' },
+        ],
+      },
+      {
+        key: 'location_id',
+        label: 'Location',
+        type: 'select',
+        placeholder: 'All Locations',
+        width: 'w-[180px]',
+        icon: MapPin,
+        options: locations.map((location) => ({
+          value: location.id.toString(),
+          label: location.name,
+        })),
+      },
+      {
+        key: 'date',
+        label: 'Date',
+        type: 'date',
+        placeholder: 'All Time',
+        width: 'w-[140px]',
+        icon: Calendar,
+      },
+    ];
+  }, [metadataFilters, locations]);
 
   // Toolbar with export button
   const toolbar = (
@@ -297,11 +453,13 @@ export function OrderDataTable({
       filters={filterConfig}
       filterValues={filters}
       preserveQueryParams={preserveQueryParams}
+      showSearch={true}
+      searchPlaceholder="Search orders..."
       showColumnToggle={false}
       stickyHeader={true}
       maxHeight="calc(100vh - 16rem)"
       preserveScroll={true}
-      only={['orders', 'pagination', 'filters']}
+      only={['orders', 'pagination', 'metadata', 'filters']}
       onRowClick={(order) => router.visit(`/orders/${order.id}`)}
       toolbar={toolbar}
       emptyState={

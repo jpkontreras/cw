@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Contracts;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
 /**
  * Base repository interface for all module repositories
  */
@@ -23,6 +25,22 @@ interface BaseRepositoryInterface
      * Get all entities
      */
     public function all(): array;
+
+    /**
+     * Get paginated entities
+     * 
+     * @param int $perPage Number of items per page
+     * @param array $columns Columns to select
+     * @param string $pageName Page parameter name
+     * @param int|null $page Current page number
+     * @return LengthAwarePaginator
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator;
 
     /**
      * Create new entity

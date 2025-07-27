@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Order\Contracts;
 
+use App\Core\Data\PaginatedResourceData;
 use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Data\OrderWithRelationsData;
@@ -92,7 +93,7 @@ interface OrderServiceInterface
     /**
      * Get paginated orders with filters
      */
-    public function getPaginatedOrders(array $filters, int $perPage = 20): array;
+    public function getPaginatedOrders(array $filters, int $perPage = 20): PaginatedResourceData;
 
     /**
      * Get order statistics

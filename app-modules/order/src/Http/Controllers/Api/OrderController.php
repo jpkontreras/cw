@@ -28,22 +28,42 @@ class OrderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $locationId = $request->input('location_id', $request->user()->location_id ?? 1);
+        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
+        $perPage = $request->input('per_page', 20);
         
-        // Get orders based on filter
-        $status = $request->input('status');
-        if ($status === 'kitchen') {
+        // Special case for kitchen display
+        if ($request->input('status') === 'kitchen') {
+            $locationId = $request->input('location_id', $request->user()->location_id ?? 1);
             $orders = $this->orderService->getKitchenOrders($locationId);
-        } else {
-            // In real implementation, would have a method to get orders with filters
-            $orders = [];
+            
+            return response()->json([
+                'data' => $orders,
+                'meta' => [
+                    'total' => count($orders),
+                    'location_id' => $locationId,
+                ],
+            ]);
         }
-
+        
+        // Get paginated orders with filters and metadata
+        $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
+        $responseData = $paginatedData->toArray();
+        
+        // Format response in JSON:API compliant structure
         return response()->json([
-            'data' => $orders,
-            'meta' => [
-                'total' => count($orders),
-                'location_id' => $locationId,
+            'data' => $responseData['data'],
+            'meta' => array_merge(
+                $responseData['pagination'],
+                [
+                    'resource' => $responseData['metadata'],
+                ]
+            ),
+            'links' => [
+                'self' => request()->fullUrl(),
+                'first' => $responseData['pagination']['first_page_url'],
+                'last' => $responseData['pagination']['last_page_url'],
+                'prev' => $responseData['pagination']['prev_page_url'],
+                'next' => $responseData['pagination']['next_page_url'],
             ],
         ]);
     }

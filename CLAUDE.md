@@ -81,8 +81,16 @@ sail artisan db:seed              # Run seeders only
 ### Key Directories
 - `app/Core/` - Core infrastructure (feature flags, base classes, contracts)
   - `Contracts/` - Core system interfaces
-  - `Services/` - Core services (FeatureFlagService)
+    - `BaseRepositoryInterface` - Base repository with pagination support
+    - `FilterableRepositoryInterface` - Advanced filtering and pagination
+    - `ResourceMetadataInterface` - Resource metadata generation
+    - `FeatureFlagInterface` - Feature flag management
+  - `Services/` - Core services (FeatureFlagService, BaseService)
   - `Data/` - Base data transfer objects
+    - `PaginatedResourceData` - Paginated response DTO
+    - `ResourceMetadata` - Resource metadata configuration
+    - `ColumnMetadata` - Column definition with filter support
+    - `FilterMetadata` - Filter configuration
   - `Exceptions/` - Core exceptions
 - `app/Http/Controllers/` - Laravel controllers handling HTTP requests
 - `app/Http/Controllers/Web/` - Web-specific controllers (Inertia responses)
@@ -378,6 +386,197 @@ class UserController
     }
 }
 ```
+
+### Resource Pagination and Metadata
+
+#### Overview
+Resources now support full Laravel pagination with automatic filter metadata generation. This provides a standardized way to handle paginated responses with dynamic filter configuration.
+
+#### Implementation Pattern
+
+##### 1. Repository Implementation
+Repositories must implement `FilterableRepositoryInterface` to support pagination and filtering:
+
+```php
+class OrderRepository implements OrderRepositoryInterface // extends FilterableRepositoryInterface
+{
+    public function paginateWithFilters(
+        array $filters = [],
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $query = Order::query();
+        $this->applyFilters($query, $filters);
+        return $query->paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    public function getFilterOptions(string $field): array
+    {
+        switch ($field) {
+            case 'status':
+                return [
+                    ['value' => 'draft', 'label' => 'Draft'],
+                    ['value' => 'placed', 'label' => 'Placed'],
+                    // ...
+                ];
+        }
+    }
+}
+```
+
+##### 2. Service Implementation
+Services implement `ResourceMetadataInterface` to provide metadata:
+
+```php
+class OrderService implements OrderServiceInterface, ResourceMetadataInterface
+{
+    public function getPaginatedOrders(array $filters, int $perPage = 20): PaginatedResourceData
+    {
+        $paginator = $this->orderRepository->paginateWithFilters($filters, $perPage);
+        $metadata = $this->getResourceMetadata()->toArray();
+        
+        return PaginatedResourceData::fromPaginator(
+            $paginator,
+            OrderData::class,
+            $metadata
+        );
+    }
+    
+    public function getResourceMetadata(array $context = []): ResourceMetadata
+    {
+        $columns = [];
+        
+        // Define columns with filter configuration
+        $columns['status'] = ColumnMetadata::enum('status', 'Status', $this->orderRepository->getFilterOptions('status'))
+            ->withFilter(FilterMetadata::multiSelect(
+                'status',
+                'Status',
+                $this->orderRepository->getFilterOptions('status'),
+                'Filter by status',
+                3
+            ));
+        
+        return new ResourceMetadata(
+            columns: collect($columns),
+            defaultFilters: ['search', 'status', 'type', 'location_id', 'date'],
+            defaultSort: '-created_at',
+            filterPresets: $this->getFilterPresets(),
+        );
+    }
+}
+```
+
+##### 3. Controller Response
+Controllers pass the structured response to the frontend:
+
+```php
+// Web Controller
+public function index(Request $request): Response
+{
+    $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
+    $perPage = $request->input('per_page', 20);
+    
+    $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
+    $responseData = $paginatedData->toArray();
+    
+    return Inertia::render('order/index', [
+        'orders' => $responseData['data'],
+        'pagination' => $responseData['pagination'],
+        'metadata' => $responseData['metadata'],
+    ]);
+}
+
+// API Controller (JSON:API compliant)
+public function index(Request $request): JsonResponse
+{
+    $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
+    $responseData = $paginatedData->toArray();
+    
+    return response()->json([
+        'data' => $responseData['data'],
+        'meta' => array_merge(
+            $responseData['pagination'],
+            ['resource' => $responseData['metadata']]
+        ),
+        'links' => [
+            'self' => request()->fullUrl(),
+            'first' => $responseData['pagination']['first_page_url'],
+            // ...
+        ],
+    ]);
+}
+```
+
+##### 4. Frontend Usage
+Frontend components consume metadata to auto-configure filters:
+
+```tsx
+import { useResourceMetadata } from '@/hooks/use-resource-metadata';
+
+function OrderDataTable({ orders, pagination, metadata }) {
+  const { filters: metadataFilters } = useResourceMetadata(metadata);
+  
+  // Filters are automatically configured from server metadata
+  return (
+    <InertiaDataTable
+      columns={columns}
+      data={orders}
+      pagination={pagination}
+      filters={metadataFilters}
+    />
+  );
+}
+```
+
+#### Response Structure
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 10,
+    "per_page": 20,
+    "total": 200,
+    "from": 1,
+    "to": 20,
+    "path": "/orders",
+    "first_page_url": "/orders?page=1",
+    "last_page_url": "/orders?page=10",
+    "next_page_url": "/orders?page=2",
+    "prev_page_url": null,
+    "links": [...]
+  },
+  "metadata": {
+    "columns": {
+      "status": {
+        "key": "status",
+        "label": "Status",
+        "type": "enum",
+        "sortable": true,
+        "filter": {
+          "key": "status",
+          "filterType": "multi-select",
+          "options": [...]
+        }
+      }
+    },
+    "filters": [...],
+    "defaultFilters": ["search", "status", "type"],
+    "filterPresets": [...]
+  }
+}
+```
+
+#### Benefits
+
+1. **Automatic Filter Generation**: Filters are configured from server metadata
+2. **Type Safety**: Full TypeScript support with generated types
+3. **Consistency**: All resources follow the same pattern
+4. **Performance**: Optimized queries with proper pagination
+5. **Flexibility**: Easy to add new filter types or metadata
 
 ## Advanced Patterns
 

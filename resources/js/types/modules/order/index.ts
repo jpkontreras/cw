@@ -80,11 +80,11 @@ export type PaymentMethod =
 
 // Component prop types
 export interface OrderListPageProps {
-  orders: SimplePagination<Order>;
+  orders: Order[];
+  pagination?: SimplePagination<Order>;
+  metadata?: any; // Will be ResourceMetadata type when imported
   locations: Array<{ id: number; name: string }>;
   filters: OrderFilters;
-  statuses: string[];
-  types: string[];
   stats?: {
     totalOrders: number;
     activeOrders: number;

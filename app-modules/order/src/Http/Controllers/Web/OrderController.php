@@ -35,31 +35,34 @@ class OrderController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search']);
+        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
+        $perPage = $request->input('per_page', 20);
 
-        // Get paginated orders with filters
-        $orders = $this->orderService->getPaginatedOrders($filters, 20);
+        // Get paginated orders with filters and metadata
+        $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
+        $responseData = $paginatedData->toArray();
 
-        // Get locations for filter dropdown
+        // Get locations for filter dropdown  
         $locations = [
             ['id' => 1, 'name' => 'Main Branch'],
             ['id' => 2, 'name' => 'Downtown Branch'],
             // TODO: Replace with actual location service
         ];
 
-        // Get available statuses and types
-        $statuses = ['draft', 'placed', 'confirmed', 'preparing', 'ready', 'delivering', 'delivered', 'completed', 'cancelled', 'refunded'];
-        $types = ['dine_in', 'takeout', 'delivery', 'catering'];
+        // Update location options in metadata
+        if (isset($responseData['metadata']['columns']['location_id'])) {
+            $responseData['metadata']['columns']['location_id']['filter']['options'] = $locations;
+        }
 
         // Get stats for the dashboard cards
         $stats = $this->orderService->getOrderStats($filters);
 
         return Inertia::render('order/index', [
-            'orders' => $orders,
+            'orders' => $responseData['data'],
+            'pagination' => $responseData['pagination'],
+            'metadata' => $responseData['metadata'],
             'locations' => $locations,
             'filters' => $filters,
-            'statuses' => $statuses,
-            'types' => $types,
             'stats' => $stats,
         ]);
     }

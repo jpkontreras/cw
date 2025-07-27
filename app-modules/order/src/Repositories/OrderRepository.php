@@ -10,6 +10,8 @@ use Colame\Order\Data\OrderItemData;
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderItem;
 use Colame\Order\Models\OrderStatusHistory;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -224,5 +226,236 @@ class OrderRepository implements OrderRepositoryInterface
         }
         
         return OrderData::from($order);
+    }
+
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        return Order::query()
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, $columns, $pageName, $page);
+    }
+
+    /**
+     * Apply filters to query
+     */
+    public function applyFilters(Builder $query, array $filters): Builder
+    {
+        // Status filter
+        if (!empty($filters['status'])) {
+            if (is_array($filters['status'])) {
+                $query->whereIn('status', $filters['status']);
+            } else {
+                $query->where('status', $filters['status']);
+            }
+        }
+
+        // Type filter
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        // Location filter
+        if (!empty($filters['location_id'])) {
+            $query->where('location_id', $filters['location_id']);
+        }
+
+        // Date filter
+        if (!empty($filters['date'])) {
+            $this->applyDateFilter($query, $filters['date']);
+        }
+
+        // Date range filter
+        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+            $query->whereBetween('created_at', [$filters['date_from'], $filters['date_to']]);
+        }
+
+        // Search filter
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('customer_phone', 'like', "%{$search}%")
+                  ->orWhere('customer_email', 'like', "%{$search}%");
+            });
+        }
+
+        // Sort
+        if (!empty($filters['sort'])) {
+            $this->applySorting($query, $filters['sort']);
+        } else {
+            // Default sort
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return $query;
+    }
+
+    /**
+     * Get paginated entities with filters
+     */
+    public function paginateWithFilters(
+        array $filters = [],
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $query = Order::query();
+        
+        // Load relationships if needed
+        if ($this->shouldIncludeRelations($filters)) {
+            $query->with(['items']);
+        }
+
+        $this->applyFilters($query, $filters);
+
+        return $query->paginate($perPage, $columns, $pageName, $page);
+    }
+
+    /**
+     * Get available filter options for a field
+     */
+    public function getFilterOptions(string $field): array
+    {
+        switch ($field) {
+            case 'status':
+                return [
+                    ['value' => 'draft', 'label' => 'Draft'],
+                    ['value' => 'placed', 'label' => 'Placed'],
+                    ['value' => 'confirmed', 'label' => 'Confirmed'],
+                    ['value' => 'preparing', 'label' => 'Preparing'],
+                    ['value' => 'ready', 'label' => 'Ready'],
+                    ['value' => 'delivering', 'label' => 'Delivering'],
+                    ['value' => 'delivered', 'label' => 'Delivered'],
+                    ['value' => 'completed', 'label' => 'Completed'],
+                    ['value' => 'cancelled', 'label' => 'Cancelled'],
+                    ['value' => 'refunded', 'label' => 'Refunded'],
+                ];
+                
+            case 'type':
+                return [
+                    ['value' => 'dine_in', 'label' => 'Dine In'],
+                    ['value' => 'takeout', 'label' => 'Takeout'],
+                    ['value' => 'delivery', 'label' => 'Delivery'],
+                    ['value' => 'catering', 'label' => 'Catering'],
+                ];
+                
+            case 'payment_status':
+                return [
+                    ['value' => 'pending', 'label' => 'Pending'],
+                    ['value' => 'partial', 'label' => 'Partial'],
+                    ['value' => 'paid', 'label' => 'Paid'],
+                    ['value' => 'refunded', 'label' => 'Refunded'],
+                ];
+                
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Get searchable fields
+     */
+    public function getSearchableFields(): array
+    {
+        return ['order_number', 'customer_name', 'customer_phone', 'customer_email'];
+    }
+
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return [
+            'order_number',
+            'status',
+            'type',
+            'total_amount',
+            'created_at',
+            'updated_at',
+            'placed_at',
+            'completed_at',
+        ];
+    }
+
+    /**
+     * Get default sort configuration
+     */
+    public function getDefaultSort(): array
+    {
+        return [
+            'field' => 'created_at',
+            'direction' => 'desc',
+        ];
+    }
+
+    /**
+     * Apply date filter based on preset
+     */
+    private function applyDateFilter(Builder $query, string $preset): void
+    {
+        switch ($preset) {
+            case 'today':
+                $query->whereDate('created_at', today());
+                break;
+            case 'yesterday':
+                $query->whereDate('created_at', today()->subDay());
+                break;
+            case 'week':
+                $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                break;
+            case 'month':
+                $query->whereMonth('created_at', now()->month)
+                      ->whereYear('created_at', now()->year);
+                break;
+            case 'quarter':
+                $query->whereBetween('created_at', [now()->startOfQuarter(), now()->endOfQuarter()]);
+                break;
+            case 'year':
+                $query->whereYear('created_at', now()->year);
+                break;
+        }
+    }
+
+    /**
+     * Apply sorting to query
+     */
+    private function applySorting(Builder $query, string $sort): void
+    {
+        // Parse sort string (e.g., "-created_at,order_number")
+        $sorts = explode(',', $sort);
+        
+        foreach ($sorts as $sortField) {
+            $sortField = trim($sortField);
+            if (empty($sortField)) {
+                continue;
+            }
+            
+            $direction = 'asc';
+            if (strpos($sortField, '-') === 0) {
+                $direction = 'desc';
+                $sortField = substr($sortField, 1);
+            }
+            
+            if (in_array($sortField, $this->getSortableFields())) {
+                $query->orderBy($sortField, $direction);
+            }
+        }
+    }
+
+    /**
+     * Check if relations should be included
+     */
+    private function shouldIncludeRelations(array $filters): bool
+    {
+        return !empty($filters['include']) && in_array('items', (array) $filters['include']);
     }
 }

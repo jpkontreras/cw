@@ -5,8 +5,15 @@ declare(strict_types=1);
 namespace Colame\Order\Services;
 
 use App\Core\Contracts\FeatureFlagInterface;
+use App\Core\Contracts\ResourceMetadataInterface;
+use App\Core\Data\ColumnMetadata;
+use App\Core\Data\FilterMetadata;
+use App\Core\Data\FilterPresetData;
+use App\Core\Data\PaginatedResourceData;
+use App\Core\Data\ResourceMetadata;
 use App\Core\Services\BaseService;
 use Colame\Item\Contracts\ItemRepositoryInterface;
+use Spatie\LaravelData\DataCollection;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Contracts\OrderServiceInterface;
@@ -27,7 +34,7 @@ use Illuminate\Support\Facades\Event;
 /**
  * Order service implementation
  */
-class OrderService extends BaseService implements OrderServiceInterface
+class OrderService extends BaseService implements OrderServiceInterface, ResourceMetadataInterface
 {
     public function __construct(
         FeatureFlagInterface $features,
@@ -413,67 +420,18 @@ class OrderService extends BaseService implements OrderServiceInterface
     /**
      * Get paginated orders with filters
      */
-    public function getPaginatedOrders(array $filters, int $perPage = 20): array
+    public function getPaginatedOrders(array $filters, int $perPage = 20): PaginatedResourceData
     {
-        $query = Order::query()->with('items');
-
-        // Apply filters
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
-        if (!empty($filters['location_id'])) {
-            $query->where('location_id', $filters['location_id']);
-        }
-
-        if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('order_number', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('customer_name', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('customer_phone', 'like', '%' . $filters['search'] . '%');
-            });
-        }
-
-        // Date filters
-        if (!empty($filters['date'])) {
-            switch ($filters['date']) {
-                case 'today':
-                    $query->whereDate('created_at', today());
-                    break;
-                case 'yesterday':
-                    $query->whereDate('created_at', today()->subDay());
-                    break;
-                case 'week':
-                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'month':
-                    $query->whereMonth('created_at', now()->month);
-                    break;
-            }
-        }
-
-        // Order by latest first
-        $query->orderBy('created_at', 'desc');
-
-        // Get paginated results
-        $paginated = $query->paginate($perPage);
-
-        // Transform to DTOs
-        $orders = collect($paginated->items())->map(function ($order) {
-            return OrderData::from($order);
-        });
-
-        return [
-            'data' => $orders,
-            'current_page' => $paginated->currentPage(),
-            'last_page' => $paginated->lastPage(),
-            'per_page' => $paginated->perPage(),
-            'total' => $paginated->total(),
-        ];
+        $paginator = $this->orderRepository->paginateWithFilters($filters, $perPage);
+        
+        // Generate metadata for the resource
+        $metadata = $this->getResourceMetadata()->toArray();
+        
+        return PaginatedResourceData::fromPaginator(
+            $paginator,
+            OrderData::class,
+            $metadata
+        );
     }
 
     /**
@@ -728,5 +686,225 @@ class OrderService extends BaseService implements OrderServiceInterface
                 $query->whereBetween('created_at', [now()->startOfQuarter(), now()->endOfQuarter()]);
                 break;
         }
+    }
+
+    /**
+     * Get metadata for the resource
+     */
+    public function getResourceMetadata(array $context = []): ResourceMetadata
+    {
+        $columns = [];
+        
+        // General search filter (not a column)
+        $columns['search'] = ColumnMetadata::text('search', 'Search', true, false)
+            ->withFilter(FilterMetadata::search('search', 'Orders', 'Search orders...', 300));
+        
+        // Order Number column
+        $columns['orderNumber'] = ColumnMetadata::text('orderNumber', 'Order', true, true);
+        
+        // Customer Name column
+        $columns['customerName'] = ColumnMetadata::text('customerName', 'Customer', true, false);
+        
+        // Type column
+        $columns['type'] = ColumnMetadata::enum('type', 'Type', $this->orderRepository->getFilterOptions('type'))
+            ->withFilter(FilterMetadata::select(
+                'type',
+                'Type',
+                $this->orderRepository->getFilterOptions('type'),
+                'All Types'
+            ));
+        
+        // Status column with multi-select filter
+        $columns['status'] = ColumnMetadata::enum('status', 'Status', $this->orderRepository->getFilterOptions('status'))
+            ->withFilter(FilterMetadata::multiSelect(
+                'status',
+                'Status',
+                $this->orderRepository->getFilterOptions('status'),
+                'Filter by status',
+                3
+            ));
+        
+        // Items count column
+        $columns['items'] = ColumnMetadata::number('items', 'Items', null, false);
+        
+        // Total Amount column
+        $columns['totalAmount'] = ColumnMetadata::currency('totalAmount', 'Total', 'CLP', true);
+        
+        // Payment Status column
+        $columns['paymentStatus'] = ColumnMetadata::enum(
+            'paymentStatus',
+            'Payment',
+            $this->orderRepository->getFilterOptions('payment_status')
+        );
+        
+        // Created At column
+        $columns['createdAt'] = ColumnMetadata::dateTime('createdAt', 'Time', 'relative', true);
+        
+        // Location filter (not a column but a filter)
+        $locationFilter = FilterMetadata::select(
+            'location_id',
+            'Location',
+            [], // Should come from location service
+            'All Locations'
+        );
+        
+        // Date filter
+        $dateFilter = FilterMetadata::date(
+            'date',
+            'Date',
+            [
+                ['label' => 'Today', 'value' => 'today'],
+                ['label' => 'Yesterday', 'value' => 'yesterday'],
+                ['label' => 'This Week', 'value' => 'week'],
+                ['label' => 'This Month', 'value' => 'month'],
+            ],
+            'YYYY-MM-DD'
+        );
+        
+        // Add the non-column filters
+        $columns['location_id'] = ColumnMetadata::text('location_id', 'Location', false, false)
+            ->withFilter($locationFilter);
+            
+        $columns['date'] = ColumnMetadata::text('date', 'Date', false, false)
+            ->withFilter($dateFilter);
+        
+        return new ResourceMetadata(
+            columns: ColumnMetadata::collect(array_values($columns), DataCollection::class),
+            defaultFilters: ['search', 'status', 'type', 'location_id', 'date'],
+            defaultSort: '-created_at',
+            filterPresets: $this->getFilterPresets(),
+            exportFormats: ['csv', 'excel', 'pdf'],
+            actions: $this->getAvailableActions($context),
+            bulkActions: ['cancel', 'export'],
+            settings: [
+                'refreshInterval' => 30000, // 30 seconds
+                'pageSize' => 20,
+            ]
+        );
+    }
+
+    /**
+     * Get filter presets for the resource
+     */
+    public function getFilterPresets(): array
+    {
+        return [
+            new FilterPresetData(
+                id: 'active',
+                name: 'Active Orders',
+                description: 'Orders that are currently being processed',
+                filters: [
+                    'status' => ['placed', 'confirmed', 'preparing', 'ready'],
+                ],
+                icon: 'clock'
+            ),
+            new FilterPresetData(
+                id: 'today',
+                name: "Today's Orders",
+                description: 'All orders from today',
+                filters: [
+                    'date' => 'today',
+                ],
+                icon: 'calendar',
+                isDefault: true
+            ),
+            new FilterPresetData(
+                id: 'completed',
+                name: 'Completed Orders',
+                description: 'Successfully completed orders',
+                filters: [
+                    'status' => ['completed', 'delivered'],
+                ],
+                icon: 'check'
+            ),
+            new FilterPresetData(
+                id: 'issues',
+                name: 'Orders with Issues',
+                description: 'Cancelled or refunded orders',
+                filters: [
+                    'status' => ['cancelled', 'refunded'],
+                ],
+                icon: 'alert'
+            ),
+        ];
+    }
+
+    /**
+     * Get available actions for the resource
+     */
+    public function getAvailableActions(array $context = []): array
+    {
+        $actions = [
+            [
+                'id' => 'view',
+                'label' => 'View Details',
+                'icon' => 'eye',
+                'route' => 'orders.show',
+            ],
+            [
+                'id' => 'edit',
+                'label' => 'Edit Order',
+                'icon' => 'edit',
+                'route' => 'orders.edit',
+                'condition' => 'canBeModified',
+            ],
+            [
+                'id' => 'receipt',
+                'label' => 'Print Receipt',
+                'icon' => 'receipt',
+                'route' => 'orders.receipt',
+            ],
+            [
+                'id' => 'cancel',
+                'label' => 'Cancel Order',
+                'icon' => 'trash',
+                'route' => 'orders.cancel',
+                'condition' => 'canBeCancelled',
+                'confirmRequired' => true,
+                'variant' => 'destructive',
+            ],
+        ];
+        
+        // Filter actions based on user permissions
+        if (!empty($context['user'])) {
+            // TODO: Check user permissions
+        }
+        
+        return $actions;
+    }
+
+    /**
+     * Get export configuration for the resource
+     */
+    public function getExportConfiguration(): array
+    {
+        return [
+            'formats' => [
+                'csv' => [
+                    'label' => 'CSV',
+                    'extension' => 'csv',
+                    'mimeType' => 'text/csv',
+                ],
+                'excel' => [
+                    'label' => 'Excel',
+                    'extension' => 'xlsx',
+                    'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ],
+                'pdf' => [
+                    'label' => 'PDF',
+                    'extension' => 'pdf',
+                    'mimeType' => 'application/pdf',
+                ],
+            ],
+            'columns' => [
+                'orderNumber' => 'Order Number',
+                'customerName' => 'Customer',
+                'type' => 'Type',
+                'status' => 'Status',
+                'totalAmount' => 'Total',
+                'paymentStatus' => 'Payment',
+                'createdAt' => 'Date',
+            ],
+        ];
     }
 }
