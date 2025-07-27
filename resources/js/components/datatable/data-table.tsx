@@ -44,6 +44,20 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   stickyHeader?: boolean
   maxHeight?: string
+  // Inertia-specific props
+  preserveScroll?: boolean
+  preserveState?: boolean
+  visitOptions?: {
+    preserveScroll?: boolean
+    preserveState?: boolean
+    only?: string[]
+  }
+  // Performance props
+  virtualize?: boolean
+  virtualizeThreshold?: number
+  // Accessibility
+  ariaLabel?: string
+  ariaLabelledBy?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -60,6 +74,13 @@ export function DataTable<TData, TValue>({
   onRowClick,
   stickyHeader = false,
   maxHeight,
+  preserveScroll = true,
+  preserveState = false,
+  visitOptions,
+  virtualize = false,
+  virtualizeThreshold = 50,
+  ariaLabel,
+  ariaLabelledBy,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -135,61 +156,79 @@ export function DataTable<TData, TValue>({
           </DropdownMenu>
         )}
       </div>
-      <div className={cn(
-        "rounded-md border",
-        stickyHeader && "overflow-x-auto"
-      )}>
-        <Table noWrapper={stickyHeader}>
-          <TableHeader className={cn(
-            stickyHeader && "sticky top-0 z-10 bg-background shadow-sm"
-          )}>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead 
-                        key={header.id}
-                        className={cn(
-                          stickyHeader && "bg-background"
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    )
-                  })}
+      <div 
+        className={cn(
+          "rounded-md border",
+          stickyHeader && "relative overflow-hidden"
+        )}
+        role="region"
+        aria-label={ariaLabel || "Data table"}
+        aria-labelledby={ariaLabelledBy}
+      >
+        <div 
+          className={cn(
+            stickyHeader && "overflow-auto"
+          )}
+          style={stickyHeader ? {
+            maxHeight: maxHeight || "calc(100vh - 20rem)"
+          } : undefined}
+        >
+          <Table className="relative" noWrapper={stickyHeader}>
+            <TableHeader className={cn(
+              stickyHeader && "sticky top-0 z-10 bg-background"
+            )}>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className={cn(
+                    stickyHeader && "border-b-2"
+                  )}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead 
+                          key={header.id}
+                          className={cn(
+                            stickyHeader && "bg-background relative",
+                            // Add shadow to sticky header for better visual separation
+                            stickyHeader && "after:absolute after:left-0 after:right-0 after:bottom-0 after:h-px after:bg-border"
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => onRowClick?.(row.original)}
+                    className={onRowClick ? "cursor-pointer" : ""}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
                 </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => onRowClick?.(row.original)}
-                  className={onRowClick ? "cursor-pointer" : ""}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       {showPagination && (
         <div className="flex items-center justify-between space-x-2 py-4">

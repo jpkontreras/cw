@@ -52,7 +52,7 @@ function OrderIndexContent({ orders, locations, filters: initialFilters = {}, st
     [stats, orders.total],
   );
 
-  const handleFilterChange = (key: string, value: string | undefined) => {
+  const handleFilterChange = (key: string, value: any) => {
     const newFilters: any = { ...filters };
     if (value && value !== 'all') {
       newFilters[key] = value;

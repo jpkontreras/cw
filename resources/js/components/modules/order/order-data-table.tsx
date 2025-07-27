@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/ui/data-table';
+import { InertiaDataTable, type FilterConfig, type PaginationData } from '@/components/datatable';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -10,36 +10,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Order } from '@/types/modules/order';
 import { formatCurrency, formatOrderNumber, getOrderAge, getStatusColor, getStatusLabel, getTypeLabel } from '@/types/modules/order/utils';
 import { router } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Edit, Eye, MoreHorizontal, Receipt, Trash } from 'lucide-react';
+import { ArrowUpDown, Calendar, Edit, Eye, MapPin, MoreHorizontal, Package, Receipt, Trash } from 'lucide-react';
 import * as React from 'react';
 
 interface OrderDataTableProps {
   orders: Order[];
+  pagination?: PaginationData;
   locations: Array<{ id: number; name: string }>;
   statuses: string[];
   types: string[];
   filters: Record<string, any>;
-  onExport: () => void;
-  onFilterChange: (key: string, value: string | undefined) => void;
-  onSearch: (query: string) => void;
-  searchQuery: string;
+  onExport?: () => void;
+  preserveQueryParams?: string[];
 }
 
 export function OrderDataTable({
   orders,
+  pagination,
   locations,
   statuses,
   types,
   filters,
   onExport,
-  onFilterChange,
-  onSearch,
-  searchQuery,
+  preserveQueryParams = [],
 }: OrderDataTableProps) {
   const [columnVisibility, setColumnVisibility] = React.useState({
     orderNumber: true,
@@ -202,165 +199,122 @@ export function OrderDataTable({
     },
   ];
 
-  const activeFilterCount = Object.keys(filters).filter((key) => filters[key] && filters[key] !== 'all').length;
+  // Configure filters with icons
+  const filterConfig: FilterConfig[] = React.useMemo(() => [
+    {
+      key: 'search',
+      label: 'Orders',
+      type: 'search',
+      placeholder: 'Search orders...',
+      width: 'w-[250px]',
+      debounceMs: 300,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'multi-select',
+      placeholder: 'Filter by status',
+      width: 'w-[180px]',
+      icon: Package,
+      options: statuses.map((status) => ({
+        value: status,
+        label: getStatusLabel(status as any),
+      })),
+      maxItems: 3,
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'select',
+      placeholder: 'All Types',
+      width: 'w-[140px]',
+      options: types.map((type) => ({
+        value: type,
+        label: getTypeLabel(type as any),
+      })),
+    },
+    {
+      key: 'location_id',
+      label: 'Location',
+      type: 'select',
+      placeholder: 'All Locations',
+      width: 'w-[180px]',
+      icon: MapPin,
+      options: locations.map((location) => ({
+        value: location.id.toString(),
+        label: location.name,
+      })),
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      type: 'date',
+      placeholder: 'All Time',
+      width: 'w-[140px]',
+      icon: Calendar,
+    },
+  ], [statuses, types, locations]);
+
+  // Toolbar with export button
+  const toolbar = (
+    <div className="flex items-center gap-2">
+      {onExport && (
+        <Button variant="outline" size="sm" onClick={onExport}>
+          Export
+        </Button>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-10 w-10">
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">View options</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[150px]">
+          <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {Object.entries(columnVisibility).map(([key, value]) => (
+            <DropdownMenuCheckboxItem
+              key={key}
+              checked={value}
+              onCheckedChange={(checked) =>
+                setColumnVisibility((prev) => ({ ...prev, [key]: checked }))
+              }
+            >
+              {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-row gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={filters.status || 'all'} onValueChange={(value) => onFilterChange('status', value === 'all' ? undefined : value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {statuses.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {getStatusLabel(status as any)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filters.type || 'all'} onValueChange={(value) => onFilterChange('type', value === 'all' ? undefined : value)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {types.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {getTypeLabel(type as any)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filters.location_id || 'all'} onValueChange={(value) => onFilterChange('location_id', value === 'all' ? undefined : value)}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Locations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              {locations.map((location) => (
-                <SelectItem key={location.id} value={location.id.toString()}>
-                  {location.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filters.date || 'all'} onValueChange={(value) => onFilterChange('date', value === 'all' ? undefined : value)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All Time" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="yesterday">Yesterday</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {activeFilterCount > 0 && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onFilterChange('status', undefined);
-                onFilterChange('type', undefined);
-                onFilterChange('location_id', undefined);
-                onFilterChange('date', undefined);
-                onSearch('');
-              }}
-              className="h-10 px-3"
-              size="sm"
-            >
-              Reset
-              <Badge variant="secondary" className="ml-2">
-                {activeFilterCount}
-              </Badge>
-            </Button>
-          )}
-
-          {/* View button aligned to the right */}
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-10 w-10">
-                  <Eye className="h-4 w-4" />
-                  <span className="sr-only">View options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[150px]">
-                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.orderNumber}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, orderNumber: checked }))}
-                >
-                  Order
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.customerName}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, customerName: checked }))}
-                >
-                  Customer
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.type}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, type: checked }))}
-                >
-                  Type
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.status}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, status: checked }))}
-                >
-                  Status
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.items}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, items: checked }))}
-                >
-                  Items
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.totalAmount}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, totalAmount: checked }))}
-                >
-                  Total
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.paymentStatus}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, paymentStatus: checked }))}
-                >
-                  Payment
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={columnVisibility.createdAt}
-                  onCheckedChange={(checked) => setColumnVisibility((prev) => ({ ...prev, createdAt: checked }))}
-                >
-                  Time
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <InertiaDataTable
+      columns={columns}
+      data={orders}
+      pagination={pagination}
+      filters={filterConfig}
+      filterValues={filters}
+      preserveQueryParams={preserveQueryParams}
+      showColumnToggle={false}
+      stickyHeader={true}
+      maxHeight="calc(100vh - 16rem)"
+      preserveScroll={true}
+      only={['orders', 'pagination', 'filters']}
+      onRowClick={(order) => router.visit(`/orders/${order.id}`)}
+      toolbar={toolbar}
+      emptyState={
+        <div className="flex h-[450px] shrink-0 items-center justify-center rounded-md border border-dashed">
+          <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+            <Package className="h-10 w-10 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No orders found</h3>
+            <p className="mb-4 mt-2 text-sm text-muted-foreground">
+              No orders match your current filters. Try adjusting your search criteria.
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Data Table */}
-      <DataTable
-        columns={columns}
-        data={orders}
-        showColumnToggle={false}
-        showPagination={false}
-        showSearch={false}
-        columnVisibility={columnVisibility}
-        onColumnVisibilityChange={(visibility) => setColumnVisibility(visibility as any)}
-        onRowClick={(order) => router.visit(`/orders/${order.id}`)}
-        stickyHeader={true}
-      />
-    </div>
+      }
+    />
   );
 }
