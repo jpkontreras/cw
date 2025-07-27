@@ -80,20 +80,22 @@ export type PaymentMethod =
 
 // Component prop types
 export interface OrderListPageProps {
-  orders: Order[];
-  pagination?: SimplePagination<Order>;
-  metadata?: any; // Will be ResourceMetadata type when imported
-  locations: Array<{ id: number; name: string }>;
-  filters: OrderFilters;
-  stats?: {
-    totalOrders: number;
-    activeOrders: number;
-    readyToServe: number;
-    revenueToday: number;
-    total_orders?: number; // for backwards compatibility
-    active_orders?: number; // for backwards compatibility
-    ready_to_serve?: number; // for backwards compatibility
-    revenue_today?: number; // for backwards compatibility
+  view: {
+    orders: Order[];
+    pagination?: SimplePagination<Order>;
+    metadata?: any; // Will be ResourceMetadata type when imported
+    locations: Array<{ id: number; name: string }>;
+    filters: OrderFilters;
+    stats?: {
+      totalOrders: number;
+      activeOrders: number;
+      readyToServe: number;
+      revenueToday: number;
+      total_orders?: number; // for backwards compatibility
+      active_orders?: number; // for backwards compatibility
+      ready_to_serve?: number; // for backwards compatibility
+      revenue_today?: number; // for backwards compatibility
+    };
   };
 }
 

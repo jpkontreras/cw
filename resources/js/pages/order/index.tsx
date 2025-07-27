@@ -8,10 +8,9 @@ import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo } from 'react';
 
-function OrderIndexContent(data) {
-  console.log({ data });
+function OrderIndexContent({ view }: OrderListPageProps) {
+  const { orders, pagination, metadata, locations, filters, stats } = view;
 
-  return;
   // Stats cards data
   const statsCards = useMemo(
     () => [

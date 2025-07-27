@@ -58,12 +58,14 @@ class OrderController extends Controller
         $stats = $this->orderService->getOrderStats($filters);
 
         return Inertia::render('order/index', [
-            'orders' => $responseData['data'],
-            'pagination' => $responseData['pagination'],
-            'metadata' => $responseData['metadata'],
-            'locations' => $locations,
-            'filters' => $filters,
-            'stats' => $stats,
+            'view' => [
+                'orders' => $responseData['data'],
+                'pagination' => $responseData['pagination'],
+                'metadata' => $responseData['metadata'],
+                'locations' => $locations,
+                'filters' => $filters,
+                'stats' => $stats,
+            ],
         ]);
     }
 
