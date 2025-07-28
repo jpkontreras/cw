@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Core\Traits\HandlesPaginationBounds;
 use Colame\Order\Contracts\OrderServiceInterface;
 use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\UpdateOrderData;
@@ -19,6 +20,7 @@ use Illuminate\Http\Response;
  */
 class OrderController extends Controller
 {
+    use HandlesPaginationBounds;
     public function __construct(
         private OrderServiceInterface $orderService
     ) {}
@@ -29,7 +31,7 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
-        $perPage = $request->input('per_page', 20);
+        $perPage = (int) $request->input('per_page', 20);
         
         // Special case for kitchen display
         if ($request->input('status') === 'kitchen') {
@@ -48,6 +50,11 @@ class OrderController extends Controller
         // Get paginated orders with filters and metadata
         $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
         $responseData = $paginatedData->toArray();
+        
+        // Handle out-of-bounds page numbers for API
+        if ($errorResponse = $this->handleOutOfBoundsPaginationApi($responseData['pagination'])) {
+            return $errorResponse;
+        }
         
         // Format response in JSON:API compliant structure
         return response()->json([

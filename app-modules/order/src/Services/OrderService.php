@@ -779,7 +779,8 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             settings: [
                 'refreshInterval' => 30000, // 30 seconds
                 'pageSize' => 20,
-            ]
+            ],
+            rowActions: true
         );
     }
 

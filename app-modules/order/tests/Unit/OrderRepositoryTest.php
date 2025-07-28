@@ -108,4 +108,45 @@ class OrderRepositoryTest extends TestCase
         $this->assertContains(Order::STATUS_PREPARING, $statuses);
         $this->assertContains(Order::STATUS_READY, $statuses);
     }
+
+    public function test_search_is_case_insensitive(): void
+    {
+        // Create orders with different case variations
+        Order::factory()->create([
+            'customer_name' => 'Diego Soto',
+            'customer_email' => 'diego@example.com',
+            'order_number' => 'ORD-20250723-6581',
+        ]);
+        
+        Order::factory()->create([
+            'customer_name' => 'JUAN PEREZ',
+            'customer_email' => 'JUAN@EXAMPLE.COM',
+            'order_number' => 'ORD-20250723-6582',
+        ]);
+        
+        Order::factory()->create([
+            'customer_name' => 'maria garcia',
+            'customer_email' => 'maria@example.com',
+            'order_number' => 'ORD-20250723-6583',
+        ]);
+
+        // Test lowercase search for mixed case name
+        $results = $this->repository->paginateWithFilters(['search' => 'diego'], 10);
+        $this->assertEquals(1, $results->total());
+        $this->assertEquals('Diego Soto', $results->items()[0]->customer_name);
+
+        // Test uppercase search for lowercase name
+        $results = $this->repository->paginateWithFilters(['search' => 'MARIA'], 10);
+        $this->assertEquals(1, $results->total());
+        $this->assertEquals('maria garcia', $results->items()[0]->customer_name);
+
+        // Test mixed case search for uppercase name
+        $results = $this->repository->paginateWithFilters(['search' => 'Juan'], 10);
+        $this->assertEquals(1, $results->total());
+        $this->assertEquals('JUAN PEREZ', $results->items()[0]->customer_name);
+
+        // Test partial search is also case insensitive
+        $results = $this->repository->paginateWithFilters(['search' => 'example.COM'], 10);
+        $this->assertEquals(3, $results->total());
+    }
 }

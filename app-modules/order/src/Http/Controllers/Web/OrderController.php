@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Core\Traits\HandlesPaginationBounds;
 use Colame\Order\Contracts\OrderServiceInterface;
 use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\OrderData;
@@ -23,6 +24,7 @@ use Inertia\Response;
  */
 class OrderController extends Controller
 {
+    use HandlesPaginationBounds;
     public function __construct(
         private OrderServiceInterface $orderService,
         private OrderStatusService $statusService,
@@ -32,15 +34,20 @@ class OrderController extends Controller
     /**
      * Display a listing of orders
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
         $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
-        $perPage = $request->input('per_page', 20);
+        $perPage = (int) $request->input('per_page', 20);
 
         // Get paginated orders with filters and metadata
         $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
         $responseData = $paginatedData->toArray();
+        
+        // Handle out-of-bounds page numbers
+        if ($redirect = $this->handleOutOfBoundsPagination($responseData['pagination'], $request, 'orders.index')) {
+            return $redirect;
+        }
 
         // Get locations for filter dropdown  
         $locations = [

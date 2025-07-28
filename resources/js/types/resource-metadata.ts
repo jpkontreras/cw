@@ -10,6 +10,9 @@ export interface ResourceMetadata {
   actions?: ResourceAction[];
   bulkActions?: string[];
   settings?: Record<string, any>;
+  perPageOptions?: number[];
+  defaultPerPage?: number;
+  rowActions?: boolean;
 }
 
 export interface ColumnMetadata {

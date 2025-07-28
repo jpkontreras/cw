@@ -92,6 +92,9 @@ sail artisan db:seed              # Run seeders only
     - `ColumnMetadata` - Column definition with filter support
     - `FilterMetadata` - Filter configuration
   - `Exceptions/` - Core exceptions
+  - `Traits/` - Reusable traits
+    - `ValidatesPagination` - Pagination validation for repositories
+    - `HandlesPaginationBounds` - Out-of-bounds page handling for controllers
 - `app/Http/Controllers/` - Laravel controllers handling HTTP requests
 - `app/Http/Controllers/Web/` - Web-specific controllers (Inertia responses)
 - `app/Http/Controllers/Api/` - API-specific controllers (JSON responses)
@@ -577,6 +580,88 @@ function OrderDataTable({ orders, pagination, metadata }) {
 3. **Consistency**: All resources follow the same pattern
 4. **Performance**: Optimized queries with proper pagination
 5. **Flexibility**: Easy to add new filter types or metadata
+
+### Pagination Configuration
+
+#### Overview
+Pagination configuration is centralized through the ResourceMetadata system, ensuring consistency between backend validation and frontend options.
+
+#### Implementation Pattern
+
+1. **Repository Level**: Use the `ValidatesPagination` trait in repositories
+```php
+use App\Core\Traits\ValidatesPagination;
+
+class OrderRepository implements OrderRepositoryInterface
+{
+    use ValidatesPagination;
+    
+    public function paginateWithFilters(...): LengthAwarePaginator
+    {
+        // Validate perPage parameter automatically
+        $perPage = $this->validatePerPage($perPage);
+        // ... rest of implementation
+    }
+}
+```
+
+2. **Metadata Configuration**: ResourceMetadata includes pagination options
+```php
+return new ResourceMetadata(
+    columns: collect($columns),
+    defaultFilters: ['search', 'status'],
+    perPageOptions: [10, 20, 50, 100], // Centralized options
+    defaultPerPage: 20,
+);
+```
+
+3. **Controller Simplicity**: Controllers just cast to int
+```php
+$perPage = (int) $request->input('per_page', 20);
+// No validation needed - handled by repository
+```
+
+4. **Frontend Integration**: Components receive options from metadata
+```tsx
+<DataTablePagination
+    pagination={pagination}
+    perPageOptions={metadata.perPageOptions} // From server
+/>
+```
+
+5. **Out-of-bounds Page Handling**: Use `HandlesPaginationBounds` trait
+```php
+use App\Core\Traits\HandlesPaginationBounds;
+
+class OrderController extends Controller
+{
+    use HandlesPaginationBounds;
+    
+    public function index(Request $request)
+    {
+        $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
+        $responseData = $paginatedData->toArray();
+        
+        // Web Controller - Redirects to page 1
+        if ($redirect = $this->handleOutOfBoundsPagination($responseData['pagination'], $request, 'orders.index')) {
+            return $redirect;
+        }
+        
+        // API Controller - Returns 404 with helpful info
+        if ($errorResponse = $this->handleOutOfBoundsPaginationApi($responseData['pagination'])) {
+            return $errorResponse;
+        }
+    }
+}
+```
+
+#### Benefits of This Approach
+
+1. **Single Source of Truth**: Pagination options defined once in ResourceMetadata
+2. **Repository Validation**: ValidatesPagination trait ensures consistency
+3. **No Config Files**: Follows interface-based architecture principles
+4. **Flexible per Resource**: Each resource can have different options if needed
+5. **Frontend Sync**: Options automatically flow to frontend via metadata
 
 ## Advanced Patterns
 

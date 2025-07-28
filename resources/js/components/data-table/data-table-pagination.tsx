@@ -10,10 +10,11 @@ interface DataTablePaginationProps<TData> {
   pagination: PaginationType;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  perPageOptions?: number[];
 }
 
-export function DataTablePagination<TData>({ pagination, onPageChange, onPageSizeChange }: DataTablePaginationProps<TData>) {
-  const pageSizeOptions = [10, 20, 30, 40, 50];
+export function DataTablePagination<TData>({ pagination, onPageChange, onPageSizeChange, perPageOptions = [10, 20, 50, 100] }: DataTablePaginationProps<TData>) {
+  const pageSizeOptions = perPageOptions;
 
   const handlePageChange = (page: number) => {
     if (onPageChange) {
@@ -127,7 +128,7 @@ function generatePageNumbers(pagination: PaginationType): (number | string)[] {
   }
 
   range.forEach((i) => {
-    if (l) {
+    if (l && typeof i === 'number' && typeof l === 'number') {
       if (i - l === 2) {
         rangeWithDots.push(l + 1);
       } else if (i - l !== 1) {
@@ -135,7 +136,9 @@ function generatePageNumbers(pagination: PaginationType): (number | string)[] {
       }
     }
     rangeWithDots.push(i);
-    l = i as number;
+    if (typeof i === 'number') {
+      l = i;
+    }
   });
 
   return rangeWithDots;

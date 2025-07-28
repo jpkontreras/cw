@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 import { ColumnMetadata, DataTableProps } from '@/types/datatable';
 import { router } from '@inertiajs/react';
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable, VisibilityState } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Search, MoreVertical } from 'lucide-react';
 import * as React from 'react';
 import { DataTablePagination } from './data-table-pagination';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
   columns?: ColumnDef<TData, TValue>[];
@@ -35,7 +36,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
   const tableColumns = React.useMemo(() => {
     if (columns) return columns;
 
-    return metadata.columns
+    const columnsArray = metadata.columns
       .filter((col) => col.visible && col.key !== 'search')
       .map((col) => ({
         id: col.key,
@@ -288,7 +289,50 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
         enableSorting: col.sortable,
         enableHiding: true,
       })) as ColumnDef<TData, TValue>[];
-  }, [columns, metadata.columns]);
+    
+    // Add actions column if metadata includes row actions
+    if (metadata.actions?.length > 0 || metadata.rowActions) {
+      const actionsColumn: ColumnDef<TData, TValue> = {
+        id: 'actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const item = row.original as any;
+          
+          return (
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => router.visit(`/orders/${item.id}`)}>
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.visit(`/orders/${item.id}/edit`)}>
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.visit(`/orders/${item.id}/receipt`)}>
+                    Print Receipt
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+        header: () => <div className="text-right"></div>,
+        meta: {
+          isActionsColumn: true,
+        },
+      };
+      
+      return [...columnsArray, actionsColumn] as ColumnDef<TData, TValue>[];
+    }
+    
+    return columnsArray;
+  }, [columns, metadata]);
 
   const table = useReactTable({
     data,
@@ -382,25 +426,56 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-b">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="border-r bg-muted/50 last:border-r-0">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const isActionsColumn = header.column.columnDef.meta?.isActionsColumn;
+                  return (
+                    <TableHead 
+                      key={header.id} 
+                      className={cn(
+                        "border-r bg-muted/50 last:border-r-0",
+                        isActionsColumn && "sticky right-0 z-10"
+                      )}
+                    >
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="border-b last:border-b-0">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="overflow-hidden border-r whitespace-nowrap last:border-r-0">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const item = row.original as any;
+                const handleRowClick = () => {
+                  if (item.id) {
+                    router.visit(`/orders/${item.id}`);
+                  }
+                };
+                
+                return (
+                  <TableRow 
+                    key={row.id} 
+                    className="border-b last:border-b-0 cursor-pointer hover:bg-muted/50"
+                    onClick={handleRowClick}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const isActionsColumn = cell.column.columnDef.meta?.isActionsColumn;
+                      return (
+                        <TableCell 
+                          key={cell.id} 
+                          className={cn(
+                            "overflow-hidden border-r whitespace-nowrap last:border-r-0",
+                            isActionsColumn && "sticky right-0 z-10 bg-gray-50 dark:bg-gray-900 border-l-2 border-gray-200 dark:border-gray-700"
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={tableColumns.length} className="h-24 text-center">
@@ -415,6 +490,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
       <DataTablePagination
         table={table}
         pagination={pagination}
+        perPageOptions={metadata.perPageOptions}
         onPageChange={(page) => {
           const params = new URLSearchParams(window.location.search);
           params.set('page', String(page));

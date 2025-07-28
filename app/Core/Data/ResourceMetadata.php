@@ -17,6 +17,7 @@ class ResourceMetadata extends Data
      * @param DataCollection<string, ColumnMetadata> $columns
      * @param array<string> $defaultFilters
      * @param array<FilterPresetData> $filterPresets
+     * @param array<int> $perPageOptions
      */
     public function __construct(
         #[DataCollectionOf(ColumnMetadata::class)]
@@ -28,6 +29,9 @@ class ResourceMetadata extends Data
         public readonly array $actions = [],
         public readonly array $bulkActions = [],
         public readonly array $settings = [],
+        public readonly array $perPageOptions = [10, 20, 50, 100],
+        public readonly int $defaultPerPage = 20,
+        public readonly bool $rowActions = false,
     ) {}
 
     /**
@@ -93,6 +97,9 @@ class ResourceMetadata extends Data
                 'searchableColumns' => $this->getSearchableColumns(),
                 'sortableColumns' => $this->getSortableColumns(),
             ], $this->settings),
+            'perPageOptions' => $this->perPageOptions,
+            'defaultPerPage' => $this->defaultPerPage,
+            'rowActions' => $this->rowActions,
         ];
     }
 }

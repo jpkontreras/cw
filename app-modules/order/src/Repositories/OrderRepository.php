@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Order\Repositories;
 
+use App\Core\Traits\ValidatesPagination;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Data\OrderItemData;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderRepository implements OrderRepositoryInterface
 {
+    use ValidatesPagination;
     /**
      * Find order by ID
      */
@@ -280,10 +282,10 @@ class OrderRepository implements OrderRepositoryInterface
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhere('customer_name', 'like', "%{$search}%")
-                  ->orWhere('customer_phone', 'like', "%{$search}%")
-                  ->orWhere('customer_email', 'like', "%{$search}%");
+                $q->whereRaw('LOWER(order_number) LIKE LOWER(?)', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(customer_name) LIKE LOWER(?)', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(customer_phone) LIKE LOWER(?)', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(customer_email) LIKE LOWER(?)', ["%{$search}%"]);
             });
         }
 
@@ -308,6 +310,9 @@ class OrderRepository implements OrderRepositoryInterface
         string $pageName = 'page',
         ?int $page = null
     ): LengthAwarePaginator {
+        // Validate perPage parameter
+        $perPage = $this->validatePerPage($perPage);
+        
         $query = Order::query();
         
         // Load relationships if needed
