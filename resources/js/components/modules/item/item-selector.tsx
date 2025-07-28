@@ -1,22 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Check, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn, formatCurrency } from '@/lib/utils';
+import { Check, Search } from 'lucide-react';
+import { useState } from 'react';
 
 interface Item {
   id: number;
@@ -37,13 +24,7 @@ interface ItemSelectorProps {
   disabled?: boolean;
 }
 
-export function ItemSelector({
-  items,
-  value,
-  onSelect,
-  placeholder = "Select an item...",
-  disabled = false,
-}: ItemSelectorProps) {
+export function ItemSelector({ items, value, onSelect, placeholder = 'Select an item...', disabled = false }: ItemSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -51,39 +32,31 @@ export function ItemSelector({
 
   const filteredItems = items.filter((item) => {
     if (!item.is_active) return false;
-    
+
     const searchLower = search.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(searchLower) ||
-      item.category?.name.toLowerCase().includes(searchLower)
-    );
+    return item.name.toLowerCase().includes(searchLower) || item.category?.name.toLowerCase().includes(searchLower);
   });
 
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    const category = item.category?.name || 'Uncategorized';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {} as Record<string, Item[]>);
+  const groupedItems = filteredItems.reduce(
+    (acc, item) => {
+      const category = item.category?.name || 'Uncategorized';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(item);
+      return acc;
+    },
+    {} as Record<string, Item[]>,
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
-        >
+        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between" disabled={disabled}>
           {selectedItem ? (
-            <div className="flex items-center justify-between w-full">
+            <div className="flex w-full items-center justify-between">
               <span>{selectedItem.name}</span>
-              <span className="text-muted-foreground">
-                {formatCurrency(selectedItem.base_price)}
-              </span>
+              <span className="text-muted-foreground">{formatCurrency(selectedItem.base_price)}</span>
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -102,9 +75,7 @@ export function ItemSelector({
             />
           </div>
           <CommandList>
-            {filteredItems.length === 0 && (
-              <CommandEmpty>No items found.</CommandEmpty>
-            )}
+            {filteredItems.length === 0 && <CommandEmpty>No items found.</CommandEmpty>}
             {Object.entries(groupedItems).map(([category, categoryItems]) => (
               <CommandGroup key={category} heading={category}>
                 {categoryItems.map((item) => (
@@ -116,17 +87,10 @@ export function ItemSelector({
                       setOpen(false);
                     }}
                   >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === item.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex items-center justify-between w-full">
+                    <Check className={cn('mr-2 h-4 w-4', value === item.id ? 'opacity-100' : 'opacity-0')} />
+                    <div className="flex w-full items-center justify-between">
                       <span>{item.name}</span>
-                      <span className="text-muted-foreground text-sm">
-                        {formatCurrency(item.base_price)}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{formatCurrency(item.base_price)}</span>
                     </div>
                   </CommandItem>
                 ))}

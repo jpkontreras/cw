@@ -1,11 +1,11 @@
-// import { OrderDataTable } from '@/components/modules/order/order-data-table';
+import { InertiaDataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import type { OrderListPageProps } from '@/types/modules/order';
 import { formatCurrency } from '@/types/modules/order/utils';
-import { Head, Link, router } from '@inertiajs/react';
-import { CheckCircle, Clock, DollarSign, Package, Plus, ShoppingCart } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { CheckCircle, Clock, DollarSign, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo } from 'react';
 
 function OrderIndexContent({ view }: OrderListPageProps) {
@@ -51,7 +51,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
   );
 
   const handleExport = () => {
-    const params = new URLSearchParams(initialFilters as any);
+    const params = new URLSearchParams(filters as any);
     window.location.href = `/orders/export?${params.toString()}`;
   };
 
@@ -99,28 +99,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
           </div>
 
           {/* Orders Data Table */}
-          <div className="rounded-lg border bg-card">
-            <div className="flex flex-col items-center justify-center px-4 py-24">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 animate-pulse rounded-full bg-blue-100 opacity-30 blur-3xl" />
-                <div className="relative rounded-full bg-white p-6 shadow-lg">
-                  <Package className="h-16 w-16 text-gray-400" />
-                </div>
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-gray-900">No orders found</h3>
-              <p className="mb-6 max-w-md text-center text-gray-600">
-                {Object.keys({}).length > 0
-                  ? 'No orders match your current filters. Try adjusting your search criteria.'
-                  : 'Your orders will appear here once customers start placing them.'}
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={() => router.visit('/orders/create')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create First Order
-                </Button>
-              </div>
-            </div>
-          </div>
+          {pagination && metadata && <InertiaDataTable data={orders || []} pagination={pagination} metadata={metadata} />}
         </div>
       </Page.Content>
     </>

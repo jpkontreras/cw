@@ -1,5 +1,4 @@
-import { formatCurrency } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 interface ItemPriceProps {
   price: number;
@@ -9,13 +8,7 @@ interface ItemPriceProps {
   className?: string;
 }
 
-export function ItemPrice({
-  price,
-  originalPrice,
-  size = 'md',
-  showCurrency = true,
-  className,
-}: ItemPriceProps) {
+export function ItemPrice({ price, originalPrice, size = 'md', showCurrency = true, className }: ItemPriceProps) {
   const sizeClasses = {
     sm: 'text-sm',
     md: 'text-base',
@@ -26,22 +19,11 @@ export function ItemPrice({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <span
-        className={cn(
-          'font-semibold',
-          sizeClasses[size],
-          hasDiscount && 'text-destructive'
-        )}
-      >
+      <span className={cn('font-semibold', sizeClasses[size], hasDiscount && 'text-destructive')}>
         {showCurrency ? formatCurrency(price) : price.toFixed(2)}
       </span>
       {hasDiscount && (
-        <span
-          className={cn(
-            'line-through text-muted-foreground',
-            size === 'sm' ? 'text-xs' : 'text-sm'
-          )}
-        >
+        <span className={cn('text-muted-foreground line-through', size === 'sm' ? 'text-xs' : 'text-sm')}>
           {showCurrency ? formatCurrency(originalPrice) : originalPrice.toFixed(2)}
         </span>
       )}

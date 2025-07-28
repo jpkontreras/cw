@@ -1,1488 +1,806 @@
 {
-    "errors": {},
-    "name": "Laravel",
-    "quote": {
-        "message": "I have not failed. I've just found 10,000 ways that won't work.",
-        "author": "Thomas Edison"
-    },
-    "auth": {
-        "user": {
-            "id": 1,
-            "name": "Julio Patricio Contreras Marchant",
-            "email": "julio.contreras.insuco@gmail.com",
-            "email_verified_at": null,
-            "created_at": "2025-07-23T01:13:50.000000Z",
-            "updated_at": "2025-07-23T01:13:50.000000Z"
-        }
-    },
-    "ziggy": {
-        "url": "http://localhost",
-        "port": null,
-        "defaults": [],
-        "routes": {
-            "items.index": {
-                "uri": "items",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "items.create": {
-                "uri": "items/create",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "items.store": {
-                "uri": "items",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "items.search": {
-                "uri": "items/search",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "items.show": {
-                "uri": "items/{id}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "items.edit": {
-                "uri": "items/{id}/edit",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "items.update": {
-                "uri": "items/{id}",
-                "methods": [
-                    "PUT"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "items.destroy": {
-                "uri": "items/{id}",
-                "methods": [
-                    "DELETE"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "api.items.index": {
-                "uri": "api/v1/items",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "api.items.store": {
-                "uri": "api/v1/items",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "api.items.search": {
-                "uri": "api/v1/items/search",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "api.items.show": {
-                "uri": "api/v1/items/{id}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "api.items.update": {
-                "uri": "api/v1/items/{id}",
-                "methods": [
-                    "PUT"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "api.items.destroy": {
-                "uri": "api/v1/items/{id}",
-                "methods": [
-                    "DELETE"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "api.items.availability": {
-                "uri": "api/v1/items/{id}/availability",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "api.items.price": {
-                "uri": "api/v1/items/{id}/price",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id"
-                ]
-            },
-            "orders.index": {
-                "uri": "orders",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "orders.dashboard": {
-                "uri": "orders/dashboard",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "orders.operations": {
-                "uri": "orders/operations",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "orders.kitchen": {
-                "uri": "orders/kitchen",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "orders.create": {
-                "uri": "orders/create",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "orders.store": {
-                "uri": "orders",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "orders.show": {
-                "uri": "orders/{order}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.edit": {
-                "uri": "orders/{order}/edit",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.update": {
-                "uri": "orders/{order}",
-                "methods": [
-                    "PUT"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.place": {
-                "uri": "orders/{order}/place",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.confirm": {
-                "uri": "orders/{order}/confirm",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.start-preparing": {
-                "uri": "orders/{order}/start-preparing",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.mark-ready": {
-                "uri": "orders/{order}/mark-ready",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.start-delivery": {
-                "uri": "orders/{order}/start-delivery",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.mark-delivered": {
-                "uri": "orders/{order}/mark-delivered",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.complete": {
-                "uri": "orders/{order}/complete",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.cancel.form": {
-                "uri": "orders/{order}/cancel",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.cancel": {
-                "uri": "orders/{order}/cancel",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "orders.payment": {
-                "uri": "orders/{order}/payment",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ]
-            },
-            "orders.payment.process": {
-                "uri": "orders/{order}/payment/process",
-                "methods": [
-                    "POST"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ]
-            },
-            "orders.receipt": {
-                "uri": "orders/{order}/receipt",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "order": "[0-9]+"
-                },
-                "parameters": [
-                    "order"
-                ],
-                "bindings": {
-                    "order": "id"
-                }
-            },
-            "api.orders.index": {
-                "uri": "api/v1/orders",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "api.orders.store": {
-                "uri": "api/v1/orders",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "api.orders.show": {
-                "uri": "api/v1/orders/{order}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.update": {
-                "uri": "api/v1/orders/{order}",
-                "methods": [
-                    "PUT"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.destroy": {
-                "uri": "api/v1/orders/{order}",
-                "methods": [
-                    "DELETE"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.update-status": {
-                "uri": "api/v1/orders/{order}/status",
-                "methods": [
-                    "PATCH"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.cancel": {
-                "uri": "api/v1/orders/{order}/cancel",
-                "methods": [
-                    "POST"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.update-item-status": {
-                "uri": "api/v1/orders/{order}/items/{item}/status",
-                "methods": [
-                    "PATCH"
-                ],
-                "parameters": [
-                    "order",
-                    "item"
-                ]
-            },
-            "api.orders.apply-offers": {
-                "uri": "api/v1/orders/{order}/offers",
-                "methods": [
-                    "POST"
-                ],
-                "parameters": [
-                    "order"
-                ]
-            },
-            "api.orders.statistics": {
-                "uri": "api/v1/orders/statistics/summary",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "home": {
-                "uri": "/",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "dashboard": {
-                "uri": "dashboard",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "profile.edit": {
-                "uri": "settings/profile",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "profile.update": {
-                "uri": "settings/profile",
-                "methods": [
-                    "PATCH"
-                ]
-            },
-            "profile.destroy": {
-                "uri": "settings/profile",
-                "methods": [
-                    "DELETE"
-                ]
-            },
-            "password.edit": {
-                "uri": "settings/password",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "password.update": {
-                "uri": "settings/password",
-                "methods": [
-                    "PUT"
-                ]
-            },
-            "register": {
-                "uri": "register",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "login": {
-                "uri": "login",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "password.request": {
-                "uri": "forgot-password",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "password.email": {
-                "uri": "forgot-password",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "password.reset": {
-                "uri": "reset-password/{token}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "token"
-                ]
-            },
-            "password.store": {
-                "uri": "reset-password",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "verification.notice": {
-                "uri": "verify-email",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "verification.verify": {
-                "uri": "verify-email/{id}/{hash}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "parameters": [
-                    "id",
-                    "hash"
-                ]
-            },
-            "verification.send": {
-                "uri": "email/verification-notification",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "password.confirm": {
-                "uri": "confirm-password",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ]
-            },
-            "logout": {
-                "uri": "logout",
-                "methods": [
-                    "POST"
-                ]
-            },
-            "storage.local": {
-                "uri": "storage/{path}",
-                "methods": [
-                    "GET",
-                    "HEAD"
-                ],
-                "wheres": {
-                    "path": ".*"
-                },
-                "parameters": [
-                    "path"
-                ]
-            }
+  "orders": [],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 0,
+    "from": null,
+    "to": null,
+    "path": "http://localhost/orders",
+    "first_page_url": "http://localhost/orders?page=1",
+    "last_page_url": "http://localhost/orders?page=1",
+    "next_page_url": null,
+    "prev_page_url": null,
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Previous",
+        "active": false
+      },
+      {
+        "url": "http://localhost/orders?page=1",
+        "label": "1",
+        "active": true
+      },
+      {
+        "url": null,
+        "label": "Next &raquo;",
+        "active": false
+      }
+    ]
+  },
+  "metadata": {
+    "columns": [
+      {
+        "key": "search",
+        "label": "Search",
+        "type": "string",
+        "sortable": false,
+        "searchable": true,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": {
+          "key": "search",
+          "label": "Orders",
+          "type": "string",
+          "filterType": "search",
+          "placeholder": "Search orders...",
+          "icon": null,
+          "width": null,
+          "options": null,
+          "sortable": false,
+          "searchable": true,
+          "required": false,
+          "debounceMs": 300,
+          "maxItems": null,
+          "presets": null,
+          "format": null,
+          "minDate": null,
+          "maxDate": null,
+          "validation": []
         },
-        "location": "http://localhost/orders"
-    },
-    "sidebarOpen": true,
-    "orders": [],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 1,
-        "per_page": 20,
-        "total": 0,
-        "from": null,
-        "to": null,
-        "path": "http://localhost/orders",
-        "first_page_url": "http://localhost/orders?page=1",
-        "last_page_url": "http://localhost/orders?page=1",
-        "next_page_url": null,
-        "prev_page_url": null,
-        "links": [
+        "metadata": []
+      },
+      {
+        "key": "orderNumber",
+        "label": "Order",
+        "type": "string",
+        "sortable": true,
+        "searchable": true,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": null,
+        "metadata": []
+      },
+      {
+        "key": "customerName",
+        "label": "Customer",
+        "type": "string",
+        "sortable": false,
+        "searchable": true,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": null,
+        "metadata": []
+      },
+      {
+        "key": "type",
+        "label": "Type",
+        "type": "enum",
+        "sortable": true,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": {
+          "key": "type",
+          "label": "Type",
+          "type": "enum",
+          "filterType": "select",
+          "placeholder": "All Types",
+          "icon": null,
+          "width": null,
+          "options": [
             {
-                "url": null,
-                "label": "&laquo; Previous",
-                "active": false
+              "value": "dine_in",
+              "label": "Dine In",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
             },
             {
-                "url": "http://localhost/orders?page=1",
-                "label": "1",
-                "active": true
+              "value": "takeout",
+              "label": "Takeout",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
             },
             {
-                "url": null,
-                "label": "Next &raquo;",
-                "active": false
+              "value": "delivery",
+              "label": "Delivery",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "catering",
+              "label": "Catering",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
             }
-        ]
-    },
-    "metadata": {
-        "columns": [
-            {
-                "key": "search",
-                "label": "Search",
-                "type": "string",
-                "sortable": false,
-                "searchable": true,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": {
-                    "key": "search",
-                    "label": "Orders",
-                    "type": "string",
-                    "filterType": "search",
-                    "placeholder": "Search orders...",
-                    "icon": null,
-                    "width": null,
-                    "options": null,
-                    "sortable": false,
-                    "searchable": true,
-                    "required": false,
-                    "debounceMs": 300,
-                    "maxItems": null,
-                    "presets": null,
-                    "format": null,
-                    "minDate": null,
-                    "maxDate": null,
-                    "validation": []
-                },
-                "metadata": []
-            },
-            {
-                "key": "orderNumber",
-                "label": "Order",
-                "type": "string",
-                "sortable": true,
-                "searchable": true,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": null,
-                "metadata": []
-            },
-            {
-                "key": "customerName",
-                "label": "Customer",
-                "type": "string",
-                "sortable": false,
-                "searchable": true,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": null,
-                "metadata": []
-            },
-            {
-                "key": "type",
-                "label": "Type",
-                "type": "enum",
-                "sortable": true,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": {
-                    "key": "type",
-                    "label": "Type",
-                    "type": "enum",
-                    "filterType": "select",
-                    "placeholder": "All Types",
-                    "icon": null,
-                    "width": null,
-                    "options": [
-                        {
-                            "value": "dine_in",
-                            "label": "Dine In",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "takeout",
-                            "label": "Takeout",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "delivery",
-                            "label": "Delivery",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "catering",
-                            "label": "Catering",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        }
-                    ],
-                    "sortable": true,
-                    "searchable": false,
-                    "required": false,
-                    "debounceMs": null,
-                    "maxItems": null,
-                    "presets": null,
-                    "format": null,
-                    "minDate": null,
-                    "maxDate": null,
-                    "validation": []
-                },
-                "metadata": {
-                    "options": [
-                        {
-                            "value": "dine_in",
-                            "label": "Dine In"
-                        },
-                        {
-                            "value": "takeout",
-                            "label": "Takeout"
-                        },
-                        {
-                            "value": "delivery",
-                            "label": "Delivery"
-                        },
-                        {
-                            "value": "catering",
-                            "label": "Catering"
-                        }
-                    ]
-                }
-            },
-            {
-                "key": "status",
-                "label": "Status",
-                "type": "enum",
-                "sortable": true,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": {
-                    "key": "status",
-                    "label": "Status",
-                    "type": "enum",
-                    "filterType": "multi-select",
-                    "placeholder": "Filter by status",
-                    "icon": null,
-                    "width": null,
-                    "options": [
-                        {
-                            "value": "draft",
-                            "label": "Draft",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "placed",
-                            "label": "Placed",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "confirmed",
-                            "label": "Confirmed",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "preparing",
-                            "label": "Preparing",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "ready",
-                            "label": "Ready",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "delivering",
-                            "label": "Delivering",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "delivered",
-                            "label": "Delivered",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "completed",
-                            "label": "Completed",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "cancelled",
-                            "label": "Cancelled",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        },
-                        {
-                            "value": "refunded",
-                            "label": "Refunded",
-                            "icon": null,
-                            "disabled": false,
-                            "metadata": null
-                        }
-                    ],
-                    "sortable": true,
-                    "searchable": false,
-                    "required": false,
-                    "debounceMs": null,
-                    "maxItems": 3,
-                    "presets": null,
-                    "format": null,
-                    "minDate": null,
-                    "maxDate": null,
-                    "validation": []
-                },
-                "metadata": {
-                    "options": [
-                        {
-                            "value": "draft",
-                            "label": "Draft"
-                        },
-                        {
-                            "value": "placed",
-                            "label": "Placed"
-                        },
-                        {
-                            "value": "confirmed",
-                            "label": "Confirmed"
-                        },
-                        {
-                            "value": "preparing",
-                            "label": "Preparing"
-                        },
-                        {
-                            "value": "ready",
-                            "label": "Ready"
-                        },
-                        {
-                            "value": "delivering",
-                            "label": "Delivering"
-                        },
-                        {
-                            "value": "delivered",
-                            "label": "Delivered"
-                        },
-                        {
-                            "value": "completed",
-                            "label": "Completed"
-                        },
-                        {
-                            "value": "cancelled",
-                            "label": "Cancelled"
-                        },
-                        {
-                            "value": "refunded",
-                            "label": "Refunded"
-                        }
-                    ]
-                }
-            },
-            {
-                "key": "items",
-                "label": "Items",
-                "type": "number",
-                "sortable": false,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": "right",
-                "width": null,
-                "filter": null,
-                "metadata": []
-            },
-            {
-                "key": "totalAmount",
-                "label": "Total",
-                "type": "currency",
-                "sortable": true,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": "CLP",
-                "align": "right",
-                "width": null,
-                "filter": null,
-                "metadata": []
-            },
-            {
-                "key": "paymentStatus",
-                "label": "Payment",
-                "type": "enum",
-                "sortable": true,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": null,
-                "metadata": {
-                    "options": [
-                        {
-                            "value": "pending",
-                            "label": "Pending"
-                        },
-                        {
-                            "value": "partial",
-                            "label": "Partial"
-                        },
-                        {
-                            "value": "paid",
-                            "label": "Paid"
-                        },
-                        {
-                            "value": "refunded",
-                            "label": "Refunded"
-                        }
-                    ]
-                }
-            },
-            {
-                "key": "createdAt",
-                "label": "Time",
-                "type": "datetime",
-                "sortable": true,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": "relative",
-                "align": null,
-                "width": null,
-                "filter": null,
-                "metadata": []
-            },
-            {
-                "key": "location_id",
-                "label": "Location",
-                "type": "string",
-                "sortable": false,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": {
-                    "key": "location_id",
-                    "label": "Location",
-                    "type": "enum",
-                    "filterType": "select",
-                    "placeholder": "All Locations",
-                    "icon": null,
-                    "width": null,
-                    "options": [],
-                    "sortable": true,
-                    "searchable": false,
-                    "required": false,
-                    "debounceMs": null,
-                    "maxItems": null,
-                    "presets": null,
-                    "format": null,
-                    "minDate": null,
-                    "maxDate": null,
-                    "validation": []
-                },
-                "metadata": []
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "string",
-                "sortable": false,
-                "searchable": false,
-                "visible": true,
-                "exportable": true,
-                "format": null,
-                "align": null,
-                "width": null,
-                "filter": {
-                    "key": "date",
-                    "label": "Date",
-                    "type": "date",
-                    "filterType": "date",
-                    "placeholder": "Select date",
-                    "icon": null,
-                    "width": null,
-                    "options": null,
-                    "sortable": true,
-                    "searchable": false,
-                    "required": false,
-                    "debounceMs": null,
-                    "maxItems": null,
-                    "presets": [
-                        {
-                            "label": "Today",
-                            "value": "today"
-                        },
-                        {
-                            "label": "Yesterday",
-                            "value": "yesterday"
-                        },
-                        {
-                            "label": "This Week",
-                            "value": "week"
-                        },
-                        {
-                            "label": "This Month",
-                            "value": "month"
-                        }
-                    ],
-                    "format": "YYYY-MM-DD",
-                    "minDate": null,
-                    "maxDate": null,
-                    "validation": []
-                },
-                "metadata": []
-            }
-        ],
-        "filters": [
-            {
-                "key": "search",
-                "label": "Orders",
-                "type": "string",
-                "filterType": "search",
-                "placeholder": "Search orders...",
-                "icon": null,
-                "width": null,
-                "options": null,
-                "sortable": false,
-                "searchable": true,
-                "required": false,
-                "debounceMs": 300,
-                "maxItems": null,
-                "presets": null,
-                "format": null,
-                "minDate": null,
-                "maxDate": null,
-                "validation": []
-            },
-            {
-                "key": "type",
-                "label": "Type",
-                "type": "enum",
-                "filterType": "select",
-                "placeholder": "All Types",
-                "icon": null,
-                "width": null,
-                "options": [
-                    {
-                        "value": "dine_in",
-                        "label": "Dine In",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "takeout",
-                        "label": "Takeout",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "delivery",
-                        "label": "Delivery",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "catering",
-                        "label": "Catering",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    }
-                ],
-                "sortable": true,
-                "searchable": false,
-                "required": false,
-                "debounceMs": null,
-                "maxItems": null,
-                "presets": null,
-                "format": null,
-                "minDate": null,
-                "maxDate": null,
-                "validation": []
-            },
-            {
-                "key": "status",
-                "label": "Status",
-                "type": "enum",
-                "filterType": "multi-select",
-                "placeholder": "Filter by status",
-                "icon": null,
-                "width": null,
-                "options": [
-                    {
-                        "value": "draft",
-                        "label": "Draft",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "placed",
-                        "label": "Placed",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "confirmed",
-                        "label": "Confirmed",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "preparing",
-                        "label": "Preparing",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "ready",
-                        "label": "Ready",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "delivering",
-                        "label": "Delivering",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "delivered",
-                        "label": "Delivered",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "completed",
-                        "label": "Completed",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "cancelled",
-                        "label": "Cancelled",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    },
-                    {
-                        "value": "refunded",
-                        "label": "Refunded",
-                        "icon": null,
-                        "disabled": false,
-                        "metadata": null
-                    }
-                ],
-                "sortable": true,
-                "searchable": false,
-                "required": false,
-                "debounceMs": null,
-                "maxItems": 3,
-                "presets": null,
-                "format": null,
-                "minDate": null,
-                "maxDate": null,
-                "validation": []
-            },
-            {
-                "key": "location_id",
-                "label": "Location",
-                "type": "enum",
-                "filterType": "select",
-                "placeholder": "All Locations",
-                "icon": null,
-                "width": null,
-                "options": [],
-                "sortable": true,
-                "searchable": false,
-                "required": false,
-                "debounceMs": null,
-                "maxItems": null,
-                "presets": null,
-                "format": null,
-                "minDate": null,
-                "maxDate": null,
-                "validation": []
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "filterType": "date",
-                "placeholder": "Select date",
-                "icon": null,
-                "width": null,
-                "options": null,
-                "sortable": true,
-                "searchable": false,
-                "required": false,
-                "debounceMs": null,
-                "maxItems": null,
-                "presets": [
-                    {
-                        "label": "Today",
-                        "value": "today"
-                    },
-                    {
-                        "label": "Yesterday",
-                        "value": "yesterday"
-                    },
-                    {
-                        "label": "This Week",
-                        "value": "week"
-                    },
-                    {
-                        "label": "This Month",
-                        "value": "month"
-                    }
-                ],
-                "format": "YYYY-MM-DD",
-                "minDate": null,
-                "maxDate": null,
-                "validation": []
-            }
-        ],
-        "defaultFilters": [
-            "search",
-            "status",
-            "type",
-            "location_id",
-            "date"
-        ],
-        "defaultSort": "-created_at",
-        "filterPresets": [
-            {
-                "id": "active",
-                "name": "Active Orders",
-                "description": "Orders that are currently being processed",
-                "filters": {
-                    "status": [
-                        "placed",
-                        "confirmed",
-                        "preparing",
-                        "ready"
-                    ]
-                },
-                "isDefault": false,
-                "icon": "clock"
-            },
-            {
-                "id": "today",
-                "name": "Today's Orders",
-                "description": "All orders from today",
-                "filters": {
-                    "date": "today"
-                },
-                "isDefault": true,
-                "icon": "calendar"
-            },
-            {
-                "id": "completed",
-                "name": "Completed Orders",
-                "description": "Successfully completed orders",
-                "filters": {
-                    "status": [
-                        "completed",
-                        "delivered"
-                    ]
-                },
-                "isDefault": false,
-                "icon": "check"
-            },
-            {
-                "id": "issues",
-                "name": "Orders with Issues",
-                "description": "Cancelled or refunded orders",
-                "filters": {
-                    "status": [
-                        "cancelled",
-                        "refunded"
-                    ]
-                },
-                "isDefault": false,
-                "icon": "alert"
-            }
-        ],
-        "exportFormats": [
-            "csv",
-            "excel",
-            "pdf"
-        ],
-        "actions": [
-            {
-                "id": "view",
-                "label": "View Details",
-                "icon": "eye",
-                "route": "orders.show"
-            },
-            {
-                "id": "edit",
-                "label": "Edit Order",
-                "icon": "edit",
-                "route": "orders.edit",
-                "condition": "canBeModified"
-            },
-            {
-                "id": "receipt",
-                "label": "Print Receipt",
-                "icon": "receipt",
-                "route": "orders.receipt"
-            },
-            {
-                "id": "cancel",
-                "label": "Cancel Order",
-                "icon": "trash",
-                "route": "orders.cancel",
-                "condition": "canBeCancelled",
-                "confirmRequired": true,
-                "variant": "destructive"
-            }
-        ],
-        "bulkActions": [
-            "cancel",
-            "export"
-        ],
-        "settings": {
-            "searchableColumns": [
-                "search",
-                "orderNumber",
-                "customerName"
-            ],
-            "sortableColumns": [
-                "orderNumber",
-                "type",
-                "status",
-                "totalAmount",
-                "paymentStatus",
-                "createdAt"
-            ],
-            "refreshInterval": 30000,
-            "pageSize": 20
-        }
-    },
-    "locations": [
-        {
-            "id": 1,
-            "name": "Main Branch"
+          ],
+          "sortable": true,
+          "searchable": false,
+          "required": false,
+          "debounceMs": null,
+          "maxItems": null,
+          "presets": null,
+          "format": null,
+          "minDate": null,
+          "maxDate": null,
+          "validation": []
         },
-        {
-            "id": 2,
-            "name": "Downtown Branch"
+        "metadata": {
+          "options": [
+            {
+              "value": "dine_in",
+              "label": "Dine In"
+            },
+            {
+              "value": "takeout",
+              "label": "Takeout"
+            },
+            {
+              "value": "delivery",
+              "label": "Delivery"
+            },
+            {
+              "value": "catering",
+              "label": "Catering"
+            }
+          ]
         }
+      },
+      {
+        "key": "status",
+        "label": "Status",
+        "type": "enum",
+        "sortable": true,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "filterType": "multi-select",
+          "placeholder": "Filter by status",
+          "icon": null,
+          "width": null,
+          "options": [
+            {
+              "value": "draft",
+              "label": "Draft",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "placed",
+              "label": "Placed",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "confirmed",
+              "label": "Confirmed",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "preparing",
+              "label": "Preparing",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "ready",
+              "label": "Ready",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "delivering",
+              "label": "Delivering",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "delivered",
+              "label": "Delivered",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "completed",
+              "label": "Completed",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "cancelled",
+              "label": "Cancelled",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            },
+            {
+              "value": "refunded",
+              "label": "Refunded",
+              "icon": null,
+              "disabled": false,
+              "metadata": null
+            }
+          ],
+          "sortable": true,
+          "searchable": false,
+          "required": false,
+          "debounceMs": null,
+          "maxItems": 3,
+          "presets": null,
+          "format": null,
+          "minDate": null,
+          "maxDate": null,
+          "validation": []
+        },
+        "metadata": {
+          "options": [
+            {
+              "value": "draft",
+              "label": "Draft"
+            },
+            {
+              "value": "placed",
+              "label": "Placed"
+            },
+            {
+              "value": "confirmed",
+              "label": "Confirmed"
+            },
+            {
+              "value": "preparing",
+              "label": "Preparing"
+            },
+            {
+              "value": "ready",
+              "label": "Ready"
+            },
+            {
+              "value": "delivering",
+              "label": "Delivering"
+            },
+            {
+              "value": "delivered",
+              "label": "Delivered"
+            },
+            {
+              "value": "completed",
+              "label": "Completed"
+            },
+            {
+              "value": "cancelled",
+              "label": "Cancelled"
+            },
+            {
+              "value": "refunded",
+              "label": "Refunded"
+            }
+          ]
+        }
+      },
+      {
+        "key": "items",
+        "label": "Items",
+        "type": "number",
+        "sortable": false,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": "right",
+        "width": null,
+        "filter": null,
+        "metadata": []
+      },
+      {
+        "key": "totalAmount",
+        "label": "Total",
+        "type": "currency",
+        "sortable": true,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": "CLP",
+        "align": "right",
+        "width": null,
+        "filter": null,
+        "metadata": []
+      },
+      {
+        "key": "paymentStatus",
+        "label": "Payment",
+        "type": "enum",
+        "sortable": true,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": null,
+        "metadata": {
+          "options": [
+            {
+              "value": "pending",
+              "label": "Pending"
+            },
+            {
+              "value": "partial",
+              "label": "Partial"
+            },
+            {
+              "value": "paid",
+              "label": "Paid"
+            },
+            {
+              "value": "refunded",
+              "label": "Refunded"
+            }
+          ]
+        }
+      },
+      {
+        "key": "createdAt",
+        "label": "Time",
+        "type": "datetime",
+        "sortable": true,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": "relative",
+        "align": null,
+        "width": null,
+        "filter": null,
+        "metadata": []
+      },
+      {
+        "key": "location_id",
+        "label": "Location",
+        "type": "string",
+        "sortable": false,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": {
+          "key": "location_id",
+          "label": "Location",
+          "type": "enum",
+          "filterType": "select",
+          "placeholder": "All Locations",
+          "icon": null,
+          "width": null,
+          "options": [],
+          "sortable": true,
+          "searchable": false,
+          "required": false,
+          "debounceMs": null,
+          "maxItems": null,
+          "presets": null,
+          "format": null,
+          "minDate": null,
+          "maxDate": null,
+          "validation": []
+        },
+        "metadata": []
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "string",
+        "sortable": false,
+        "searchable": false,
+        "visible": true,
+        "exportable": true,
+        "format": null,
+        "align": null,
+        "width": null,
+        "filter": {
+          "key": "date",
+          "label": "Date",
+          "type": "date",
+          "filterType": "date",
+          "placeholder": "Select date",
+          "icon": null,
+          "width": null,
+          "options": null,
+          "sortable": true,
+          "searchable": false,
+          "required": false,
+          "debounceMs": null,
+          "maxItems": null,
+          "presets": [
+            {
+              "label": "Today",
+              "value": "today"
+            },
+            {
+              "label": "Yesterday",
+              "value": "yesterday"
+            },
+            {
+              "label": "This Week",
+              "value": "week"
+            },
+            {
+              "label": "This Month",
+              "value": "month"
+            }
+          ],
+          "format": "YYYY-MM-DD",
+          "minDate": null,
+          "maxDate": null,
+          "validation": []
+        },
+        "metadata": []
+      }
     ],
-    "filters": {
-        "search": "iss"
-    },
-    "stats": {
-        "total_orders": 0,
-        "active_orders": 26,
-        "ready_to_serve": 6,
-        "revenue_today": 0,
-        "average_order_value": 0,
-        "completion_rate": 0
+    "filters": [
+      {
+        "key": "search",
+        "label": "Orders",
+        "type": "string",
+        "filterType": "search",
+        "placeholder": "Search orders...",
+        "icon": null,
+        "width": null,
+        "options": null,
+        "sortable": false,
+        "searchable": true,
+        "required": false,
+        "debounceMs": 300,
+        "maxItems": null,
+        "presets": null,
+        "format": null,
+        "minDate": null,
+        "maxDate": null,
+        "validation": []
+      },
+      {
+        "key": "type",
+        "label": "Type",
+        "type": "enum",
+        "filterType": "select",
+        "placeholder": "All Types",
+        "icon": null,
+        "width": null,
+        "options": [
+          {
+            "value": "dine_in",
+            "label": "Dine In",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "takeout",
+            "label": "Takeout",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "delivery",
+            "label": "Delivery",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "catering",
+            "label": "Catering",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          }
+        ],
+        "sortable": true,
+        "searchable": false,
+        "required": false,
+        "debounceMs": null,
+        "maxItems": null,
+        "presets": null,
+        "format": null,
+        "minDate": null,
+        "maxDate": null,
+        "validation": []
+      },
+      {
+        "key": "status",
+        "label": "Status",
+        "type": "enum",
+        "filterType": "multi-select",
+        "placeholder": "Filter by status",
+        "icon": null,
+        "width": null,
+        "options": [
+          {
+            "value": "draft",
+            "label": "Draft",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "placed",
+            "label": "Placed",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "confirmed",
+            "label": "Confirmed",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "preparing",
+            "label": "Preparing",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "ready",
+            "label": "Ready",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "delivering",
+            "label": "Delivering",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "delivered",
+            "label": "Delivered",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "completed",
+            "label": "Completed",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "cancelled",
+            "label": "Cancelled",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          },
+          {
+            "value": "refunded",
+            "label": "Refunded",
+            "icon": null,
+            "disabled": false,
+            "metadata": null
+          }
+        ],
+        "sortable": true,
+        "searchable": false,
+        "required": false,
+        "debounceMs": null,
+        "maxItems": 3,
+        "presets": null,
+        "format": null,
+        "minDate": null,
+        "maxDate": null,
+        "validation": []
+      },
+      {
+        "key": "location_id",
+        "label": "Location",
+        "type": "enum",
+        "filterType": "select",
+        "placeholder": "All Locations",
+        "icon": null,
+        "width": null,
+        "options": [],
+        "sortable": true,
+        "searchable": false,
+        "required": false,
+        "debounceMs": null,
+        "maxItems": null,
+        "presets": null,
+        "format": null,
+        "minDate": null,
+        "maxDate": null,
+        "validation": []
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "filterType": "date",
+        "placeholder": "Select date",
+        "icon": null,
+        "width": null,
+        "options": null,
+        "sortable": true,
+        "searchable": false,
+        "required": false,
+        "debounceMs": null,
+        "maxItems": null,
+        "presets": [
+          {
+            "label": "Today",
+            "value": "today"
+          },
+          {
+            "label": "Yesterday",
+            "value": "yesterday"
+          },
+          {
+            "label": "This Week",
+            "value": "week"
+          },
+          {
+            "label": "This Month",
+            "value": "month"
+          }
+        ],
+        "format": "YYYY-MM-DD",
+        "minDate": null,
+        "maxDate": null,
+        "validation": []
+      }
+    ],
+    "defaultFilters": ["search", "status", "type", "location_id", "date"],
+    "defaultSort": "-created_at",
+    "filterPresets": [
+      {
+        "id": "active",
+        "name": "Active Orders",
+        "description": "Orders that are currently being processed",
+        "filters": {
+          "status": ["placed", "confirmed", "preparing", "ready"]
+        },
+        "isDefault": false,
+        "icon": "clock"
+      },
+      {
+        "id": "today",
+        "name": "Today's Orders",
+        "description": "All orders from today",
+        "filters": {
+          "date": "today"
+        },
+        "isDefault": true,
+        "icon": "calendar"
+      },
+      {
+        "id": "completed",
+        "name": "Completed Orders",
+        "description": "Successfully completed orders",
+        "filters": {
+          "status": ["completed", "delivered"]
+        },
+        "isDefault": false,
+        "icon": "check"
+      },
+      {
+        "id": "issues",
+        "name": "Orders with Issues",
+        "description": "Cancelled or refunded orders",
+        "filters": {
+          "status": ["cancelled", "refunded"]
+        },
+        "isDefault": false,
+        "icon": "alert"
+      }
+    ],
+    "exportFormats": ["csv", "excel", "pdf"],
+    "actions": [
+      {
+        "id": "view",
+        "label": "View Details",
+        "icon": "eye",
+        "route": "orders.show"
+      },
+      {
+        "id": "edit",
+        "label": "Edit Order",
+        "icon": "edit",
+        "route": "orders.edit",
+        "condition": "canBeModified"
+      },
+      {
+        "id": "receipt",
+        "label": "Print Receipt",
+        "icon": "receipt",
+        "route": "orders.receipt"
+      },
+      {
+        "id": "cancel",
+        "label": "Cancel Order",
+        "icon": "trash",
+        "route": "orders.cancel",
+        "condition": "canBeCancelled",
+        "confirmRequired": true,
+        "variant": "destructive"
+      }
+    ],
+    "bulkActions": ["cancel", "export"],
+    "settings": {
+      "searchableColumns": ["search", "orderNumber", "customerName"],
+      "sortableColumns": ["orderNumber", "type", "status", "totalAmount", "paymentStatus", "createdAt"],
+      "refreshInterval": 30000,
+      "pageSize": 20
     }
+  },
+  "locations": [
+    {
+      "id": 1,
+      "name": "Main Branch"
+    },
+    {
+      "id": 2,
+      "name": "Downtown Branch"
+    }
+  ],
+  "filters": {
+    "search": "iss"
+  },
+  "stats": {
+    "total_orders": 0,
+    "active_orders": 26,
+    "ready_to_serve": 6,
+    "revenue_today": 0,
+    "average_order_value": 0,
+    "completion_rate": 0
+  }
 }

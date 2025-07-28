@@ -1,0 +1,484 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import { ColumnMetadata, DataTableProps } from '@/types/datatable';
+import { router } from '@inertiajs/react';
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable, VisibilityState } from '@tanstack/react-table';
+import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react';
+import * as React from 'react';
+import { DataTablePagination } from './data-table-pagination';
+
+interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
+  columns?: ColumnDef<TData, TValue>[];
+  className?: string;
+}
+
+export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, columns, className }: InertiaDataTableProps<TData, TValue>) {
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+
+  // Simple navigation function
+  const navigate = (params: Record<string, string | number>) => {
+    router.get(window.location.pathname, params, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    });
+  };
+
+  // Generate columns from metadata if not provided
+  const tableColumns = React.useMemo(() => {
+    if (columns) return columns;
+
+    return metadata.columns
+      .filter((col) => col.visible && col.key !== 'search')
+      .map((col) => ({
+        id: col.key,
+        accessorKey: col.key,
+        header: () => {
+          const params = new URLSearchParams(window.location.search);
+          const currentSort = params.get('sort') || '';
+          const isSortedAsc = currentSort === col.key;
+          const isSortedDesc = currentSort === `-${col.key}`;
+          const isSorted = isSortedAsc || isSortedDesc;
+
+          const handleSort = () => {
+            if (!col.sortable) return;
+
+            if (!isSorted) {
+              // Not sorted -> Ascending
+              params.set('sort', col.key);
+            } else if (isSortedAsc) {
+              // Ascending -> Descending
+              params.set('sort', `-${col.key}`);
+            } else {
+              // Descending -> No sort
+              params.delete('sort');
+            }
+
+            navigate(Object.fromEntries(params));
+          };
+
+          const currentFilterValue = params.get(col.key) || '';
+          const selectedValues = currentFilterValue ? currentFilterValue.split(',') : [];
+
+          const handleColumnFilter = (value: string) => {
+            if (value && value !== '__all__') {
+              params.set(col.key, value);
+            } else {
+              params.delete(col.key);
+            }
+            params.set('page', '1');
+            navigate(Object.fromEntries(params));
+          };
+
+          const handleMultiSelectChange = (value: string, checked: boolean) => {
+            let newValues = [...selectedValues];
+            if (checked) {
+              if (!newValues.includes(value)) {
+                newValues.push(value);
+              }
+            } else {
+              newValues = newValues.filter((v) => v !== value);
+            }
+
+            if (newValues.length > 0) {
+              params.set(col.key, newValues.join(','));
+            } else {
+              params.delete(col.key);
+            }
+            params.set('page', '1');
+            navigate(Object.fromEntries(params));
+          };
+
+          const clearFilter = () => {
+            params.delete(col.key);
+            params.set('page', '1');
+            navigate(Object.fromEntries(params));
+          };
+
+          const hasActiveFilter = (col.filter || col.searchable) && currentFilterValue !== '';
+          const showFilterIcon = col.filter || col.searchable;
+
+          return (
+            <div className="flex w-full items-center justify-between">
+              <div className="flex items-center gap-1">
+                <span className="font-medium">{col.label}</span>
+
+                {showFilterIcon && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant={hasActiveFilter ? 'secondary' : 'ghost'} size="sm" className="h-5 w-5 p-0">
+                        <Search className={cn('h-3 w-3', hasActiveFilter && 'text-primary')} />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="leading-none font-medium">{col.filter?.label || `Search ${col.label}`}</h4>
+                          {hasActiveFilter && (
+                            <Button variant="ghost" size="sm" onClick={clearFilter} className="h-auto p-1 text-xs">
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Searchable columns without explicit filter config */}
+                        {col.searchable && !col.filter && (
+                          <Input
+                            placeholder={`Search ${col.label.toLowerCase()}...`}
+                            defaultValue={currentFilterValue}
+                            onChange={(e) => {
+                              clearTimeout((window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`]);
+                              (window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`] = setTimeout(() => {
+                                handleColumnFilter(e.target.value);
+                              }, 300);
+                            }}
+                          />
+                        )}
+
+                        {col.filter?.filterType === 'search' && (
+                          <Input
+                            placeholder={col.filter.placeholder}
+                            defaultValue={currentFilterValue}
+                            onChange={(e) => {
+                              clearTimeout((window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`]);
+                              (window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`] = setTimeout(() => {
+                                handleColumnFilter(e.target.value);
+                              }, col.filter.debounceMs || 300);
+                            }}
+                          />
+                        )}
+
+                        {col.filter?.filterType === 'select' && (
+                          <Select value={currentFilterValue || '__all__'} onValueChange={handleColumnFilter}>
+                            <SelectTrigger>
+                              <SelectValue placeholder={col.filter.placeholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__all__">{col.filter.placeholder || 'All'}</SelectItem>
+                              {col.filter.options?.map((option) => (
+                                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        {col.filter?.filterType === 'multi-select' && (
+                          <div className="space-y-2">
+                            {selectedValues.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pb-2">
+                                {selectedValues.map((value) => {
+                                  const option = col.filter.options?.find((opt) => opt.value === value);
+                                  return (
+                                    <Badge key={value} variant="secondary" className="text-xs">
+                                      {option?.label || value}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="max-h-[200px] space-y-2 overflow-y-auto">
+                              {col.filter.options?.map((option) => (
+                                <label
+                                  key={option.value}
+                                  className={cn(
+                                    'flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-muted',
+                                    option.disabled && 'cursor-not-allowed opacity-50',
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={selectedValues.includes(option.value)}
+                                    onCheckedChange={(checked) => handleMultiSelectChange(option.value, checked as boolean)}
+                                    disabled={option.disabled}
+                                  />
+                                  <span className="text-sm">{option.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                            {col.filter.maxItems && selectedValues.length >= col.filter.maxItems && (
+                              <p className="text-xs text-muted-foreground">Maximum {col.filter.maxItems} items can be selected</p>
+                            )}
+                          </div>
+                        )}
+
+                        {col.filter?.filterType === 'date' && (
+                          <div className="space-y-2">
+                            {col.filter.presets && col.filter.presets.length > 0 && (
+                              <Select
+                                value={currentFilterValue || '__custom__'}
+                                onValueChange={(value) => {
+                                  if (value !== '__custom__') {
+                                    handleColumnFilter(value);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select date range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__custom__">Custom date</SelectItem>
+                                  {col.filter.presets.map((preset) => (
+                                    <SelectItem key={preset.value} value={preset.value}>
+                                      {preset.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Input
+                              type="date"
+                              defaultValue={currentFilterValue}
+                              onChange={(e) => handleColumnFilter(e.target.value)}
+                              max={col.filter.maxDate || undefined}
+                              min={col.filter.minDate || undefined}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+
+              {col.sortable && (
+                <Button variant="ghost" onClick={handleSort} size="sm" className="ml-auto h-6 w-6 p-0">
+                  {isSortedDesc ? (
+                    <ArrowDown className="h-4 w-4" />
+                  ) : isSortedAsc ? (
+                    <ArrowUp className="h-4 w-4" />
+                  ) : (
+                    <ArrowUpDown className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+            </div>
+          );
+        },
+        cell: ({ row }) => {
+          const value = row.getValue(col.key);
+          const formattedValue = formatCellValue(value, col);
+          const stringValue = String(formattedValue);
+          const needsTruncation = stringValue.length > 100;
+
+          if (needsTruncation) {
+            return (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className={cn('cursor-help truncate', col.align && `text-${col.align}`)}>{stringValue.substring(0, 100)}...</div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <p className="text-sm">{stringValue}</p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            );
+          }
+
+          return <div className={cn('truncate', col.align && `text-${col.align}`)}>{formattedValue}</div>;
+        },
+        enableSorting: col.sortable,
+        enableHiding: true,
+      })) as ColumnDef<TData, TValue>[];
+  }, [columns, metadata.columns]);
+
+  const table = useReactTable({
+    data,
+    columns: tableColumns,
+    getCoreRowModel: getCoreRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    state: {
+      columnVisibility,
+    },
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    pageCount: pagination.last_page,
+  });
+
+  // Simple filter handlers
+  const handleSearchChange = (key: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.set('page', '1');
+
+    // Debounce with timeout
+    clearTimeout((window as unknown as { searchTimeout?: NodeJS.Timeout }).searchTimeout);
+    (window as unknown as { searchTimeout?: NodeJS.Timeout }).searchTimeout = setTimeout(() => {
+      navigate(Object.fromEntries(params));
+    }, 300);
+  };
+
+  const handleSelectChange = (key: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value && value !== '__all__') {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.set('page', '1');
+    navigate(Object.fromEntries(params));
+  };
+
+  return (
+    <div className={cn('space-y-4', className)}>
+      {/* Simple inline filters */}
+      <div className="flex items-center gap-4">
+        {metadata.filters
+          .filter((filter) => metadata.defaultFilters.includes(filter.key))
+          .map((filter) => {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            if (filter.filterType === 'search') {
+              const currentValue = urlParams.get(filter.key) || '';
+              return (
+                <Input
+                  key={filter.key}
+                  placeholder={filter.placeholder}
+                  defaultValue={currentValue}
+                  onChange={(e) => handleSearchChange(filter.key, e.target.value)}
+                  className="max-w-xs"
+                />
+              );
+            }
+
+            if (filter.filterType === 'select' || filter.filterType === 'multi-select') {
+              const currentValue = urlParams.get(filter.key) || '__all__';
+              return (
+                <Select key={filter.key} value={currentValue} onValueChange={(value) => handleSelectChange(filter.key, value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={filter.placeholder || filter.label} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">{filter.placeholder || `All ${filter.label}`}</SelectItem>
+                    {filter.options?.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            }
+
+            return null;
+          })}
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="border-b">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="border-r bg-muted/50 last:border-r-0">
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="border-b last:border-b-0">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="overflow-hidden border-r whitespace-nowrap last:border-r-0">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={tableColumns.length} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <DataTablePagination
+        table={table}
+        pagination={pagination}
+        onPageChange={(page) => {
+          const params = new URLSearchParams(window.location.search);
+          params.set('page', String(page));
+          navigate(Object.fromEntries(params));
+        }}
+        onPageSizeChange={(pageSize) => {
+          const params = new URLSearchParams(window.location.search);
+          params.set('per_page', String(pageSize));
+          params.set('page', '1');
+          navigate(Object.fromEntries(params));
+        }}
+      />
+    </div>
+  );
+}
+
+// Helper function to format cell values
+function formatCellValue(value: unknown, column: ColumnMetadata): React.ReactNode {
+  if (value === null || value === undefined) return '-';
+
+  switch (column.type) {
+    case 'number':
+      // Handle arrays (like items count)
+      if (Array.isArray(value)) {
+        return value.length;
+      }
+      return typeof value === 'number' ? value : '-';
+
+    case 'currency':
+      return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: column.format || 'CLP',
+      }).format(value);
+
+    case 'datetime':
+      if (column.format === 'relative') {
+        const date = new Date(value);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+      }
+      return new Date(value).toLocaleString();
+
+    case 'date':
+      return new Date(value).toLocaleDateString();
+
+    case 'enum':
+      if (column.metadata?.options) {
+        const option = column.metadata.options.find((opt: { value: string; label: string }) => opt.value === value);
+        return option?.label || value;
+      }
+      return value;
+
+    case 'boolean':
+      return value ? 'Yes' : 'No';
+
+    default:
+      return String(value);
+  }
+}

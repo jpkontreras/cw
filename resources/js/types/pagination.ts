@@ -84,7 +84,7 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
   if ('links' in pagination && Array.isArray(pagination.links)) {
     return pagination as SimplePagination<T>;
   }
-  
+
   // If it's Laravel resource format
   if ('meta' in pagination && pagination.meta) {
     return {
@@ -100,10 +100,10 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
       per_page: pagination.meta.per_page,
       prev_page_url: pagination.links.prev,
       to: pagination.meta.to,
-      total: pagination.meta.total
+      total: pagination.meta.total,
     };
   }
-  
+
   // Legacy format - create links array
   const currentPage = (pagination as any).current_page || (pagination as any).currentPage || 1;
   const lastPage = (pagination as any).last_page || (pagination as any).lastPage || 1;
@@ -111,31 +111,31 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
   const total = pagination.total || 0;
   const from = total > 0 ? (currentPage - 1) * perPage + 1 : null;
   const to = total > 0 ? Math.min(currentPage * perPage, total) : null;
-  
+
   // Generate links array
   const links: LaravelPaginationLink[] = [
     {
       url: currentPage > 1 ? `?page=${currentPage - 1}` : null,
       label: '&laquo; Previous',
-      active: false
-    }
+      active: false,
+    },
   ];
-  
+
   // Add page numbers
   for (let i = 1; i <= lastPage; i++) {
     links.push({
       url: `?page=${i}`,
       label: String(i),
-      active: i === currentPage
+      active: i === currentPage,
     });
   }
-  
+
   links.push({
     url: currentPage < lastPage ? `?page=${currentPage + 1}` : null,
     label: 'Next &raquo;',
-    active: false
+    active: false,
   });
-  
+
   return {
     data: pagination.data,
     current_page: currentPage,
@@ -149,6 +149,6 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
     per_page: perPage,
     prev_page_url: currentPage > 1 ? `?page=${currentPage - 1}` : null,
     to,
-    total
+    total,
   };
 }

@@ -1,7 +1,7 @@
 // resources/js/types/modules/order/utils.ts
 
-import { Order, OrderStatus, OrderType, PaymentStatus, KitchenStatus, OrderItem } from './index';
-import { ORDER_STATUS_CONFIG, ORDER_TYPE_CONFIG, PAYMENT_STATUS_CONFIG, KITCHEN_STATUS_CONFIG, TAX_RATE } from './constants';
+import { KITCHEN_STATUS_CONFIG, ORDER_STATUS_CONFIG, ORDER_TYPE_CONFIG, PAYMENT_STATUS_CONFIG, TAX_RATE } from './constants';
+import { KitchenStatus, Order, OrderItem, OrderStatus, OrderType, PaymentStatus } from './index';
 
 // Status utilities
 export const getStatusColor = (status: OrderStatus): string => {
@@ -23,16 +23,16 @@ export const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null =>
 export const canTransitionToStatus = (fromStatus: OrderStatus, toStatus: OrderStatus): boolean => {
   const nextStatus = getNextStatus(fromStatus);
   if (!nextStatus) return false;
-  
+
   // Allow direct transition to next status
   if (nextStatus === toStatus) return true;
-  
+
   // Allow cancellation from certain statuses
   if (toStatus === 'cancelled' && ['draft', 'placed', 'confirmed'].includes(fromStatus)) return true;
-  
+
   // Allow direct transition to completed from ready
   if (fromStatus === 'ready' && toStatus === 'completed') return true;
-  
+
   return false;
 };
 
@@ -112,27 +112,27 @@ export const isOrderHighPriority = (order: Order): boolean => {
 // Time utilities
 export const getOrderAge = (order: Order): string => {
   if (!order.createdAt) return 'Unknown';
-  
+
   const createdDate = new Date(order.createdAt);
   if (isNaN(createdDate.getTime())) return 'Unknown';
-  
+
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  
+
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins} min ago`;
-  
+
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours} hr ago`;
-  
+
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays} days ago`;
 };
 
 export const getPreparationTime = (order: Order): number | null => {
   if (!order.placedAt || !order.readyAt) return null;
-  
+
   const placedDate = new Date(order.placedAt);
   const readyDate = new Date(order.readyAt);
   return Math.floor((readyDate.getTime() - placedDate.getTime()) / 60000);
@@ -140,7 +140,7 @@ export const getPreparationTime = (order: Order): number | null => {
 
 export const formatDuration = (minutes: number): string => {
   if (minutes < 60) return `${minutes} min`;
-  
+
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
@@ -186,37 +186,43 @@ export const validateEmail = (email: string): boolean => {
 
 // Grouping utilities
 export const groupOrdersByCourse = (items: OrderItem[]): Record<string, OrderItem[]> => {
-  return items.reduce((groups, item) => {
-    const course = item.course || 'other';
-    if (!groups[course]) groups[course] = [];
-    groups[course].push(item);
-    return groups;
-  }, {} as Record<string, OrderItem[]>);
+  return items.reduce(
+    (groups, item) => {
+      const course = item.course || 'other';
+      if (!groups[course]) groups[course] = [];
+      groups[course].push(item);
+      return groups;
+    },
+    {} as Record<string, OrderItem[]>,
+  );
 };
 
 export const groupOrdersByStatus = (orders: Order[]): Record<OrderStatus, Order[]> => {
-  return orders.reduce((groups, order) => {
-    if (!groups[order.status]) groups[order.status] = [];
-    groups[order.status].push(order);
-    return groups;
-  }, {} as Record<OrderStatus, Order[]>);
+  return orders.reduce(
+    (groups, order) => {
+      if (!groups[order.status]) groups[order.status] = [];
+      groups[order.status].push(order);
+      return groups;
+    },
+    {} as Record<OrderStatus, Order[]>,
+  );
 };
 
 // Kitchen display utilities
 export const getKitchenOrderPriority = (order: Order): number => {
   let priority = 0;
-  
+
   // High priority orders
   if (order.priority === 'high') priority += 100;
-  
+
   // Order age (older orders get higher priority)
   const ageMinutes = Math.floor((Date.now() - new Date(order.placedAt || order.createdAt).getTime()) / 60000);
   priority += Math.min(ageMinutes, 60); // Cap at 60 minutes
-  
+
   // Status priority
   if (order.status === 'confirmed') priority += 20;
   if (order.status === 'preparing') priority += 10;
-  
+
   return priority;
 };
 

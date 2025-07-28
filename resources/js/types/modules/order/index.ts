@@ -42,7 +42,7 @@ export interface OrderItemModifier {
   quantity: number;
 }
 
-export type OrderStatus = 
+export type OrderStatus =
   | 'draft'
   | 'placed'
   | 'confirmed'
@@ -54,29 +54,13 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
-export type OrderType = 
-  | 'dine_in'
-  | 'takeout'
-  | 'delivery'
-  | 'catering';
+export type OrderType = 'dine_in' | 'takeout' | 'delivery' | 'catering';
 
-export type PaymentStatus = 
-  | 'pending'
-  | 'partial'
-  | 'paid'
-  | 'refunded';
+export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'refunded';
 
-export type KitchenStatus = 
-  | 'pending'
-  | 'preparing'
-  | 'ready'
-  | 'served';
+export type KitchenStatus = 'pending' | 'preparing' | 'ready' | 'served';
 
-export type PaymentMethod = 
-  | 'cash'
-  | 'card'
-  | 'transfer'
-  | 'other';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other';
 
 // Component prop types
 export interface OrderListPageProps {

@@ -73,25 +73,9 @@ export interface ResourceAction {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
 }
 
-export type ColumnType = 
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'date'
-  | 'datetime'
-  | 'currency'
-  | 'enum'
-  | 'array'
-  | 'object';
+export type ColumnType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'currency' | 'enum' | 'array' | 'object';
 
-export type FilterType = 
-  | 'search'
-  | 'select'
-  | 'multi-select'
-  | 'date'
-  | 'date-range'
-  | 'boolean'
-  | 'number-range';
+export type FilterType = 'search' | 'select' | 'multi-select' | 'date' | 'date-range' | 'boolean' | 'number-range';
 
 // Helper type for paginated responses
 export interface PaginatedResponse<T> {

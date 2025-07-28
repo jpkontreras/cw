@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/utils';
 
 interface Modifier {
@@ -26,17 +25,13 @@ interface ModifierSelectorProps {
   onModifierChange: (groupId: number, modifierIds: number[]) => void;
 }
 
-export function ModifierSelector({
-  groups,
-  selectedModifiers,
-  onModifierChange,
-}: ModifierSelectorProps) {
+export function ModifierSelector({ groups, selectedModifiers, onModifierChange }: ModifierSelectorProps) {
   const handleRadioChange = (groupId: number, modifierId: string) => {
     onModifierChange(groupId, [parseInt(modifierId)]);
   };
 
   const handleCheckboxChange = (groupId: number, modifierId: number, checked: boolean) => {
-    const group = groups.find(g => g.id === groupId);
+    const group = groups.find((g) => g.id === groupId);
     if (!group) return;
 
     const current = selectedModifiers[groupId] || [];
@@ -49,7 +44,7 @@ export function ModifierSelector({
       }
       updated = [...current, modifierId];
     } else {
-      updated = current.filter(id => id !== modifierId);
+      updated = current.filter((id) => id !== modifierId);
     }
 
     onModifierChange(groupId, updated);
@@ -67,31 +62,25 @@ export function ModifierSelector({
             <CardHeader>
               <CardTitle className="text-base">
                 {group.name}
-                {isRequired && <span className="text-destructive ml-1">*</span>}
+                {isRequired && <span className="ml-1 text-destructive">*</span>}
               </CardTitle>
               <CardDescription>
                 {group.min_selections === group.max_selections
                   ? `Select exactly ${group.min_selections}`
                   : group.min_selections > 0
-                  ? `Select ${group.min_selections} to ${group.max_selections}`
-                  : `Select up to ${group.max_selections}`}
+                    ? `Select ${group.min_selections} to ${group.max_selections}`
+                    : `Select up to ${group.max_selections}`}
                 {selectedCount > 0 && ` (${selectedCount} selected)`}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isRadio ? (
-                <RadioGroup
-                  value={selectedModifiers[group.id]?.[0]?.toString() || ''}
-                  onValueChange={(value) => handleRadioChange(group.id, value)}
-                >
+                <RadioGroup value={selectedModifiers[group.id]?.[0]?.toString() || ''} onValueChange={(value) => handleRadioChange(group.id, value)}>
                   {group.modifiers.map((modifier) => (
                     <div key={modifier.id} className="flex items-center justify-between py-2">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value={modifier.id.toString()} id={`${group.id}-${modifier.id}`} />
-                        <Label
-                          htmlFor={`${group.id}-${modifier.id}`}
-                          className="text-sm font-normal cursor-pointer"
-                        >
+                        <Label htmlFor={`${group.id}-${modifier.id}`} className="cursor-pointer text-sm font-normal">
                           {modifier.name}
                         </Label>
                       </div>
@@ -116,15 +105,10 @@ export function ModifierSelector({
                           <Checkbox
                             id={`${group.id}-${modifier.id}`}
                             checked={isChecked}
-                            onCheckedChange={(checked) => 
-                              handleCheckboxChange(group.id, modifier.id, checked as boolean)
-                            }
+                            onCheckedChange={(checked) => handleCheckboxChange(group.id, modifier.id, checked as boolean)}
                             disabled={isDisabled}
                           />
-                          <Label
-                            htmlFor={`${group.id}-${modifier.id}`}
-                            className="text-sm font-normal cursor-pointer"
-                          >
+                          <Label htmlFor={`${group.id}-${modifier.id}`} className="cursor-pointer text-sm font-normal">
                             {modifier.name}
                           </Label>
                         </div>
