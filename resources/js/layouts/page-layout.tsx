@@ -50,11 +50,11 @@ const PageHeader = ({ title, subtitle, actions, className }: PageHeaderProps) =>
   return (
     <header className={cn('border-b bg-background', className)}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-4 sm:py-6">
+        <div className="flex items-center justify-between py-3 sm:py-4">
           <div className="min-w-0 flex-1">
-            {title && <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>}
+            {title && <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>}
 
-            {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
           </div>
 
           {actions && <div className="ml-4 flex shrink-0 items-center gap-2 sm:ml-6">{actions}</div>}

@@ -1,11 +1,19 @@
+import * as React from 'react';
+import { Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { FilterMetadata } from '@/types/datatable';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import * as React from 'react';
 
 interface MultiSelectFilterProps {
   filter: FilterMetadata;
@@ -16,56 +24,137 @@ interface MultiSelectFilterProps {
 
 export function MultiSelectFilter({ filter, value = [], onChange, className }: MultiSelectFilterProps) {
   const [open, setOpen] = React.useState(false);
+  const [localValue, setLocalValue] = React.useState<string[]>(value);
+
+  // Update local value when prop changes
+  React.useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   const handleSelect = (optionValue: string) => {
-    const newValue = value.includes(optionValue) ? value.filter((v) => v !== optionValue) : [...value, optionValue];
+    const newValue = localValue.includes(optionValue) 
+      ? localValue.filter((v) => v !== optionValue) 
+      : [...localValue, optionValue];
 
     // Respect maxItems if set
     if (filter.maxItems && newValue.length > filter.maxItems) {
       return;
     }
 
-    onChange(newValue);
+    setLocalValue(newValue);
   };
 
-  const selectedLabels = value.map((v) => filter.options?.find((opt) => opt.value === v)?.label).filter(Boolean);
+  const handleClearAll = () => {
+    setLocalValue([]);
+  };
+
+  const handleApplyFilter = () => {
+    onChange(localValue);
+  };
+
+  const selectedLabels = value
+    .map((v) => filter.options?.find((opt) => opt.value === v)?.label)
+    .filter(Boolean);
+
+  const displayText = () => {
+    if (value.length === 0) {
+      return filter.placeholder || `All ${filter.label}`;
+    }
+    if (value.length === 1) {
+      return selectedLabels[0];
+    }
+    if (value.length === 2) {
+      return selectedLabels.join(', ');
+    }
+    return `${selectedLabels[0]}, ${selectedLabels[1]} +${value.length - 2}`;
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn('justify-between', className)}
-          style={{ width: filter.width || '200px' }}
-        >
-          <span className="truncate">
-            {value.length === 0
-              ? filter.placeholder || `Select ${filter.label}`
-              : value.length === 1
-                ? selectedLabels[0]
-                : `${value.length} selected`}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
-        <Command>
-          <CommandInput placeholder={`Search ${filter.label.toLowerCase()}...`} />
-          <CommandEmpty>No {filter.label.toLowerCase()} found.</CommandEmpty>
-          <CommandGroup>
-            {filter.options?.map((option) => (
-              <CommandItem key={option.value} value={option.value} onSelect={() => handleSelect(option.value)} disabled={option.disabled}>
-                <Check className={cn('mr-2 h-4 w-4', value.includes(option.value) ? 'opacity-100' : 'opacity-0')} />
-                {option.icon && <span className="mr-2">{option.icon}</span>}
-                {option.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+    <div className="flex flex-col w-full max-h-[400px]">
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <Command className="flex-1 flex flex-col">
+          <CommandInput placeholder={`Search ${filter.label.toLowerCase()}...`} className="flex-shrink-0" />
+          <CommandList className="flex-1 overflow-auto">
+            <CommandEmpty>No {filter.label.toLowerCase()} found.</CommandEmpty>
+            <CommandGroup>
+              {localValue.length > 0 && (
+                <>
+                  <CommandItem
+                    onSelect={handleClearAll}
+                    className="justify-center text-center"
+                  >
+                    Clear all filters
+                  </CommandItem>
+                  <CommandSeparator />
+                </>
+              )}
+              {filter.options?.map((option) => {
+                const isSelected = localValue.includes(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={() => handleSelect(option.value)}
+                    disabled={option.disabled}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div
+                        className={cn(
+                          'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                          isSelected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'opacity-50 [&_svg]:invisible'
+                        )}
+                      >
+                        <Check className="h-3 w-3" />
+                      </div>
+                      {option.icon && <span className="mr-2">{option.icon}</span>}
+                      <span>{option.label}</span>
+                    </div>
+                    {option.count !== undefined && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {option.count}
+                      </span>
+                    )}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </div>
+      {localValue.length > 0 && (
+        <div className="flex flex-wrap gap-1 p-2 border-t flex-shrink-0 max-h-[60px] overflow-auto">
+          {localValue.slice(0, 3).map((v) => {
+            const option = filter.options?.find((opt) => opt.value === v);
+            return (
+              <Badge
+                key={v}
+                variant="secondary"
+                className="text-xs"
+              >
+                {option?.label || v}
+              </Badge>
+            );
+          })}
+          {localValue.length > 3 && (
+            <Badge variant="outline" className="text-xs">
+              +{localValue.length - 3} more
+            </Badge>
+          )}
+        </div>
+      )}
+      <div className="p-2 border-t flex-shrink-0">
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={handleApplyFilter}
+        >
+          Filter
+        </Button>
+      </div>
+    </div>
   );
 }
 

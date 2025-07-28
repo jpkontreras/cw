@@ -10,10 +10,11 @@ import { cn } from '@/lib/utils';
 import { ColumnMetadata, DataTableProps } from '@/types/datatable';
 import { router } from '@inertiajs/react';
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable, VisibilityState } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, Search, MoreVertical } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Search, MoreVertical, MoreHorizontal, X, Filter } from 'lucide-react';
 import * as React from 'react';
 import { DataTablePagination } from './data-table-pagination';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MultiSelectFilter } from './filters';
 
 interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
   columns?: ColumnDef<TData, TValue>[];
@@ -22,6 +23,7 @@ interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
 
 export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, columns, className }: InertiaDataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
 
   // Simple navigation function
   const navigate = (params: Record<string, string | number>) => {
@@ -103,22 +105,22 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
             navigate(Object.fromEntries(params));
           };
 
-          const hasActiveFilter = (col.filter || col.searchable) && currentFilterValue !== '';
-          const showFilterIcon = col.filter || col.searchable;
+          const hasActiveFilter = (col.filter || col.type === 'string') && currentFilterValue !== '';
+          const showFilterIcon = col.filter || col.type === 'string';
 
           return (
-            <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-1">
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex items-center gap-1 flex-1">
                 <span className="font-medium">{col.label}</span>
 
                 {showFilterIcon && (
-                  <Popover>
+                  <Popover modal={false}>
                     <PopoverTrigger asChild>
                       <Button variant={hasActiveFilter ? 'secondary' : 'ghost'} size="sm" className="h-5 w-5 p-0">
                         <Search className={cn('h-3 w-3', hasActiveFilter && 'text-primary')} />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80">
+                    <PopoverContent className="w-80" onOpenAutoFocus={(e) => e.preventDefault()}>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="leading-none font-medium">{col.filter?.label || `Search ${col.label}`}</h4>
@@ -129,31 +131,73 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
                           )}
                         </div>
 
-                        {/* Searchable columns without explicit filter config */}
-                        {col.searchable && !col.filter && (
-                          <Input
-                            placeholder={`Search ${col.label.toLowerCase()}...`}
-                            defaultValue={currentFilterValue}
-                            onChange={(e) => {
-                              clearTimeout((window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`]);
-                              (window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`] = setTimeout(() => {
-                                handleColumnFilter(e.target.value);
-                              }, 300);
-                            }}
-                          />
+                        {/* Text columns without explicit filter config - allow search */}
+                        {col.type === 'string' && !col.filter && (
+                          <div className="space-y-2">
+                            <Input
+                              id={`${col.key}-filter-input`}
+                              placeholder={`Search ${col.label.toLowerCase()}...`}
+                              defaultValue={currentFilterValue}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const input = e.target as HTMLInputElement;
+                                  const value = input.value;
+                                  const newParams = new URLSearchParams(window.location.search);
+                                  if (value) {
+                                    newParams.set(col.key, value);
+                                  } else {
+                                    newParams.delete(col.key);
+                                  }
+                                  newParams.set('page', '1');
+                                  navigate(Object.fromEntries(newParams));
+                                }
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                const input = document.getElementById(`${col.key}-filter-input`) as HTMLInputElement;
+                                const value = input?.value || '';
+                                const newParams = new URLSearchParams(window.location.search);
+                                if (value) {
+                                  newParams.set(col.key, value);
+                                } else {
+                                  newParams.delete(col.key);
+                                }
+                                newParams.set('page', '1');
+                                navigate(Object.fromEntries(newParams));
+                              }}
+                            >
+                              Filter
+                            </Button>
+                          </div>
                         )}
 
                         {col.filter?.filterType === 'search' && (
-                          <Input
-                            placeholder={col.filter.placeholder}
-                            defaultValue={currentFilterValue}
-                            onChange={(e) => {
-                              clearTimeout((window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`]);
-                              (window as unknown as Record<string, NodeJS.Timeout>)[`${col.key}Timeout`] = setTimeout(() => {
-                                handleColumnFilter(e.target.value);
-                              }, col.filter.debounceMs || 300);
-                            }}
-                          />
+                          <div className="space-y-2">
+                            <Input
+                              id={`${col.key}-filter-input`}
+                              placeholder={col.filter.placeholder}
+                              defaultValue={currentFilterValue}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const input = e.target as HTMLInputElement;
+                                  handleColumnFilter(input.value);
+                                }
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                const input = document.getElementById(`${col.key}-filter-input`) as HTMLInputElement;
+                                handleColumnFilter(input?.value || '');
+                              }}
+                            >
+                              Filter
+                            </Button>
+                          </div>
                         )}
 
                         {col.filter?.filterType === 'select' && (
@@ -173,41 +217,20 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
                         )}
 
                         {col.filter?.filterType === 'multi-select' && (
-                          <div className="space-y-2">
-                            {selectedValues.length > 0 && (
-                              <div className="flex flex-wrap gap-1 pb-2">
-                                {selectedValues.map((value) => {
-                                  const option = col.filter.options?.find((opt) => opt.value === value);
-                                  return (
-                                    <Badge key={value} variant="secondary" className="text-xs">
-                                      {option?.label || value}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            <div className="max-h-[200px] space-y-2 overflow-y-auto">
-                              {col.filter.options?.map((option) => (
-                                <label
-                                  key={option.value}
-                                  className={cn(
-                                    'flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-muted',
-                                    option.disabled && 'cursor-not-allowed opacity-50',
-                                  )}
-                                >
-                                  <Checkbox
-                                    checked={selectedValues.includes(option.value)}
-                                    onCheckedChange={(checked) => handleMultiSelectChange(option.value, checked as boolean)}
-                                    disabled={option.disabled}
-                                  />
-                                  <span className="text-sm">{option.label}</span>
-                                </label>
-                              ))}
-                            </div>
-                            {col.filter.maxItems && selectedValues.length >= col.filter.maxItems && (
-                              <p className="text-xs text-muted-foreground">Maximum {col.filter.maxItems} items can be selected</p>
-                            )}
-                          </div>
+                          <MultiSelectFilter
+                            filter={col.filter}
+                            value={selectedValues}
+                            onChange={(values) => {
+                              const params = new URLSearchParams(window.location.search);
+                              if (values.length > 0) {
+                                params.set(col.key, values.join(','));
+                              } else {
+                                params.delete(col.key);
+                              }
+                              params.set('page', '1');
+                              navigate(Object.fromEntries(params));
+                            }}
+                          />
                         )}
 
                         {col.filter?.filterType === 'date' && (
@@ -250,13 +273,19 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
               </div>
 
               {col.sortable && (
-                <Button variant="ghost" onClick={handleSort} size="sm" className="ml-auto h-6 w-6 p-0">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleSort} 
+                  size="sm" 
+                  className="h-8 px-2 flex-shrink-0"
+                  aria-label={`Sort by ${col.label}`}
+                >
                   {isSortedDesc ? (
                     <ArrowDown className="h-4 w-4" />
                   ) : isSortedAsc ? (
                     <ArrowUp className="h-4 w-4" />
                   ) : (
-                    <ArrowUpDown className="h-4 w-4" />
+                    <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               )}
@@ -349,7 +378,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
   });
 
   // Simple filter handlers
-  const handleSearchChange = (key: string, value: string) => {
+  const handleSearchSubmit = (key: string, value: string) => {
     const params = new URLSearchParams(window.location.search);
     if (value) {
       params.set(key, value);
@@ -357,12 +386,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
       params.delete(key);
     }
     params.set('page', '1');
-
-    // Debounce with timeout
-    clearTimeout((window as unknown as { searchTimeout?: NodeJS.Timeout }).searchTimeout);
-    (window as unknown as { searchTimeout?: NodeJS.Timeout }).searchTimeout = setTimeout(() => {
-      navigate(Object.fromEntries(params));
-    }, 300);
+    navigate(Object.fromEntries(params));
   };
 
   const handleSelectChange = (key: string, value: string) => {
@@ -378,47 +402,175 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Simple inline filters */}
-      <div className="flex items-center gap-4">
-        {metadata.filters
-          .filter((filter) => metadata.defaultFilters.includes(filter.key))
-          .map((filter) => {
-            const urlParams = new URLSearchParams(window.location.search);
+      {/* New toolbar design */}
+      <div className="relative">
+        {isSearchExpanded ? (
+          // Expanded search view
+          <div className="flex items-center gap-2">
+            {metadata.filters
+              .filter((filter) => filter.filterType === 'search' && metadata.defaultFilters.includes(filter.key))
+              .map((filter) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentValue = urlParams.get(filter.key) || '';
+                return (
+                  <React.Fragment key={filter.key}>
+                    <Input
+                      placeholder={filter.placeholder}
+                      defaultValue={currentValue}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearchSubmit(filter.key, (e.target as HTMLInputElement).value);
+                        }
+                      }}
+                      className="flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const input = document.querySelector('.flex-1') as HTMLInputElement;
+                        handleSearchSubmit(filter.key, input?.value || '');
+                      }}
+                    >
+                      Search
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsSearchExpanded(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </React.Fragment>
+                );
+              })}
+          </div>
+        ) : (
+          // Collapsed toolbar view
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Search icon */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSearchExpanded(true)}
+              className="h-9 w-9 p-0"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
 
-            if (filter.filterType === 'search') {
-              const currentValue = urlParams.get(filter.key) || '';
-              return (
-                <Input
-                  key={filter.key}
-                  placeholder={filter.placeholder}
-                  defaultValue={currentValue}
-                  onChange={(e) => handleSearchChange(filter.key, e.target.value)}
-                  className="max-w-xs"
-                />
-              );
-            }
-
-            if (filter.filterType === 'select' || filter.filterType === 'multi-select') {
-              const currentValue = urlParams.get(filter.key) || '__all__';
-              return (
-                <Select key={filter.key} value={currentValue} onValueChange={(value) => handleSelectChange(filter.key, value)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={filter.placeholder || filter.label} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">{filter.placeholder || `All ${filter.label}`}</SelectItem>
-                    {filter.options?.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
+            {/* Center: Filter summary */}
+            <div className="flex-1 flex items-center gap-2 overflow-x-auto">
+              {(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const activeFilters: { key: string; value: string; label: string }[] = [];
+                
+                // Collect all active filters
+                metadata.columns.forEach((col) => {
+                  const value = urlParams.get(col.key);
+                  if (value && col.key !== 'search') {
+                    if (col.filter?.filterType === 'multi-select' && col.filter.options) {
+                      const values = value.split(',');
+                      const labels = values
+                        .map(v => col.filter?.options?.find(opt => opt.value === v)?.label || v)
+                        .join(', ');
+                      activeFilters.push({
+                        key: col.key,
+                        value,
+                        label: `${col.label}: ${labels}`
+                      });
+                    } else if (col.filter?.filterType === 'select' && col.filter.options) {
+                      const option = col.filter.options.find(opt => opt.value === value);
+                      activeFilters.push({
+                        key: col.key,
+                        value,
+                        label: `${col.label}: ${option?.label || value}`
+                      });
+                    } else if (col.type === 'string') {
+                      activeFilters.push({
+                        key: col.key,
+                        value,
+                        label: `${col.label}: ${value}`
+                      });
+                    }
+                  }
+                });
+                
+                // Add search filter
+                const searchValue = urlParams.get('search');
+                if (searchValue) {
+                  activeFilters.push({
+                    key: 'search',
+                    value: searchValue,
+                    label: `Search: ${searchValue}`
+                  });
+                }
+                
+                if (activeFilters.length === 0) {
+                  return (
+                    <div className="text-sm text-muted-foreground">
+                      No filters applied
+                    </div>
+                  );
+                }
+                
+                return (
+                  <>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Filter className="h-3 w-3" />
+                      <span>Filters:</span>
+                    </div>
+                    {activeFilters.map((filter) => (
+                      <Badge
+                        key={filter.key}
+                        variant="secondary"
+                        className="max-w-[200px] cursor-pointer hover:bg-secondary/80"
+                        onClick={() => {
+                          const newParams = new URLSearchParams(window.location.search);
+                          newParams.delete(filter.key);
+                          newParams.set('page', '1');
+                          navigate(Object.fromEntries(newParams));
+                        }}
+                      >
+                        <span className="truncate">{filter.label}</span>
+                        <X className="ml-1 h-3 w-3 flex-shrink-0" />
+                      </Badge>
                     ))}
-                  </SelectContent>
-                </Select>
-              );
-            }
+                  </>
+                );
+              })()}
+            </div>
 
-            return null;
-          })}
+            {/* Right: More options */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentPage = urlParams.get('page');
+                    const currentPerPage = urlParams.get('per_page');
+                    if (currentPage) params.set('page', currentPage);
+                    if (currentPerPage) params.set('per_page', currentPerPage);
+                    navigate(Object.fromEntries(params));
+                  }}
+                  disabled={(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return !Array.from(urlParams.keys()).some(key => 
+                      key !== 'page' && key !== 'per_page' && urlParams.get(key)
+                    );
+                  })()}
+                >
+                  Clear all filters
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border">

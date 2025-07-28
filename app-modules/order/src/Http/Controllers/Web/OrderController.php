@@ -37,7 +37,7 @@ class OrderController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
-        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
+        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page', 'orderNumber', 'customerName', 'paymentStatus']);
         $perPage = (int) $request->input('per_page', 20);
 
         // Get paginated orders with filters and metadata

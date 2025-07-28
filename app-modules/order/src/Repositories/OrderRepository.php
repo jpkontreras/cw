@@ -260,12 +260,20 @@ class OrderRepository implements OrderRepositoryInterface
 
         // Type filter
         if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
+            if (is_array($filters['type'])) {
+                $query->whereIn('type', $filters['type']);
+            } else {
+                $query->where('type', $filters['type']);
+            }
         }
 
         // Location filter
         if (!empty($filters['location_id'])) {
-            $query->where('location_id', $filters['location_id']);
+            if (is_array($filters['location_id'])) {
+                $query->whereIn('location_id', $filters['location_id']);
+            } else {
+                $query->where('location_id', $filters['location_id']);
+            }
         }
 
         // Date filter
@@ -287,6 +295,24 @@ class OrderRepository implements OrderRepositoryInterface
                   ->orWhereRaw('LOWER(customer_phone) LIKE LOWER(?)', ["%{$search}%"])
                   ->orWhereRaw('LOWER(customer_email) LIKE LOWER(?)', ["%{$search}%"]);
             });
+        }
+
+        // Column-specific text filters
+        if (!empty($filters['orderNumber'])) {
+            $query->whereRaw('LOWER(order_number) LIKE LOWER(?)', ["%{$filters['orderNumber']}%"]);
+        }
+
+        if (!empty($filters['customerName'])) {
+            $query->whereRaw('LOWER(customer_name) LIKE LOWER(?)', ["%{$filters['customerName']}%"]);
+        }
+
+        // Payment status filter
+        if (!empty($filters['paymentStatus'])) {
+            if (is_array($filters['paymentStatus'])) {
+                $query->whereIn('payment_status', $filters['paymentStatus']);
+            } else {
+                $query->where('payment_status', $filters['paymentStatus']);
+            }
         }
 
         // Sort
@@ -381,9 +407,11 @@ class OrderRepository implements OrderRepositoryInterface
     {
         return [
             'order_number',
+            'customer_name',
             'status',
             'type',
             'total_amount',
+            'payment_status',
             'created_at',
             'updated_at',
             'placed_at',
@@ -435,8 +463,20 @@ class OrderRepository implements OrderRepositoryInterface
      */
     private function applySorting(Builder $query, string $sort): void
     {
-        // Parse sort string (e.g., "-created_at,order_number")
+        // Parse sort string (e.g., "-createdAt,orderNumber")
         $sorts = explode(',', $sort);
+        
+        // Map camelCase to database columns
+        $fieldMap = [
+            'orderNumber' => 'order_number',
+            'customerName' => 'customer_name',
+            'totalAmount' => 'total_amount',
+            'paymentStatus' => 'payment_status',
+            'createdAt' => 'created_at',
+            'updatedAt' => 'updated_at',
+            'placedAt' => 'placed_at',
+            'completedAt' => 'completed_at',
+        ];
         
         foreach ($sorts as $sortField) {
             $sortField = trim($sortField);
@@ -450,8 +490,11 @@ class OrderRepository implements OrderRepositoryInterface
                 $sortField = substr($sortField, 1);
             }
             
-            if (in_array($sortField, $this->getSortableFields())) {
-                $query->orderBy($sortField, $direction);
+            // Map camelCase to snake_case database column
+            $dbField = $fieldMap[$sortField] ?? $sortField;
+            
+            if (in_array($dbField, $this->getSortableFields())) {
+                $query->orderBy($dbField, $direction);
             }
         }
     }

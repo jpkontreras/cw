@@ -469,11 +469,21 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
 
         // Calculate stats
         $totalOrders = $dateQuery->count();
-        $activeOrders = clone $query;
-        $activeOrders = $activeOrders->whereNotIn('status', ['completed', 'cancelled', 'refunded'])->count();
         
+        // Today's orders count (always from today regardless of filters)
+        $todayOrders = Order::query()->whereDate('created_at', today())->count();
+        
+        // Active orders (placed, confirmed, preparing, ready)
+        $activeOrders = clone $query;
+        $activeOrders = $activeOrders->whereIn('status', ['placed', 'confirmed', 'preparing', 'ready'])->count();
+        
+        // Ready to serve
         $readyToServe = clone $query;
         $readyToServe = $readyToServe->where('status', 'ready')->count();
+        
+        // Pending payment
+        $pendingPayment = clone $query;
+        $pendingPayment = $pendingPayment->where('payment_status', 'pending')->count();
         
         $revenueToday = clone $dateQuery;
         $revenueToday = $revenueToday->whereIn('status', ['completed', 'delivered'])
@@ -487,8 +497,10 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
 
         return [
             'total_orders' => $totalOrders,
+            'today_orders' => $todayOrders,
             'active_orders' => $activeOrders,
             'ready_to_serve' => $readyToServe,
+            'pending_payment' => $pendingPayment,
             'revenue_today' => $revenueToday,
             'average_order_value' => round($avgOrderValue, 2),
             'completion_rate' => round($completionRate, 1),
@@ -707,11 +719,12 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         
         // Type column
         $columns['type'] = ColumnMetadata::enum('type', 'Type', $this->orderRepository->getFilterOptions('type'))
-            ->withFilter(FilterMetadata::select(
+            ->withFilter(FilterMetadata::multiSelect(
                 'type',
                 'Type',
                 $this->orderRepository->getFilterOptions('type'),
-                'All Types'
+                'Filter by type',
+                3
             ));
         
         // Status column with multi-select filter
@@ -741,11 +754,12 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $columns['createdAt'] = ColumnMetadata::dateTime('createdAt', 'Time', 'relative', true);
         
         // Location filter (not a column but a filter)
-        $locationFilter = FilterMetadata::select(
+        $locationFilter = FilterMetadata::multiSelect(
             'location_id',
             'Location',
             [], // Should come from location service
-            'All Locations'
+            'Filter by location',
+            3
         );
         
         // Date filter
