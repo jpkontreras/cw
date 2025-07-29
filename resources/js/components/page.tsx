@@ -61,9 +61,9 @@ export function PageHeader({ title, description, children, className, showBackBu
 }
 
 export function PageContent({ children, className, noPadding = false }: PageContentProps) {
-  return <div className={cn('flex-1 overflow-hidden', !noPadding && 'px-4 py-6 sm:px-4 lg:px-4', className)}>{children}</div>;
+  return <div className={cn('flex-1', !noPadding && 'px-4 py-6 sm:px-4 lg:px-4', className)}>{children}</div>;
 }
 
 export function PageLayout({ children, className }: PageLayoutProps) {
-  return <div className={cn('flex min-h-full flex-col', className)}>{children}</div>;
+  return <div className={cn('flex flex-1 flex-col', className)}>{children}</div>;
 }

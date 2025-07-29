@@ -2,7 +2,7 @@ import { BottomActionBar, MenuItemCard, ViewModeToggle, type ViewMode } from '@/
 import { PageContent, PageHeader, PageLayout } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -13,7 +13,7 @@ import type { CreateOrderRequest, OrderType } from '@/types/modules/order';
 import { ORDER_TYPE_CONFIG } from '@/types/modules/order/constants';
 import { calculateTax, calculateTotal, formatCurrency } from '@/types/modules/order/utils';
 import { Head, useForm } from '@inertiajs/react';
-import { Clock, CreditCard, DollarSign, Leaf, MapPin, Package, Phone, Receipt, ShoppingBag, Truck, Utensils } from 'lucide-react';
+import { Clock, CreditCard, DollarSign, MapPin, Package, ShoppingBag, Truck, Utensils } from 'lucide-react';
 import { FormEventHandler, useEffect, useMemo, useState } from 'react';
 
 interface Props {
@@ -62,7 +62,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
     userId: null,
     locationId: locations[0]?.id || 1,
     type: 'dine_in' as OrderType,
-    tableNumber: tables.find((t) => t.available)?.number || null,
+    tableNumber: null,
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -118,9 +118,8 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   };
 
   const canPlaceOrder = () => {
-    if (!data.customerName || !data.customerPhone) return false;
-    if (data.type === 'delivery' && !data.deliveryAddress) return false;
-    if (data.type === 'dine_in' && !data.tableNumber) return false;
+    if (!data.customerName) return false;
+    if (data.type === 'delivery' && (!data.customerPhone || !data.deliveryAddress)) return false;
     return true;
   };
 
@@ -245,19 +244,20 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
     <AppLayout>
       <Head title="Create Order" />
 
-      <PageLayout>
+      <PageLayout className="flex flex-col h-full overflow-hidden">
         <PageHeader title="New Order" description="Select items from the menu" showBackButton backHref="/orders">
           {currentStep === 'menu' && <ViewModeToggle value={viewMode} onChange={setViewMode} />}
         </PageHeader>
 
-        <PageContent noPadding className="relative pb-24">
-          <form onSubmit={handleSubmit}>
-            <div className="min-h-[calc(100vh-160px)]">
+        <div className="flex-1 flex flex-col min-h-0">
+          <PageContent noPadding className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit}>
+              <div>
               {currentStep === 'menu' ? (
                 /* Step 1: Menu Selection */
-                <div className="bg-gray-50/50 px-4 sm:px-6 lg:px-8">
-                  <div className="mx-auto max-w-7xl">
-                    <div className="space-y-16 pt-8">
+                <div className="bg-white px-4 sm:px-6 lg:px-8 pb-4">
+                  <div className="mx-auto max-w-[1400px]">
+                    <div className="space-y-12 pt-6 pb-4">
                       {Object.entries(
                         items.reduce(
                           (acc, item) => {
@@ -270,43 +270,22 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                       ).map(([category, categoryItems], categoryIndex) => (
                         <div key={category} className="relative">
                           {/* Category Header */}
-                          <div className="mb-10">
-                            <div className="mb-4 flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <h2 className="text-4xl font-bold text-gray-900">{category}</h2>
-                                <div className="hidden items-center gap-2 sm:flex">
-                                  <Badge variant="outline" className="text-sm font-medium">
-                                    {categoryItems.length} {categoryItems.length === 1 ? 'item' : 'items'}
-                                  </Badge>
-                                  {categoryItems.filter((item) => item.isVegetarian).length > 0 && (
-                                    <Badge variant="outline" className="border-green-300 text-sm font-medium text-green-700">
-                                      <Leaf className="mr-1 h-3 w-3" />
-                                      {categoryItems.filter((item) => item.isVegetarian).length} Veg
-                                    </Badge>
-                                  )}
-                                </div>
+                          <div className="mb-6">
+                            <div className="flex items-baseline justify-between">
+                              <div className="flex items-baseline gap-3">
+                                <h2 className="text-2xl font-bold tracking-tight text-gray-900">{category}</h2>
+                                <span className="text-base text-gray-500">{categoryItems.length} items</span>
                               </div>
-
-                              {/* Category description or special note */}
                               {categoryIndex === 0 && <p className="hidden text-sm text-gray-500 lg:block">Fresh & delicious options</p>}
                             </div>
-                            <div className="relative">
-                              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div className="w-full border-t-2 border-gray-200"></div>
-                              </div>
-                              <div className="relative flex justify-start">
-                                <span className="bg-gray-50 pr-3">
-                                  <div className="h-2 w-32 rounded-full bg-gradient-to-r from-primary to-primary/60"></div>
-                                </span>
-                              </div>
-                            </div>
+                            <div className="mt-3 h-0.5 w-20 rounded-full bg-gradient-to-r from-primary to-primary/40"></div>
                           </div>
 
                           {/* Items Grid */}
                           <div
                             className={cn(
                               viewMode === 'compact' && 'space-y-3',
-                              viewMode === 'standard' && 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3',
+                              viewMode === 'standard' && 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start',
                             )}
                           >
                             {categoryItems.map((item: any) => {
@@ -346,250 +325,192 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                 </div>
               ) : (
                 /* Step 2: Customer Details & Checkout */
-                <div className="px-4 py-8 sm:px-6 lg:px-8">
-                  <div className="mx-auto max-w-3xl">
-                    <div className="space-y-6">
-                      {/* Order Type Card */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Order Type</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-3 gap-4">
-                            {(['dine_in', 'takeout', 'delivery'] as OrderType[]).map((type) => {
-                              const Icon = getTypeIcon(type);
-                              const config = ORDER_TYPE_CONFIG[type];
-                              return (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => setData('type', type)}
-                                  className={cn(
-                                    'relative flex flex-col items-center gap-3 rounded-lg border-2 p-6 transition-all',
-                                    data.type === type
-                                      ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                                      : 'border-input hover:border-muted-foreground hover:bg-muted/50',
-                                  )}
-                                >
-                                  <Icon className="h-8 w-8" />
-                                  <span className="font-medium">{config.label}</span>
-                                </button>
-                              );
-                            })}
+                <div className="px-4 py-6 sm:px-6 lg:px-8">
+                  <div className="mx-auto max-w-[1440px]">
+                    <Card className="p-8">
+                      <div className="space-y-6">
+                      {/* Order Type Selection */}
+                      <div className="space-y-3">
+                        <h3 className="text-base font-medium">Order Type</h3>
+                        <div className="grid grid-cols-3 gap-3">
+                          {(['dine_in', 'takeout', 'delivery'] as OrderType[]).map((type) => {
+                            const Icon = getTypeIcon(type);
+                            const config = ORDER_TYPE_CONFIG[type];
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setData('type', type)}
+                                className={cn(
+                                  'relative flex items-center justify-center gap-3 rounded-lg border-2 px-4 py-3 text-base font-medium transition-all',
+                                  data.type === type
+                                    ? 'border-gray-900 bg-gray-900 text-white'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400',
+                                )}
+                              >
+                                <Icon className="h-5 w-5" />
+                                <span>{config.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <Separator className="my-6" />
+
+                      {/* Customer Information */}
+                      <div className="space-y-4">
+                        <h3 className="text-base font-medium">Customer Information</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor="customerName" className="text-sm font-medium mb-2 block">Name *</Label>
+                            <Input
+                              id="customerName"
+                              value={data.customerName || ''}
+                              onChange={(e) => setData('customerName', e.target.value)}
+                              placeholder="Customer name"
+                              className="h-11 text-base"
+                            />
                           </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Customer Information Card */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Customer Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="customerName">Name *</Label>
-                              <Input
-                                id="customerName"
-                                value={data.customerName || ''}
-                                onChange={(e) => setData('customerName', e.target.value)}
-                                placeholder="Customer name"
-                                className="h-11"
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="customerPhone">
-                                <Phone className="mr-1 inline h-4 w-4" />
-                                Phone *
-                              </Label>
-                              <Input
-                                id="customerPhone"
-                                value={data.customerPhone || ''}
-                                onChange={(e) => setData('customerPhone', e.target.value)}
-                                placeholder="+56 9 1234 5678"
-                                className="h-11"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          {/* Table Selection for Dine In */}
-                          {data.type === 'dine_in' && tables.length > 0 && (
-                            <div className="space-y-2 pt-2">
-                              <Label>Table Number *</Label>
-                              <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
-                                {tables
-                                  .filter((t) => t.available)
-                                  .map((table) => (
-                                    <button
-                                      key={table.id}
-                                      type="button"
-                                      onClick={() => setData('tableNumber', table.number)}
-                                      className={cn(
-                                        'h-12 rounded-lg border-2 text-sm font-medium transition-all',
-                                        data.tableNumber === table.number
-                                          ? 'border-primary bg-primary text-primary-foreground'
-                                          : 'border-input hover:border-muted-foreground hover:bg-muted/50',
-                                      )}
-                                    >
-                                      {table.number}
-                                    </button>
-                                  ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Delivery Address */}
                           {data.type === 'delivery' && (
-                            <div className="space-y-2 pt-2">
-                              <Label htmlFor="deliveryAddress">
-                                <MapPin className="mr-1 inline h-4 w-4" />
-                                Delivery Address *
-                              </Label>
-                              <Textarea
-                                id="deliveryAddress"
-                                value={data.deliveryAddress || ''}
-                                onChange={(e) => setData('deliveryAddress', e.target.value)}
-                                placeholder="Street address, apartment, suite, floor, etc."
-                                rows={3}
-                                className="resize-none"
-                                required
-                              />
-                            </div>
+                            <>
+                              <div>
+                                <Label htmlFor="customerPhone" className="text-sm font-medium mb-2 block">
+                                  Phone *
+                                </Label>
+                                <Input
+                                  id="customerPhone"
+                                  value={data.customerPhone || ''}
+                                  onChange={(e) => setData('customerPhone', e.target.value)}
+                                  placeholder="+56 9 1234 5678"
+                                  className="h-11 text-base"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="deliveryAddress" className="text-sm font-medium mb-2 block">
+                                  Delivery Address *
+                                </Label>
+                                <Textarea
+                                  id="deliveryAddress"
+                                  value={data.deliveryAddress || ''}
+                                  onChange={(e) => setData('deliveryAddress', e.target.value)}
+                                  placeholder="Street address"
+                                  rows={3}
+                                  className="resize-none text-base"
+                                />
+                              </div>
+                            </>
                           )}
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
 
-                      {/* Special Instructions Card */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Special Instructions</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <Textarea
-                            value={data.specialInstructions || ''}
-                            onChange={(e) => setData('specialInstructions', e.target.value)}
-                            placeholder="Any special requests, allergies, or dietary requirements..."
-                            rows={4}
-                            className="resize-none"
-                          />
-                        </CardContent>
-                      </Card>
+                      <Separator className="my-6" />
 
-                      {/* Payment Method Card */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Payment Method</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 gap-4">
-                            <Button type="button" variant="outline" className="h-24 flex-col gap-3" disabled>
-                              <DollarSign className="h-6 w-6" />
-                              <span>Cash</span>
-                            </Button>
-                            <Button type="button" variant="outline" className="h-24 flex-col gap-3" disabled>
-                              <CreditCard className="h-6 w-6" />
-                              <span>Card</span>
-                            </Button>
+                      {/* Special Instructions */}
+                      <div className="space-y-3">
+                        <h3 className="text-base font-medium">Special Instructions</h3>
+                        <Textarea
+                          id="specialInstructions"
+                          value={data.specialInstructions || ''}
+                          onChange={(e) => setData('specialInstructions', e.target.value)}
+                          placeholder="Any special requests..."
+                          rows={4}
+                          className="resize-none text-base"
+                        />
+                      </div>
+
+                      <Separator className="my-6" />
+
+                      {/* Payment Method */}
+                      <div className="space-y-3">
+                        <h3 className="text-base font-medium">Payment Method</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button type="button" variant="outline" className="h-12 gap-3 text-base" disabled>
+                            <DollarSign className="h-5 w-5" />
+                            <span>Cash</span>
+                          </Button>
+                          <Button type="button" variant="outline" className="h-12 gap-3 text-base" disabled>
+                            <CreditCard className="h-5 w-5" />
+                            <span>Card</span>
+                          </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Payment collected after confirmation</p>
+                      </div>
+
+                      <Separator className="my-6" />
+
+                      {/* Order Summary */}
+                      <div className="rounded-lg border bg-gray-50 p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-base font-medium">Order Summary</h3>
+                          <span className="text-sm text-muted-foreground">{data.items.reduce((sum: number, item: any) => sum + item.quantity, 0)} items</span>
+                        </div>
+                        
+                        {/* Item list */}
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {data.items.map((orderItem: any, index: number) => {
+                            const menuItem = items.find((i) => i.id === orderItem.item_id);
+                            if (!menuItem) return null;
+                            return (
+                              <div key={`${orderItem.item_id}-${index}`} className="flex justify-between text-sm">
+                                <span className="text-gray-600">
+                                  {orderItem.quantity}× {menuItem.name}
+                                </span>
+                                <span className="font-medium tabular-nums">{formatCurrency(menuItem.price * orderItem.quantity)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Subtotal</span>
+                            <span className="tabular-nums">{formatCurrency(subtotal)}</span>
                           </div>
-                          <p className="mt-4 text-center text-sm text-muted-foreground">Payment will be collected after order confirmation</p>
-                        </CardContent>
-                      </Card>
-
-                      {/* Order Review Card */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Receipt className="h-5 w-5" />
-                            Order Review
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {/* Items Summary */}
-                            <div>
-                              <h4 className="mb-2 font-medium">Items ({data.items.reduce((sum: number, item: any) => sum + item.quantity, 0)})</h4>
-                              <div className="space-y-2">
-                                {data.items.map((orderItem: any, index: number) => {
-                                  const menuItem = items.find((i) => i.id === orderItem.item_id);
-                                  if (!menuItem) return null;
-
-                                  const itemModifiers = selectedModifiers[orderItem.item_id] || [];
-                                  const modifierPrice = itemModifiers.reduce((sum, modId) => {
-                                    const mod = menuItem.modifiers?.find((m) => m.id === modId);
-                                    return sum + (mod?.price || 0);
-                                  }, 0);
-                                  const itemTotal = (menuItem.price + modifierPrice) * orderItem.quantity;
-
-                                  return (
-                                    <div key={`${orderItem.item_id}-${index}`} className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">
-                                        {orderItem.quantity}× {menuItem.name}
-                                      </span>
-                                      <span className="font-medium tabular-nums">{formatCurrency(itemTotal)}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            {/* Totals */}
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Subtotal</span>
-                                <span className="tabular-nums">{formatCurrency(subtotal)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Tax (19%)</span>
-                                <span className="tabular-nums">{formatCurrency(tax)}</span>
-                              </div>
-                              <Separator />
-                              <div className="flex items-baseline justify-between">
-                                <span className="font-semibold">Total</span>
-                                <span className="text-xl font-bold text-primary tabular-nums">{formatCurrency(total)}</span>
-                              </div>
-                            </div>
-
-                            {/* Estimated Time */}
-                            <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">
-                                Estimated preparation time: <strong>15-20 minutes</strong>
-                              </span>
-                            </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Tax</span>
+                            <span className="tabular-nums">{formatCurrency(tax)}</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                          <div className="flex justify-between text-lg font-semibold pt-2 border-t">
+                            <span>Total</span>
+                            <span className="tabular-nums">{formatCurrency(total)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          <span>15-20 min</span>
+                        </div>
+                      </div>
+                      </div>
+                    </Card>
                   </div>
                 </div>
               )}
-            </div>
-          </form>
-        </PageContent>
+              </div>
+            </form>
+          </PageContent>
+          
+          {/* Bottom Action Bar - Sticky at bottom */}
+          <BottomActionBar
+            data={data}
+            items={items}
+            locations={locations}
+            currentStep={currentStep}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            canProceedToDetails={canProceedToDetails()}
+            canPlaceOrder={canPlaceOrder()}
+            processing={processing}
+            onContinueToDetails={() => setCurrentStep('details')}
+            onPlaceOrder={(e: any) => handleSubmit(e)}
+            onUpdateQuantity={updateItemQuantityByIndex}
+            onRemoveItem={removeItemByIndex}
+            selectedModifiers={selectedModifiers}
+          />
+        </div>
       </PageLayout>
-
-      {/* Bottom Action Bar - Outside of PageLayout for proper positioning */}
-      <BottomActionBar
-        data={data}
-        items={items}
-        locations={locations}
-        currentStep={currentStep}
-        subtotal={subtotal}
-        tax={tax}
-        total={total}
-        canProceedToDetails={canProceedToDetails()}
-        canPlaceOrder={canPlaceOrder()}
-        processing={processing}
-        onContinueToDetails={() => setCurrentStep('details')}
-        onPlaceOrder={(e: any) => handleSubmit(e)}
-        onUpdateQuantity={updateItemQuantityByIndex}
-        onRemoveItem={removeItemByIndex}
-        selectedModifiers={selectedModifiers}
-      />
     </AppLayout>
   );
 }

@@ -100,7 +100,7 @@ class OrderController extends Controller
         ];
 
         // Get active items from the repository
-        $activeItems = $this->itemRepository->getActiveItems();
+        $activeItems = $this->itemRepository->getActive();
         
         // Transform items for the frontend
         $items = $activeItems->map(function ($item) {
@@ -131,27 +131,29 @@ class OrderController extends Controller
             // Convert camelCase to snake_case for Laravel data
             $requestData = $request->all();
 
-            // Map frontend field names to backend field names
+            // Map frontend field names to match DTO constructor parameter names (camelCase)
             $mappedData = [
-                'user_id' => $request->user()?->id,
-                'location_id' => $requestData['location_id'] ?? null,
+                'userId' => $request->user()?->id,
+                'locationId' => $requestData['locationId'] ?? 1,  // Default to location 1 if not provided
                 'type' => $requestData['type'] ?? 'dine_in',
-                'table_number' => $requestData['table_number'] ?? null,
-                'customer_name' => $requestData['customer_name'] ?? null,
-                'customer_phone' => $requestData['customer_phone'] ?? null,
-                'customer_email' => $requestData['customer_email'] ?? null,
-                'delivery_address' => $requestData['delivery_address'] ?? null,
+                'tableNumber' => $requestData['tableNumber'] ?? null,
+                'customerName' => $requestData['customerName'] ?? null,
+                'customerPhone' => $requestData['customerPhone'] ?? null,
+                'customerEmail' => $requestData['customerEmail'] ?? null,
+                'deliveryAddress' => $requestData['deliveryAddress'] ?? null,
                 'notes' => $requestData['notes'] ?? null,
-                'special_instructions' => $requestData['special_instructions'] ?? null,
+                'specialInstructions' => $requestData['specialInstructions'] ?? null,
                 'items' => array_map(function ($item) {
                     return [
-                        'item_id' => $item['item_id'] ?? null,
+                        'item_id' => $item['item_id'] ?? null,  // Frontend already sends snake_case for this
                         'quantity' => $item['quantity'] ?? 1,
                         'unit_price' => 0, // Will be set by service
                         'notes' => $item['notes'] ?? null,
                         'modifiers' => $item['modifiers'] ?? [],
                     ];
                 }, $requestData['items'] ?? []),
+                'offerCodes' => $requestData['offerCodes'] ?? null,
+                'metadata' => $requestData['metadata'] ?? null,
             ];
 
             $data = CreateOrderData::from($mappedData);

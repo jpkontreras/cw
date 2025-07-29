@@ -36,7 +36,7 @@ class OrderItemRepository implements OrderItemRepositoryInterface
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(fn($item) => OrderItemData::from($item))
-            ->toArray();
+            ->all();
     }
 
     /**
@@ -81,7 +81,7 @@ class OrderItemRepository implements OrderItemRepositoryInterface
             ->where('status', $status)
             ->get()
             ->map(fn($item) => OrderItemData::from($item))
-            ->toArray();
+            ->all();
     }
 
     /**

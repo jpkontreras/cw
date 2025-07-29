@@ -59,20 +59,13 @@ export function MenuItemCard({
 }: Props) {
   const [showNotes, setShowNotes] = useState(false);
 
-  // Calculate total price including modifiers
-  const modifierPrice = selectedModifiers.reduce((sum, modId) => {
-    const modifier = item.modifiers?.find((m) => m.id === modId);
-    return sum + (modifier?.price || 0);
-  }, 0);
-  const totalPrice = (item.price + modifierPrice) * (quantity || 1);
-
   // Render spicy level indicators
   const renderSpicyLevel = () => {
     if (!item.spicyLevel) return null;
     return (
       <div className="flex items-center gap-0.5">
         {[...Array(3)].map((_, i) => (
-          <Flame key={i} className={cn('h-3 w-3', i < item.spicyLevel ? 'fill-orange-500 text-orange-500' : 'text-gray-300')} />
+          <Flame key={i} className={cn('h-3 w-3', i < (item.spicyLevel || 0) ? 'fill-orange-500 text-orange-500' : 'text-gray-300')} />
         ))}
       </div>
     );
@@ -163,28 +156,31 @@ export function MenuItemCard({
     return (
       <Card
         className={cn(
-          'group cursor-pointer overflow-hidden transition-all duration-200',
-          isActive && 'shadow-lg ring-2 ring-primary',
-          quantity > 0 && 'border-primary/20 bg-primary/5',
+          'group relative cursor-pointer overflow-hidden py-0 transition-all duration-300',
+          isActive && 'shadow-xl ring-2 ring-primary z-20',
+          quantity > 0 && !isActive && 'border-primary/30 shadow-md',
+          !quantity && 'hover:-translate-y-1 hover:shadow-lg',
         )}
         onClick={onClick}
       >
         {/* Image Section */}
-        <div className="group relative h-48 overflow-hidden">
+        <div className="group relative h-48 overflow-hidden bg-gray-100">
           {item.image ? (
             <img src={item.image} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
           ) : (
-            <MenuPlaceholder size="lg" variant={item.id} className="scale-110" />
+            <MenuPlaceholder size="lg" variant={item.id} className="h-full w-full scale-110" />
           )}
 
           {/* Gradient overlay for better badge visibility */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/20" />
 
           {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-            {item.spicyLevel && <Badge className="border-0 bg-orange-500/90 text-white shadow-md backdrop-blur-sm">{renderSpicyLevel()}</Badge>}
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+            {item.spicyLevel && (
+              <Badge className="border-0 bg-orange-500 px-2 py-0.5 text-xs font-medium text-white shadow-sm">{renderSpicyLevel()}</Badge>
+            )}
             {item.isVegetarian && (
-              <Badge className="border-0 bg-green-600/90 text-white shadow-md backdrop-blur-sm">
+              <Badge className="border-0 bg-green-600 px-2 py-0.5 text-xs font-medium text-white shadow-sm">
                 <Leaf className="mr-1 h-3 w-3" />
                 Veg
               </Badge>
@@ -193,18 +189,18 @@ export function MenuItemCard({
 
           {/* Rating */}
           {item.rating && (
-            <div className="absolute top-2 right-2">
-              <Badge className="border-0 bg-white/90 text-gray-900 shadow-md backdrop-blur-sm">
-                <Star className="mr-1 h-3 w-3 fill-yellow-500 text-yellow-500" />
-                <span className="font-semibold">{item.rating.toFixed(1)}</span>
+            <div className="absolute top-3 right-3">
+              <Badge className="border-0 bg-white px-2 py-0.5 text-xs font-semibold text-gray-900 shadow-sm">
+                <Star className="mr-0.5 h-3 w-3 fill-yellow-500 text-yellow-500" />
+                {item.rating.toFixed(1)}
               </Badge>
             </div>
           )}
 
           {/* Popular indicator */}
           {item.rating && item.rating >= 4.5 && (
-            <div className="absolute bottom-2 left-2">
-              <Badge className="border-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md">
+            <div className="absolute bottom-3 left-3">
+              <Badge className="border-0 bg-gradient-to-r from-purple-600 to-pink-600 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
                 <TrendingUp className="mr-1 h-3 w-3" />
                 Popular
               </Badge>
@@ -213,77 +209,77 @@ export function MenuItemCard({
         </div>
 
         {/* Content */}
-        <CardContent className="space-y-3 p-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-            {item.description && <p className="mt-1 line-clamp-2 text-sm text-gray-600">{item.description}</p>}
-          </div>
+        <CardContent className="flex flex-col p-0">
+          <div className="px-4 pt-3 pb-3">
+            <h3 className="text-lg leading-tight font-semibold text-gray-900">{item.name}</h3>
+            <div className="mt-1">
+              <span className="text-2xl font-bold text-gray-900">{formatCurrency(item.price)}</span>
+            </div>
+            {item.description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-600">{item.description}</p>}
 
-          {/* Meta info */}
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            {item.preparationTime && (
-              <div className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{item.preparationTime} min</span>
+            {/* Meta info */}
+            {(item.preparationTime || item.calories) && (
+              <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                {item.preparationTime && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{item.preparationTime} min</span>
+                  </div>
+                )}
+                {item.calories && (
+                  <div className="flex items-center gap-1">
+                    <Info className="h-3.5 w-3.5" />
+                    <span>{item.calories} cal</span>
+                  </div>
+                )}
               </div>
             )}
-            {item.calories && (
-              <div className="flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" />
-                <span>{item.calories} cal</span>
-              </div>
-            )}
           </div>
 
-          {/* Price and Actions */}
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-2xl font-bold text-primary">{formatCurrency(item.price)}</span>
-
+          {/* Actions */}
+          <div className="mt-auto">
             {quantity > 0 ? (
-              <div className="flex items-center gap-2">
-                <Button
+              <div className="flex items-center">
+                <button
                   type="button"
-                  size="icon"
-                  variant="outline"
-                  className="h-9 w-9"
+                  className="flex h-12 flex-1 items-center justify-center bg-gray-100 text-gray-700 transition-all hover:bg-gray-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateQuantity(quantity - 1);
                   }}
                 >
                   <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-8 text-center text-lg font-semibold">{quantity}</span>
-                <Button
+                </button>
+                <span className="flex h-12 min-w-[3rem] items-center justify-center bg-gray-50 text-lg font-semibold tabular-nums">{quantity}</span>
+                <button
                   type="button"
-                  size="icon"
-                  variant="outline"
-                  className="h-9 w-9"
+                  className="flex h-12 flex-1 items-center justify-center bg-gray-100 text-gray-700 transition-all hover:bg-gray-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateQuantity(quantity + 1);
                   }}
                 >
                   <Plus className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             ) : (
-              <Button
+              <button
                 type="button"
+                className="flex h-12 w-full items-center justify-center gap-2 bg-gray-900 text-white transition-colors hover:bg-gray-800"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAdd();
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Add to Order
-              </Button>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm font-medium">Add to Order</span>
+              </button>
             )}
           </div>
 
           {/* Modifiers - Only show when item is added and expanded */}
           {quantity > 0 && item.modifiers && item.modifiers.length > 0 && isActive && (
-            <div className="space-y-2 border-t pt-3">
+            <div className="space-y-2 border-t px-4 pt-3">
               <p className="text-sm font-medium text-gray-700">Customize:</p>
               <div className="space-y-2">
                 {item.modifiers.map((modifier) => (
@@ -312,7 +308,7 @@ export function MenuItemCard({
 
           {/* Special Instructions */}
           {quantity > 0 && isActive && (
-            <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 pt-2 pb-3" onClick={(e) => e.stopPropagation()}>
               <Button type="button" variant="ghost" size="sm" className="w-full justify-start text-sm" onClick={() => setShowNotes(!showNotes)}>
                 {showNotes ? 'Hide' : 'Add'} special instructions
               </Button>
