@@ -1,0 +1,97 @@
+<?php
+
+namespace Colame\Item\Providers;
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
+use Colame\Item\Contracts\ItemRepositoryInterface;
+use Colame\Item\Contracts\ModifierRepositoryInterface;
+use Colame\Item\Contracts\PricingRepositoryInterface;
+use Colame\Item\Contracts\InventoryRepositoryInterface;
+use Colame\Item\Contracts\RecipeRepositoryInterface;
+use Colame\Item\Contracts\ItemServiceInterface;
+use Colame\Item\Repositories\ItemRepository;
+use Colame\Item\Repositories\ModifierRepository;
+use Colame\Item\Repositories\PricingRepository;
+use Colame\Item\Repositories\InventoryRepository;
+use Colame\Item\Repositories\RecipeRepository;
+use Colame\Item\Services\ItemService;
+
+class ItemServiceProvider extends ServiceProvider
+{
+    /**
+     * Register services
+     */
+    public function register(): void
+    {
+        // Register repository bindings
+        $this->app->bind(ItemRepositoryInterface::class, ItemRepository::class);
+        $this->app->bind(ModifierRepositoryInterface::class, ModifierRepository::class);
+        $this->app->bind(PricingRepositoryInterface::class, PricingRepository::class);
+        $this->app->bind(InventoryRepositoryInterface::class, InventoryRepository::class);
+        $this->app->bind(RecipeRepositoryInterface::class, RecipeRepository::class);
+        
+        // Register service bindings
+        $this->app->bind(ItemServiceInterface::class, ItemService::class);
+        
+        // Merge config
+        $this->mergeConfigFrom(
+            __DIR__ . '/../../config/features.php',
+            'features'
+        );
+        
+        // Merge item-specific config if exists
+        if (file_exists(__DIR__ . '/../../config/item.php')) {
+            $this->mergeConfigFrom(
+                __DIR__ . '/../../config/item.php',
+                'item'
+            );
+        }
+    }
+    
+    /**
+     * Bootstrap services
+     */
+    public function boot(): void
+    {
+        // Load migrations
+        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
+        
+        // Load routes
+        if (file_exists(__DIR__ . '/../../routes/web.php')) {
+            $this->loadRoutesFrom(__DIR__ . '/../../routes/web.php');
+        }
+        
+        if (file_exists(__DIR__ . '/../../routes/api.php')) {
+            $this->loadRoutesFrom(__DIR__ . '/../../routes/api.php');
+        }
+        
+        // Load legacy route file if exists
+        if (file_exists(__DIR__ . '/../../routes/item-routes.php')) {
+            $this->loadRoutesFrom(__DIR__ . '/../../routes/item-routes.php');
+        }
+        
+        // Register event listeners
+        $this->registerEventListeners();
+        
+        // Publish config
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__ . '/../../config/features.php' => config_path('features/item.php'),
+            ], 'item-config');
+            
+            // Publish migrations
+            $this->publishes([
+                __DIR__ . '/../../database/migrations' => database_path('migrations'),
+            ], 'item-migrations');
+        }
+    }
+    
+    /**
+     * Register event listeners
+     */
+    protected function registerEventListeners(): void
+    {
+        // Register item event listeners here when we create them
+    }
+}
