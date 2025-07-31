@@ -72,7 +72,12 @@ interface ItemRepositoryInterface extends FilterableRepositoryInterface
     /**
      * Update an item
      */
-    public function update(int $id, array $data): ItemData;
+    public function update(int $id, array $data): bool;
+    
+    /**
+     * Update an item and return the updated data
+     */
+    public function updateAndReturn(int $id, array $data): ItemData;
     
     /**
      * Update stock quantity

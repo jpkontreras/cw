@@ -38,9 +38,9 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
   const tableColumns = React.useMemo(() => {
     if (columns) return columns;
 
-    const columnsArray = metadata.columns
-      .filter((col) => col.visible && col.key !== 'search')
-      .map((col) => ({
+    const columnsArray = Object.values(metadata?.columns || {})
+      .filter((col: any) => col.visible && col.key !== 'search')
+      .map((col: any) => ({
         id: col.key,
         accessorKey: col.key,
         header: () => {
@@ -465,7 +465,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
                 const activeFilters: { key: string; value: string; label: string }[] = [];
                 
                 // Collect all active filters
-                metadata.columns.forEach((col) => {
+                Object.values(metadata?.columns || {}).forEach((col: any) => {
                   const value = urlParams.get(col.key);
                   if (value && col.key !== 'search') {
                     if (col.filter?.filterType === 'multi-select' && col.filter.options) {

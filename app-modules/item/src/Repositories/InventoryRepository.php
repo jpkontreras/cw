@@ -11,6 +11,7 @@ use Colame\Item\Models\ItemLocationStock;
 use Colame\Item\Models\Item;
 use Colame\Item\Models\ItemVariant;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -630,5 +631,185 @@ class InventoryRepository implements InventoryRepositoryInterface
         $query->orderBy('created_at', 'desc');
         
         return $query->paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Find entity by ID
+     */
+    public function find(int $id): ?object
+    {
+        return InventoryMovement::find($id);
+    }
+    
+    /**
+     * Find entity by ID or throw exception
+     */
+    public function findOrFail(int $id): object
+    {
+        return InventoryMovement::findOrFail($id);
+    }
+    
+    /**
+     * Get all entities
+     */
+    public function all(): array
+    {
+        return InventoryMovement::all()->map(fn($movement) => InventoryMovementData::from($movement))->toArray();
+    }
+    
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $perPage = $this->validatePerPage($perPage);
+        return InventoryMovement::paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Create new entity
+     */
+    public function create(array $data): object
+    {
+        return InventoryMovement::create($data);
+    }
+    
+    /**
+     * Update existing entity
+     */
+    public function update(int $id, array $data): bool
+    {
+        $movement = InventoryMovement::findOrFail($id);
+        return $movement->update($data);
+    }
+    
+    /**
+     * Delete entity
+     */
+    public function delete(int $id): bool
+    {
+        $movement = InventoryMovement::findOrFail($id);
+        return $movement->delete();
+    }
+    
+    /**
+     * Check if entity exists
+     */
+    public function exists(int $id): bool
+    {
+        return InventoryMovement::where('id', $id)->exists();
+    }
+    
+    /**
+     * Apply filters to query
+     */
+    public function applyFilters(Builder $query, array $filters): Builder
+    {
+        // Search filter
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('reason', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhere('reference_id', 'like', "%{$search}%");
+            });
+        }
+        
+        // Item filter
+        if (!empty($filters['item_id'])) {
+            $query->where('item_id', $filters['item_id']);
+        }
+        
+        // Location filter
+        if (!empty($filters['location_id'])) {
+            $query->where('location_id', $filters['location_id']);
+        }
+        
+        // Movement type filter
+        if (!empty($filters['movement_type'])) {
+            $query->where('movement_type', $filters['movement_type']);
+        }
+        
+        // Date range filter
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+        
+        // Sort
+        if (!empty($filters['sort'])) {
+            $sortField = ltrim($filters['sort'], '-');
+            $sortDirection = str_starts_with($filters['sort'], '-') ? 'desc' : 'asc';
+            
+            $allowedSortFields = ['created_at', 'quantity', 'movement_type'];
+            if (in_array($sortField, $allowedSortFields)) {
+                $query->orderBy($sortField, $sortDirection);
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+        
+        return $query;
+    }
+    
+    /**
+     * Get available filter options for a field
+     */
+    public function getFilterOptions(string $field): array
+    {
+        switch ($field) {
+            case 'movement_type':
+                return [
+                    ['value' => 'stock_in', 'label' => 'Stock In'],
+                    ['value' => 'stock_out', 'label' => 'Stock Out'],
+                    ['value' => 'adjustment', 'label' => 'Adjustment'],
+                    ['value' => 'transfer', 'label' => 'Transfer'],
+                    ['value' => 'sale', 'label' => 'Sale'],
+                    ['value' => 'return', 'label' => 'Return'],
+                    ['value' => 'damage', 'label' => 'Damage'],
+                    ['value' => 'stock_take', 'label' => 'Stock Take'],
+                ];
+            case 'status':
+                return [
+                    ['value' => 'completed', 'label' => 'Completed'],
+                    ['value' => 'pending', 'label' => 'Pending'],
+                    ['value' => 'cancelled', 'label' => 'Cancelled'],
+                ];
+            default:
+                return [];
+        }
+    }
+    
+    /**
+     * Get searchable fields
+     */
+    public function getSearchableFields(): array
+    {
+        return ['reason', 'notes', 'reference_id'];
+    }
+    
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return ['created_at', 'quantity', 'movement_type'];
+    }
+    
+    /**
+     * Get default sort configuration
+     */
+    public function getDefaultSort(): array
+    {
+        return [
+            'field' => 'created_at',
+            'direction' => 'desc'
+        ];
     }
 }

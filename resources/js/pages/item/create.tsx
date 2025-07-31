@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { Head, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -133,7 +134,7 @@ export default function ItemCreate({ categories, item_types, features }: PagePro
   };
 
   return (
-    <>
+    <AppLayout>
       <Head title="Create Item" />
       
       <PageLayout>
@@ -603,6 +604,6 @@ export default function ItemCreate({ categories, item_types, features }: PagePro
           </form>
         </PageLayout.Content>
       </PageLayout>
-    </>
+    </AppLayout>
   );
 }

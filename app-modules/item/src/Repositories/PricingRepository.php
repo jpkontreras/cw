@@ -135,7 +135,13 @@ class PricingRepository implements PricingRepositoryInterface
     /**
      * Update a pricing rule
      */
-    public function update(int $id, array $data): ItemLocationPriceData
+    public function update(int $id, array $data): bool
+    {
+        $price = ItemLocationPrice::findOrFail($id);
+        return $price->update($data);
+    }
+    
+    public function updateAndReturn(int $id, array $data): ItemLocationPriceData
     {
         $price = ItemLocationPrice::findOrFail($id);
         $price->update($data);
@@ -349,5 +355,42 @@ class PricingRepository implements PricingRepositoryInterface
         }
         
         return $query->paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Find entity by ID or throw exception
+     */
+    public function findOrFail(int $id): object
+    {
+        return ItemLocationPrice::findOrFail($id);
+    }
+    
+    /**
+     * Get all entities
+     */
+    public function all(): array
+    {
+        return ItemLocationPrice::all()->map(fn($price) => ItemLocationPriceData::from($price))->toArray();
+    }
+    
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $perPage = $this->validatePerPage($perPage);
+        return ItemLocationPrice::paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Check if entity exists
+     */
+    public function exists(int $id): bool
+    {
+        return ItemLocationPrice::where('id', $id)->exists();
     }
 }

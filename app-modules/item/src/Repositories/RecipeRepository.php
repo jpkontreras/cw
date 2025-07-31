@@ -89,7 +89,13 @@ class RecipeRepository implements RecipeRepositoryInterface
     /**
      * Update a recipe
      */
-    public function update(int $id, array $data): RecipeData
+    public function update(int $id, array $data): bool
+    {
+        $recipe = Recipe::findOrFail($id);
+        return $recipe->update($data);
+    }
+    
+    public function updateAndReturn(int $id, array $data): RecipeData
     {
         $recipe = Recipe::findOrFail($id);
         $recipe->update($data);
@@ -110,7 +116,13 @@ class RecipeRepository implements RecipeRepositoryInterface
     /**
      * Update an ingredient
      */
-    public function updateIngredient(int $id, array $data): IngredientData
+    public function updateIngredient(int $id, array $data): bool
+    {
+        $ingredient = Ingredient::findOrFail($id);
+        return $ingredient->update($data);
+    }
+    
+    public function updateIngredientAndReturn(int $id, array $data): IngredientData
     {
         $ingredient = Ingredient::findOrFail($id);
         $ingredient->update($data);
@@ -564,5 +576,42 @@ class RecipeRepository implements RecipeRepositoryInterface
         }
         
         return $query->paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Find entity by ID or throw exception
+     */
+    public function findOrFail(int $id): object
+    {
+        return Recipe::findOrFail($id);
+    }
+    
+    /**
+     * Get all entities
+     */
+    public function all(): array
+    {
+        return Recipe::all()->map(fn($recipe) => RecipeData::from($recipe))->toArray();
+    }
+    
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $perPage = $this->validatePerPage($perPage);
+        return Recipe::paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Check if entity exists
+     */
+    public function exists(int $id): bool
+    {
+        return Recipe::where('id', $id)->exists();
     }
 }

@@ -7,6 +7,7 @@ import { Link } from '@inertiajs/react';
 import {
   BookOpen,
   ChefHat,
+  DollarSign,
   FileText,
   Folder,
   LayoutGrid,
@@ -14,11 +15,13 @@ import {
   MapPin,
   Monitor,
   Package,
+  PackageCheck,
   Plus,
   Settings,
   ShoppingCart,
   Tag,
   Users,
+  Utensils,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -64,6 +67,38 @@ const mainNavItems: NavItem[] = [
     title: 'Items',
     href: '/items',
     icon: Package,
+    items: [
+      {
+        title: 'All Items',
+        href: '/items',
+        icon: List,
+      },
+      {
+        title: 'Create Item',
+        href: '/items/create',
+        icon: Plus,
+      },
+      {
+        title: 'Inventory',
+        href: '/items/inventory',
+        icon: PackageCheck,
+      },
+      {
+        title: 'Modifiers',
+        href: '/items/modifiers',
+        icon: Utensils,
+      },
+      {
+        title: 'Pricing',
+        href: '/items/pricing',
+        icon: DollarSign,
+      },
+      {
+        title: 'Recipes',
+        href: '/items/recipes',
+        icon: ChefHat,
+      },
+    ],
   },
   {
     title: 'Staff',

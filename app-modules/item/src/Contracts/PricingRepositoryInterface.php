@@ -41,7 +41,12 @@ interface PricingRepositoryInterface extends BaseRepositoryInterface
     /**
      * Update a pricing rule
      */
-    public function update(int $id, array $data): ItemLocationPriceData;
+    public function update(int $id, array $data): bool;
+    
+    /**
+     * Update a pricing rule and return the updated data
+     */
+    public function updateAndReturn(int $id, array $data): ItemLocationPriceData;
     
     /**
      * Create bulk pricing rules

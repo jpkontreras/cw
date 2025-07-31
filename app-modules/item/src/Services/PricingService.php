@@ -24,8 +24,10 @@ class PricingService extends BaseService
     public function __construct(
         private readonly PricingRepositoryInterface $pricingRepository,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Calculate price for an item with all applicable rules

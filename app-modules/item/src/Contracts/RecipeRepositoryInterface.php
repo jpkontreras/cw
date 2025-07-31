@@ -38,7 +38,12 @@ interface RecipeRepositoryInterface extends BaseRepositoryInterface
     /**
      * Update a recipe
      */
-    public function update(int $id, array $data): RecipeData;
+    public function update(int $id, array $data): bool;
+    
+    /**
+     * Update a recipe and return the updated data
+     */
+    public function updateAndReturn(int $id, array $data): RecipeData;
     
     /**
      * Create a new ingredient
@@ -48,7 +53,12 @@ interface RecipeRepositoryInterface extends BaseRepositoryInterface
     /**
      * Update an ingredient
      */
-    public function updateIngredient(int $id, array $data): IngredientData;
+    public function updateIngredient(int $id, array $data): bool;
+    
+    /**
+     * Update an ingredient and return the updated data
+     */
+    public function updateIngredientAndReturn(int $id, array $data): IngredientData;
     
     /**
      * Add ingredients to a recipe

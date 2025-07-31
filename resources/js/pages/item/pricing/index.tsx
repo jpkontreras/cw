@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -491,7 +492,7 @@ export default function PricingIndex({
   ];
 
   return (
-    <>
+    <AppLayout>
       <Head title="Pricing Rules" />
       
       <PageLayout>
@@ -1018,6 +1019,6 @@ export default function PricingIndex({
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </AppLayout>
   );
 }

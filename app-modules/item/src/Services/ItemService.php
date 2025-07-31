@@ -8,6 +8,7 @@ use App\Core\Data\PaginatedResourceData;
 use App\Core\Data\ResourceMetadata;
 use App\Core\Data\ColumnMetadata;
 use App\Core\Data\FilterMetadata;
+use App\Core\Data\FilterPresetData;
 use App\Core\Services\BaseService;
 use Colame\Item\Contracts\ItemServiceInterface;
 use Colame\Item\Contracts\ItemRepositoryInterface;
@@ -38,8 +39,10 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
         private PricingRepositoryInterface $pricingRepository,
         private InventoryRepositoryInterface $inventoryRepository,
         private RecipeRepositoryInterface $recipeRepository,
-        private FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Get paginated items with filters
@@ -57,7 +60,15 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
     }
     
     /**
-     * Get a single item by ID
+     * Find a single item by ID (returns basic data)
+     */
+    public function find(int $id): ?ItemData
+    {
+        return $this->itemRepository->find($id);
+    }
+    
+    /**
+     * Get a single item by ID with relations
      */
     public function getItem(int $id): ItemWithRelationsData
     {
@@ -158,7 +169,7 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
         
         try {
             // Update the item
-            $item = $this->itemRepository->update($id, $data);
+            $item = $this->itemRepository->updateAndReturn($id, $data);
             
             // Update categories if provided
             if (isset($data['categories'])) {
@@ -185,7 +196,7 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
                 $recipe = $this->recipeRepository->findByItem($item->id);
                 
                 if ($recipe) {
-                    $this->recipeRepository->update($recipe->id, $data['recipe']);
+                    $this->recipeRepository->updateAndReturn($recipe->id, $data['recipe']);
                     
                     if (isset($data['recipe']['ingredients'])) {
                         $this->recipeRepository->updateRecipeIngredients($recipe->id, $data['recipe']['ingredients']);
@@ -463,13 +474,10 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
         $columns = [];
         
         // Define columns
-        $columns['name'] = ColumnMetadata::string('name', 'Name')
-            ->sortable()
+        $columns['name'] = ColumnMetadata::text('name', 'Name')
             ->withFilter(FilterMetadata::search('search', 'Search items', 'Search by name, SKU, or barcode'));
         
-        $columns['base_price'] = ColumnMetadata::number('base_price', 'Price')
-            ->sortable()
-            ->withFilter(FilterMetadata::range('price', 'Price Range', 0, 999999));
+        $columns['base_price'] = ColumnMetadata::number('base_price', 'Price');
         
         $columns['is_active'] = ColumnMetadata::boolean('is_active', 'Active')
             ->withFilter(FilterMetadata::select('status', 'Status', $this->itemRepository->getFilterOptions('status')));
@@ -485,11 +493,10 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
                 ->withFilter(FilterMetadata::multiSelect('inventory', 'Inventory Status', $this->itemRepository->getFilterOptions('inventory')));
         }
         
-        $columns['created_at'] = ColumnMetadata::datetime('created_at', 'Created')
-            ->sortable();
+        $columns['created_at'] = ColumnMetadata::datetime('created_at', 'Created');
         
         return new ResourceMetadata(
-            columns: collect($columns),
+            columns: ColumnMetadata::collect($columns, \Spatie\LaravelData\DataCollection::class),
             defaultFilters: ['search', 'status', 'type', 'category_id'],
             defaultSort: 'sort_order',
             perPageOptions: [10, 20, 50, 100],
@@ -623,5 +630,232 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
         if (!empty($images)) {
             $this->processImages($itemId, $images);
         }
+    }
+    
+    /**
+     * Get available item types
+     */
+    public function getItemTypes(): array
+    {
+        return [
+            ['value' => 'product', 'label' => 'Product'],
+            ['value' => 'service', 'label' => 'Service'],
+            ['value' => 'combo', 'label' => 'Combo'],
+        ];
+    }
+    
+    /**
+     * Get items formatted for select options
+     */
+    public function getItemsForSelect(array $options = []): Collection
+    {
+        $query = $this->itemRepository->getActiveItems();
+        
+        if (!empty($options['with_variants']) && $this->features->isEnabled('item.variants')) {
+            // Include variants in the selection
+            return $query->map(function ($item) {
+                $options = collect([[
+                    'value' => $item->id,
+                    'label' => $item->name,
+                    'type' => 'item',
+                    'price' => $item->basePrice,
+                ]]);
+                
+                if (!empty($item->variants)) {
+                    foreach ($item->variants as $variant) {
+                        $options->push([
+                            'value' => "item_{$item->id}_variant_{$variant->id}",
+                            'label' => "{$item->name} - {$variant->name}",
+                            'type' => 'variant',
+                            'itemId' => $item->id,
+                            'variantId' => $variant->id,
+                            'price' => $item->basePrice + $variant->priceAdjustment,
+                        ]);
+                    }
+                }
+                
+                return $options;
+            })->flatten(1);
+        }
+        
+        return $query->map(function ($item) {
+            return [
+                'value' => $item->id,
+                'label' => $item->name,
+                'price' => $item->basePrice,
+                'sku' => $item->sku,
+                'type' => $item->type,
+            ];
+        });
+    }
+    
+    /**
+     * Get items for stock take
+     */
+    public function getItemsForStockTake(?int $locationId = null): Collection
+    {
+        if (!$this->features->isEnabled('item.inventory_tracking')) {
+            return collect();
+        }
+        
+        $items = $this->itemRepository->getItemsWithStock($locationId);
+        
+        return $items->map(function ($item) use ($locationId) {
+            $currentStock = $this->inventoryRepository->getStockLevel($item->id, null, $locationId);
+            
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'sku' => $item->sku,
+                'category' => $item->categoryName,
+                'current_stock' => $currentStock,
+                'counted_stock' => null,
+                'variance' => null,
+                'unit' => $item->stockUnit ?? 'units',
+            ];
+        });
+    }
+    
+    /**
+     * Alias for getItem() to match controller usage
+     */
+    public function getItemWithRelations(int $id): ItemWithRelationsData
+    {
+        return $this->getItem($id);
+    }
+    
+    /**
+     * Get filter presets for the resource
+     */
+    public function getFilterPresets(): array
+    {
+        return [
+            new FilterPresetData(
+                id: 'active',
+                name: 'Active Items',
+                description: 'Items that are currently available',
+                filters: [
+                    'status' => ['active'],
+                    'is_available' => true,
+                ],
+                icon: 'package'
+            ),
+            new FilterPresetData(
+                id: 'low-stock',
+                name: 'Low Stock',
+                description: 'Items with low inventory',
+                filters: [
+                    'inventory' => ['low', 'out_of_stock'],
+                ],
+                icon: 'alert-triangle'
+            ),
+            new FilterPresetData(
+                id: 'featured',
+                name: 'Featured Items',
+                description: 'Items marked as featured',
+                filters: [
+                    'featured' => 'yes',
+                ],
+                icon: 'star'
+            ),
+        ];
+    }
+    
+    /**
+     * Get available actions for the resource
+     */
+    public function getAvailableActions(array $context = []): array
+    {
+        $actions = [
+            [
+                'id' => 'view',
+                'label' => 'View Details',
+                'icon' => 'eye',
+                'route' => 'items.show',
+            ],
+            [
+                'id' => 'edit',
+                'label' => 'Edit Item',
+                'icon' => 'edit',
+                'route' => 'items.edit',
+            ],
+        ];
+        
+        if ($this->features->isEnabled('item.inventory_tracking')) {
+            $actions[] = [
+                'id' => 'adjust-stock',
+                'label' => 'Adjust Stock',
+                'icon' => 'package',
+                'route' => 'items.inventory.adjust',
+            ];
+        }
+        
+        if ($this->features->isEnabled('item.batch_operations')) {
+            $actions[] = [
+                'id' => 'duplicate',
+                'label' => 'Duplicate',
+                'icon' => 'copy',
+                'route' => 'items.duplicate',
+            ];
+        }
+        
+        $actions[] = [
+            'id' => 'delete',
+            'label' => 'Delete',
+            'icon' => 'trash',
+            'route' => 'items.destroy',
+            'destructive' => true,
+        ];
+        
+        return $actions;
+    }
+    
+    /**
+     * Get export configuration for the resource
+     */
+    public function getExportConfiguration(): array
+    {
+        return [
+            'formats' => [
+                'csv' => [
+                    'label' => 'CSV',
+                    'extension' => 'csv',
+                    'mimeType' => 'text/csv',
+                ],
+                'excel' => [
+                    'label' => 'Excel',
+                    'extension' => 'xlsx',
+                    'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ],
+                'pdf' => [
+                    'label' => 'PDF',
+                    'extension' => 'pdf',
+                    'mimeType' => 'application/pdf',
+                ],
+            ],
+            'columns' => [
+                'id' => 'ID',
+                'name' => 'Name',
+                'sku' => 'SKU',
+                'description' => 'Description',
+                'base_price' => 'Base Price',
+                'cost' => 'Cost',
+                'type' => 'Type',
+                'status' => 'Status',
+                'is_available' => 'Available',
+                'is_featured' => 'Featured',
+                'stock_quantity' => 'Stock Quantity',
+                'created_at' => 'Created Date',
+                'updated_at' => 'Last Updated',
+            ],
+            'defaultColumns' => [
+                'name',
+                'sku',
+                'base_price',
+                'type',
+                'status',
+                'stock_quantity',
+            ],
+        ];
     }
 }

@@ -351,4 +351,75 @@ class ModifierRepository implements ModifierRepositoryInterface
         
         return $query->paginate($perPage, $columns, $pageName, $page);
     }
+    
+    /**
+     * Find entity by ID
+     */
+    public function find(int $id): ?object
+    {
+        return ModifierGroup::find($id);
+    }
+    
+    /**
+     * Find entity by ID or throw exception
+     */
+    public function findOrFail(int $id): object
+    {
+        return ModifierGroup::findOrFail($id);
+    }
+    
+    /**
+     * Get all entities
+     */
+    public function all(): array
+    {
+        return ModifierGroup::all()->map(fn($group) => ModifierGroupData::from($group))->toArray();
+    }
+    
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $perPage = $this->validatePerPage($perPage);
+        return ModifierGroup::paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Create new entity
+     */
+    public function create(array $data): object
+    {
+        return ModifierGroup::create($data);
+    }
+    
+    /**
+     * Update existing entity
+     */
+    public function update(int $id, array $data): bool
+    {
+        $group = ModifierGroup::findOrFail($id);
+        return $group->update($data);
+    }
+    
+    /**
+     * Delete entity
+     */
+    public function delete(int $id): bool
+    {
+        $group = ModifierGroup::findOrFail($id);
+        return $group->delete();
+    }
+    
+    /**
+     * Check if entity exists
+     */
+    public function exists(int $id): bool
+    {
+        return ModifierGroup::where('id', $id)->exists();
+    }
 }

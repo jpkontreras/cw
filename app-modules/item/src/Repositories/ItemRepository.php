@@ -25,6 +25,7 @@ use Colame\Item\Models\ItemLocationStock;
 use Colame\Item\Models\ItemCategory;
 use Colame\Item\Models\Recipe;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -310,7 +311,13 @@ class ItemRepository implements ItemRepositoryInterface
     /**
      * Update an item
      */
-    public function update(int $id, array $data): ItemData
+    public function update(int $id, array $data): bool
+    {
+        $item = Item::findOrFail($id);
+        return $item->update($data);
+    }
+    
+    public function updateAndReturn(int $id, array $data): ItemData
     {
         $item = Item::findOrFail($id);
         $item->update($data);
@@ -538,7 +545,7 @@ class ItemRepository implements ItemRepositoryInterface
     /**
      * Apply filters to query
      */
-    private function applyFilters($query, array $filters): void
+    public function applyFilters(Builder $query, array $filters): Builder
     {
         // Search filter
         if (!empty($filters['search'])) {
@@ -633,5 +640,89 @@ class ItemRepository implements ItemRepositoryInterface
         } else {
             $query->orderBy('sort_order')->orderBy('name');
         }
+        
+        return $query;
+    }
+    
+    /**
+     * Find entity by ID or throw exception
+     */
+    public function findOrFail(int $id): object
+    {
+        return Item::findOrFail($id);
+    }
+    
+    /**
+     * Get all entities
+     */
+    public function all(): array
+    {
+        return Item::all()->map(fn($item) => ItemData::from($item))->toArray();
+    }
+    
+    /**
+     * Get paginated entities
+     */
+    public function paginate(
+        int $perPage = 15,
+        array $columns = ['*'],
+        string $pageName = 'page',
+        ?int $page = null
+    ): LengthAwarePaginator {
+        $perPage = $this->validatePerPage($perPage);
+        return Item::paginate($perPage, $columns, $pageName, $page);
+    }
+    
+    /**
+     * Check if entity exists
+     */
+    public function exists(int $id): bool
+    {
+        return Item::where('id', $id)->exists();
+    }
+    
+    /**
+     * Get searchable fields
+     */
+    public function getSearchableFields(): array
+    {
+        return ['name', 'description', 'sku', 'barcode'];
+    }
+    
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return ['name', 'base_price', 'created_at', 'updated_at', 'sort_order'];
+    }
+    
+    /**
+     * Get default sort configuration
+     */
+    public function getDefaultSort(): array
+    {
+        return [
+            'field' => 'sort_order',
+            'direction' => 'asc'
+        ];
+    }
+    
+    /**
+     * Get items with stock information
+     */
+    public function getItemsWithStock(?int $locationId = null): Collection
+    {
+        $query = Item::with(['variants', 'categories'])
+            ->where('track_stock', true)
+            ->where('is_active', true);
+        
+        if ($locationId) {
+            $query->with(['locationStock' => function ($q) use ($locationId) {
+                $q->where('location_id', $locationId);
+            }]);
+        }
+        
+        return ItemData::collect($query->get());
     }
 }

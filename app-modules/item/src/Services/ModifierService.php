@@ -26,8 +26,10 @@ class ModifierService extends BaseService
     public function __construct(
         private readonly ModifierRepositoryInterface $modifierRepository,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Create a new modifier group
@@ -344,6 +346,31 @@ class ModifierService extends BaseService
     private function syncGroupItems(int $groupId, array $itemIds): void
     {
         $this->modifierRepository->syncGroupItems($groupId, $itemIds);
+    }
+    
+    /**
+     * Get all modifier groups with optional filters
+     */
+    public function getModifierGroups(array $filters = []): Collection
+    {
+        return $this->modifierRepository->getGroups($filters);
+    }
+    
+    /**
+     * Get a modifier group with its modifiers
+     */
+    public function getModifierGroupWithModifiers(int $groupId): ?ModifierGroupData
+    {
+        $group = $this->modifierRepository->findGroup($groupId);
+        if (!$group) {
+            return null;
+        }
+        
+        // Load modifiers for the group
+        $modifiers = $this->modifierRepository->getGroupModifiers($groupId);
+        $group->modifiers = $modifiers;
+        
+        return $group;
     }
     
     /**

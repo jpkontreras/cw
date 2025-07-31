@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Head, router } from '@inertiajs/react';
-import PageLayout from '@/layouts/page-layout';
+import { Head, router, Link } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,7 @@ import { formatCurrency } from '@/lib/format';
 import { ColumnDef } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { type BreadcrumbItem } from '@/types';
 
 interface Item {
   id: number;
@@ -79,7 +81,14 @@ interface PageProps {
   };
 }
 
-export default function ItemsIndex({ 
+const breadcrumbs: BreadcrumbItem[] = [
+  {
+    title: 'Items',
+    href: '/items',
+  },
+];
+
+function ItemsIndexContent({ 
   items, 
   pagination, 
   metadata, 
@@ -94,17 +103,34 @@ export default function ItemsIndex({
     const cols: ColumnDef<Item>[] = [
       {
         id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
+        header: () => {
+          const allSelected = items.length > 0 && items.every(item => selectedItems.includes(item.id));
+          const someSelected = items.some(item => selectedItems.includes(item.id));
+          return (
+            <Checkbox
+              checked={allSelected}
+              // indeterminate={someSelected && !allSelected}
+              onCheckedChange={(value) => {
+                if (value) {
+                  setSelectedItems(items.map(item => item.id));
+                } else {
+                  setSelectedItems([]);
+                }
+              }}
+              aria-label="Select all"
+            />
+          );
+        },
         cell: ({ row }) => (
           <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            checked={selectedItems.includes(row.original.id)}
+            onCheckedChange={(value) => {
+              if (value) {
+                setSelectedItems([...selectedItems, row.original.id]);
+              } else {
+                setSelectedItems(selectedItems.filter(id => id !== row.original.id));
+              }
+            }}
             aria-label="Select row"
           />
         ),
@@ -227,7 +253,7 @@ export default function ItemsIndex({
       accessorKey: 'is_available',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.is_available ? 'success' : 'secondary'}>
+        <Badge variant={row.original.is_available ? 'default' : 'secondary'} className={row.original.is_available ? 'bg-green-500 hover:bg-green-600' : ''}>
           {row.original.is_available ? 'Available' : 'Unavailable'}
         </Badge>
       ),
@@ -283,7 +309,7 @@ export default function ItemsIndex({
     });
 
     return cols;
-  }, [features]);
+  }, [features, items, selectedItems]);
 
   const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this item?')) {
@@ -356,130 +382,118 @@ export default function ItemsIndex({
 
   return (
     <>
-      <Head title="Items" />
-      
-      <PageLayout>
-        <PageLayout.Header
-          title="Items"
-          subtitle="Manage your products, services, and combos"
-          actions={
-            <PageLayout.Actions>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <FileUp className="mr-2 h-4 w-4" />
-                    Import
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                    Import from CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.get('/items/import-template')}>
-                    Download template
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setExportDialogOpen(true)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              
-              <Button 
-                size="sm"
-                onClick={() => router.visit('/items/create')}
-              >
+      <Page.Header
+        title="Items"
+        subtitle="Manage your products, services, and combos"
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Import
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                  Import from CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.get('/items/import-template')}>
+                  Download template
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setExportDialogOpen(true)}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            
+            <Link href="/items/create">
+              <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 New Item
               </Button>
-            </PageLayout.Actions>
-          }
-        />
-        
-        <PageLayout.Content>
-          {/* Stats Cards */}
-          {statsCards.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-              {statsCards.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <Card key={index}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {stat.title}
-                      </CardTitle>
-                      <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                        <Icon className={cn('h-4 w-4', stat.color)} />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stat.value}</div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            </Link>
+          </>
+        }
+      />
+
+      <Page.Content>
+        <div className="space-y-6">
+        {/* Stats Cards */}
+        {statsCards.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {statsCards.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={index}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                      <Icon className={cn('h-4 w-4', stat.color)} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
           )}
 
           {/* Bulk Actions */}
           {selectedItems.length > 0 && (
-            <Alert className="mb-4">
-              <AlertDescription className="flex items-center justify-between">
-                <span>{selectedItems.length} items selected</span>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleBulkAction('make_available')}
-                  >
-                    Make Available
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleBulkAction('make_unavailable')}
-                  >
-                    Make Unavailable
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="text-destructive"
-                    onClick={() => handleBulkAction('delete')}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert>
+            <AlertDescription className="flex items-center justify-between">
+              <span>{selectedItems.length} items selected</span>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleBulkAction('make_available')}
+                >
+                  Make Available
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleBulkAction('make_unavailable')}
+                >
+                  Make Unavailable
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={() => handleBulkAction('delete')}
+                >
+                  Delete
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
-          {/* Data Table */}
-          <Card>
-            <CardContent className="p-0">
-              <InertiaDataTable
-                columns={columns}
-                data={items}
-                pagination={pagination}
-                filters={metadata?.filters}
-                onRowSelectionChange={(rows) => {
-                  setSelectedItems(rows.map(r => r.id));
-                }}
-              />
-            </CardContent>
-          </Card>
-        </PageLayout.Content>
-      </PageLayout>
+        {/* Data Table */}
+        <InertiaDataTable
+          columns={columns}
+          data={items}
+          pagination={pagination}
+          metadata={metadata}
+        />
 
-      {/* Import Dialog */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent>
+        {/* Import Dialog */}
+        <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+          <DialogContent>
           <DialogHeader>
             <DialogTitle>Import Items</DialogTitle>
             <DialogDescription>
@@ -487,8 +501,8 @@ export default function ItemsIndex({
             </DialogDescription>
           </DialogHeader>
           {/* Import form would go here */}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
       {/* Export Dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
@@ -500,8 +514,21 @@ export default function ItemsIndex({
             </DialogDescription>
           </DialogHeader>
           {/* Export form would go here */}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+          </Dialog>
+        </div>
+      </Page.Content>
     </>
+  );
+}
+
+export default function ItemsIndex(props: PageProps) {
+  return (
+    <AppLayout>
+      <Head title="Items" />
+      <Page>
+        <ItemsIndexContent {...props} />
+      </Page>
+    </AppLayout>
   );
 }

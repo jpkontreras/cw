@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -474,7 +475,7 @@ export default function ModifiersIndex({
   ];
 
   return (
-    <>
+    <AppLayout>
       <Head title="Modifiers" />
       
       <PageLayout>
@@ -1081,6 +1082,6 @@ export default function ModifiersIndex({
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </AppLayout>
   );
 }

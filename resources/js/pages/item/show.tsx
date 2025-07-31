@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -176,7 +177,7 @@ export default function ItemShow({
   } : null;
 
   return (
-    <>
+    <AppLayout>
       <Head title={item.name} />
       
       <PageLayout>
@@ -713,6 +714,6 @@ export default function ItemShow({
           </div>
         </PageLayout.Content>
       </PageLayout>
-    </>
+    </AppLayout>
   );
 }

@@ -27,8 +27,10 @@ class InventoryService extends BaseService
     public function __construct(
         private readonly InventoryRepositoryInterface $inventoryRepository,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Get current inventory levels
@@ -444,6 +446,104 @@ class InventoryService extends BaseService
         }
         
         return $results;
+    }
+    
+    /**
+     * Get paginated inventory data
+     */
+    public function getPaginatedInventory(array $filters = [], int $perPage = 20, ?int $locationId = null): mixed
+    {
+        return $this->inventoryRepository->paginateWithFilters($filters, $perPage, $locationId);
+    }
+    
+    /**
+     * Get recent inventory adjustments
+     */
+    public function getRecentAdjustments(int $limit = 10, ?int $locationId = null): Collection
+    {
+        return $this->inventoryRepository->getRecentAdjustments($limit, $locationId);
+    }
+    
+    /**
+     * Get pending stock transfers
+     */
+    public function getPendingTransfers(?int $locationId = null): Collection
+    {
+        if (!$this->features->isEnabled('item.stock_transfers')) {
+            return collect();
+        }
+        
+        return $this->inventoryRepository->getPendingTransfers($locationId);
+    }
+    
+    /**
+     * Get recent stock transfers
+     */
+    public function getRecentTransfers(int $limit = 10, ?int $locationId = null): Collection
+    {
+        if (!$this->features->isEnabled('item.stock_transfers')) {
+            return collect();
+        }
+        
+        return $this->inventoryRepository->getRecentTransfers($limit, $locationId);
+    }
+    
+    /**
+     * Get last stock take information
+     */
+    public function getLastStockTake(?int $locationId = null): ?array
+    {
+        $lastStockTake = $this->inventoryRepository->getLastStockTake($locationId);
+        
+        if (!$lastStockTake) {
+            return null;
+        }
+        
+        return [
+            'date' => $lastStockTake->created_at,
+            'user' => $lastStockTake->user_name ?? 'System',
+            'items_counted' => $lastStockTake->items_counted ?? 0,
+            'total_adjustments' => $lastStockTake->total_adjustments ?? 0,
+            'location_id' => $lastStockTake->location_id,
+        ];
+    }
+    
+    /**
+     * Get reorder rules
+     */
+    public function getReorderRules(?int $locationId = null): Collection
+    {
+        if (!$this->features->isEnabled('item.auto_reorder')) {
+            return collect();
+        }
+        
+        return $this->inventoryRepository->getReorderRules($locationId);
+    }
+    
+    /**
+     * Get current stock level
+     */
+    public function getStockLevel(int $itemId, ?int $variantId = null, ?int $locationId = null): float
+    {
+        $inventory = $this->getInventoryLevel($itemId, $variantId, $locationId);
+        return $inventory ? $inventory->quantityOnHand : 0;
+    }
+    
+    /**
+     * Get available stock (considering reservations)
+     */
+    public function getAvailableStock(int $itemId, ?int $variantId = null, ?int $locationId = null): float
+    {
+        $inventory = $this->getInventoryLevel($itemId, $variantId, $locationId);
+        if (!$inventory) {
+            return 0;
+        }
+        
+        if ($this->features->isEnabled('item.stock_reservation')) {
+            return $inventory->quantityOnHand - $inventory->quantityReserved;
+        }
+        
+        return $inventory->quantityOnHand;
     }
     
     /**

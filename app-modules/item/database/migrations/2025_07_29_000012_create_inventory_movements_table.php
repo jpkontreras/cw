@@ -26,7 +26,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->index(); // Who made the adjustment
             $table->timestamps();
             
-            $table->index(['inventoriable_type', 'inventoriable_id']);
+            // morphs() already creates an index for inventoriable_type and inventoriable_id
             $table->index(['location_id', 'created_at']);
             $table->index(['reference_type', 'reference_id']);
             $table->index('movement_type');

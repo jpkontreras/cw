@@ -17,7 +17,7 @@ return new class extends Migration
             
             $table->unique(['item_id', 'category_id']);
             $table->index(['item_id', 'is_primary']);
-            $table->index('category_id');
+            // index on category_id already created above with ->index()
         });
     }
 

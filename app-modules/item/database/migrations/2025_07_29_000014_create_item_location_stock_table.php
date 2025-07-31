@@ -15,14 +15,14 @@ return new class extends Migration
             $table->foreignId('location_id')->index(); // Foreign key to location module
             $table->decimal('quantity', 10, 3)->default(0);
             $table->decimal('reserved_quantity', 10, 3)->default(0); // For pending orders
-            $table->decimal('available_quantity', 10, 3)->virtualAs('quantity - reserved_quantity');
+            // Note: We'll calculate available_quantity in the model instead of using a virtual column
+            // as PostgreSQL has different syntax and indexing limitations for generated columns
             $table->decimal('reorder_point', 10, 3)->default(0);
             $table->decimal('reorder_quantity', 10, 3)->default(0);
             $table->timestamps();
             
             $table->unique(['item_id', 'item_variant_id', 'location_id'], 'item_variant_location_unique');
             $table->index(['location_id', 'quantity']);
-            $table->index(['location_id', 'available_quantity']);
         });
     }
 

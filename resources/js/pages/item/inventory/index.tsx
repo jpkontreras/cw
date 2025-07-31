@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -342,7 +343,7 @@ export default function InventoryIndex({
   ];
 
   return (
-    <>
+    <AppLayout>
       <Head title="Inventory Management" />
       
       <PageLayout>
@@ -657,6 +658,6 @@ export default function InventoryIndex({
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </AppLayout>
   );
 }

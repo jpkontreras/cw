@@ -35,6 +35,10 @@ class ItemLocationStock extends Model
         'reorder_quantity' => 0,
     ];
     
+    protected $appends = [
+        'available_quantity'
+    ];
+    
     /**
      * Get available quantity (calculated attribute)
      */
