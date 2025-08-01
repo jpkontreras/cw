@@ -80,22 +80,22 @@ const mainNavItems: NavItem[] = [
       },
       {
         title: 'Inventory',
-        href: '/items/inventory',
+        href: '/inventory',
         icon: PackageCheck,
       },
       {
         title: 'Modifiers',
-        href: '/items/modifiers',
+        href: '/modifiers',
         icon: Utensils,
       },
       {
         title: 'Pricing',
-        href: '/items/pricing',
+        href: '/pricing',
         icon: DollarSign,
       },
       {
         title: 'Recipes',
-        href: '/items/recipes',
+        href: '/recipes',
         icon: ChefHat,
       },
     ],

@@ -10,6 +10,7 @@ use App\Core\Traits\HandlesPaginationBounds;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
@@ -50,6 +51,15 @@ class InventoryController extends Controller
                 'auto_reorder' => $this->features->isEnabled('item.auto_reorder'),
                 'batch_tracking' => $this->features->isEnabled('item.batch_tracking'),
             ],
+            'adjustment_types' => [
+                ['value' => 'recount', 'label' => 'Physical Recount'],
+                ['value' => 'damaged', 'label' => 'Damaged Goods'],
+                ['value' => 'expired', 'label' => 'Expired'],
+                ['value' => 'theft', 'label' => 'Theft/Loss'],
+                ['value' => 'return', 'label' => 'Return to Supplier'],
+                ['value' => 'other', 'label' => 'Other'],
+            ],
+            'recent_adjustments' => $this->inventoryService->getRecentAdjustments(10, $locationId),
         ]);
     }
     

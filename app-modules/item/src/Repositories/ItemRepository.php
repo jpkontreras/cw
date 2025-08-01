@@ -714,7 +714,7 @@ class ItemRepository implements ItemRepositoryInterface
     public function getItemsWithStock(?int $locationId = null): Collection
     {
         $query = Item::with(['variants', 'categories'])
-            ->where('track_stock', true)
+            ->where('track_inventory', true)
             ->where('is_active', true);
         
         if ($locationId) {

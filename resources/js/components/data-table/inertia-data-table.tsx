@@ -320,7 +320,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
       })) as ColumnDef<TData, TValue>[];
     
     // Add actions column if metadata includes row actions
-    if (metadata.actions?.length > 0 || metadata.rowActions) {
+    if (metadata?.actions?.length > 0 || metadata?.rowActions) {
       const actionsColumn: ColumnDef<TData, TValue> = {
         id: 'actions',
         enableSorting: false,
@@ -407,8 +407,8 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
         {isSearchExpanded ? (
           // Expanded search view
           <div className="flex items-center gap-2">
-            {metadata.filters
-              .filter((filter) => filter.filterType === 'search' && metadata.defaultFilters.includes(filter.key))
+            {metadata?.filters
+              ?.filter((filter) => filter.filterType === 'search' && metadata?.defaultFilters?.includes(filter.key))
               .map((filter) => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const currentValue = urlParams.get(filter.key) || '';
@@ -642,7 +642,7 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
       <DataTablePagination
         table={table}
         pagination={pagination}
-        perPageOptions={metadata.perPageOptions}
+        perPageOptions={metadata?.perPageOptions || [10, 20, 50, 100]}
         onPageChange={(page) => {
           const params = new URLSearchParams(window.location.search);
           params.set('page', String(page));
@@ -698,7 +698,7 @@ function formatCellValue(value: unknown, column: ColumnMetadata): React.ReactNod
 
     case 'enum':
       if (column.metadata?.options) {
-        const option = column.metadata.options.find((opt: { value: string; label: string }) => opt.value === value);
+        const option = column.metadata?.options?.find((opt: { value: string; label: string }) => opt.value === value);
         return option?.label || value;
       }
       return value;

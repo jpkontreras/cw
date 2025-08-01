@@ -444,16 +444,12 @@ export default function InventoryIndex({
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
-              <Card>
-                <CardContent className="p-0">
-                  <InertiaDataTable
-                    columns={columns}
-                    data={inventory}
-                    pagination={pagination}
-                    filters={metadata?.filters}
-                  />
-                </CardContent>
-              </Card>
+              <InertiaDataTable
+                columns={columns}
+                data={inventory}
+                pagination={pagination}
+                metadata={metadata}
+              />
             </TabsContent>
 
             <TabsContent value="low-stock" className="mt-6">
