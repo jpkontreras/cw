@@ -25,8 +25,10 @@ class ExportService extends BaseService
         private readonly InventoryRepositoryInterface $inventoryRepository,
         private readonly RecipeRepositoryInterface $recipeRepository,
         private readonly PricingRepositoryInterface $pricingRepository,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Export items to CSV

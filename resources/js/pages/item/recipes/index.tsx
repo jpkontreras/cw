@@ -153,14 +153,10 @@ export default function RecipesIndex({
   low_margin_recipes,
   features
 }: PageProps) {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null);
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
-  const [steps, setSteps] = useState<RecipeStep[]>([]);
 
-  const { data, setData, post, put, processing, errors, reset } = useForm({
+  const { data, setData, errors } = useForm({
     name: '',
     description: '',
     item_id: '',
@@ -367,39 +363,11 @@ export default function RecipesIndex({
   };
 
   const handleEdit = (recipe: Recipe) => {
-    setEditingRecipe(recipe);
-    setData({
-      name: recipe.name,
-      description: recipe.description || '',
-      item_id: recipe.item_id.toString(),
-      yield_quantity: recipe.yield_quantity.toString(),
-      yield_unit: recipe.yield_unit,
-      prep_time_minutes: recipe.prep_time_minutes?.toString() || '',
-      cook_time_minutes: recipe.cook_time_minutes?.toString() || '',
-      difficulty: recipe.difficulty,
-      is_active: recipe.is_active,
-    });
-    setIngredients(recipe.ingredients);
-    setSteps(recipe.instructions);
-    setCreateDialogOpen(true);
+    router.visit(`/recipes/${recipe.id}/edit`);
   };
 
   const handleDuplicate = (recipe: Recipe) => {
-    setEditingRecipe(null);
-    setData({
-      name: `${recipe.name} (Copy)`,
-      description: recipe.description || '',
-      item_id: recipe.item_id.toString(),
-      yield_quantity: recipe.yield_quantity.toString(),
-      yield_unit: recipe.yield_unit,
-      prep_time_minutes: recipe.prep_time_minutes?.toString() || '',
-      cook_time_minutes: recipe.cook_time_minutes?.toString() || '',
-      difficulty: recipe.difficulty,
-      is_active: false,
-    });
-    setIngredients(recipe.ingredients.map(({ id, ...ing }) => ing));
-    setSteps(recipe.instructions);
-    setCreateDialogOpen(true);
+    router.visit(`/recipes/${recipe.id}/duplicate`);
   };
 
   const handleDelete = (id: number) => {
@@ -414,88 +382,6 @@ export default function RecipesIndex({
 
   const handleExport = (recipe: Recipe) => {
     router.get(`/recipes/${recipe.id}/export`);
-  };
-
-  const addIngredient = () => {
-    setIngredients([
-      ...ingredients,
-      {
-        item_id: 0,
-        quantity: 0,
-        unit: 'g',
-        notes: '',
-      },
-    ]);
-  };
-
-  const updateIngredient = (index: number, field: keyof RecipeIngredient, value: any) => {
-    const updated = [...ingredients];
-    updated[index] = { ...updated[index], [field]: value };
-    setIngredients(updated);
-  };
-
-  const removeIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
-
-  const addStep = () => {
-    setSteps([
-      ...steps,
-      {
-        order: steps.length + 1,
-        instruction: '',
-        duration_minutes: undefined,
-      },
-    ]);
-  };
-
-  const updateStep = (index: number, field: keyof RecipeStep, value: any) => {
-    const updated = [...steps];
-    updated[index] = { ...updated[index], [field]: value };
-    setSteps(updated);
-  };
-
-  const removeStep = (index: number) => {
-    const updated = steps.filter((_, i) => i !== index);
-    // Reorder remaining steps
-    updated.forEach((step, i) => {
-      step.order = i + 1;
-    });
-    setSteps(updated);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (ingredients.length === 0) {
-      alert('Please add at least one ingredient');
-      return;
-    }
-    
-    if (steps.length === 0) {
-      alert('Please add at least one instruction step');
-      return;
-    }
-    
-    const formData = {
-      ...data,
-      ingredients,
-      instructions: steps,
-    };
-    
-    const url = editingRecipe ? `/recipes/${editingRecipe.id}` : '/recipes';
-    const method = editingRecipe ? put : post;
-    
-    method(url, {
-      data: formData,
-      onSuccess: () => {
-        setCreateDialogOpen(false);
-        setEditingRecipe(null);
-        setIngredients([]);
-        setSteps([]);
-        reset();
-      },
-    });
   };
 
   const statsCards = [
@@ -550,13 +436,7 @@ export default function RecipesIndex({
               </Button>
               <Button
                 size="sm"
-                onClick={() => {
-                  setEditingRecipe(null);
-                  setIngredients([]);
-                  setSteps([]);
-                  reset();
-                  setCreateDialogOpen(true);
-                }}
+                onClick={() => router.visit('/recipes/create')}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 New Recipe
@@ -611,12 +491,34 @@ export default function RecipesIndex({
             <TabsContent value="all" className="mt-6">
               <Card>
                 <CardContent className="p-0">
-                  <InertiaDataTable
-                    columns={columns}
-                    data={recipes}
-                    pagination={pagination}
-                    filters={metadata?.filters}
-                  />
+                  {recipes.length > 0 ? (
+                    <InertiaDataTable
+                      columns={columns}
+                      data={recipes}
+                      pagination={pagination}
+                      filters={metadata?.filters}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 px-4">
+                      <div className="rounded-full bg-muted p-6 mb-6">
+                        <ChefHat className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No recipes yet</h3>
+                      <p className="text-muted-foreground text-center mb-6 max-w-sm">
+                        Start by creating your first recipe to manage ingredients, calculate costs, and track profit margins.
+                      </p>
+                      <div className="flex gap-3">
+                        <Button onClick={() => router.visit('/recipes/create')}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Recipe
+                        </Button>
+                        <Button variant="outline" onClick={() => router.visit('/recipes/import')}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Import Recipes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -710,300 +612,6 @@ export default function RecipesIndex({
         </PageLayout.Content>
       </PageLayout>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>
-                {editingRecipe ? 'Edit Recipe' : 'Create Recipe'}
-              </DialogTitle>
-              <DialogDescription>
-                Define ingredients and instructions for your recipe
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 my-6">
-              {/* Basic Info */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Basic Information</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">
-                      Recipe Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="name"
-                      value={data.name}
-                      onChange={(e) => setData('name', e.target.value)}
-                      placeholder="e.g., Classic Empanada Filling"
-                      className={errors.name ? 'border-destructive' : ''}
-                    />
-                    {errors.name && (
-                      <p className="text-sm text-destructive">{errors.name}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>For Item <span className="text-destructive">*</span></Label>
-                    <ItemSelector
-                      value={data.item_id ? parseInt(data.item_id) : undefined}
-                      onValueChange={(value) => setData('item_id', value?.toString() || '')}
-                      items={items}
-                      showPrice={false}
-                      showSku={false}
-                      placeholder="Select item"
-                    />
-                    {errors.item_id && (
-                      <p className="text-sm text-destructive">{errors.item_id}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={data.description}
-                    onChange={(e) => setData('description', e.target.value)}
-                    placeholder="Brief description of the recipe..."
-                    rows={2}
-                  />
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="yield_quantity">
-                      Yield Quantity <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="yield_quantity"
-                      type="number"
-                      value={data.yield_quantity}
-                      onChange={(e) => setData('yield_quantity', e.target.value)}
-                      className={errors.yield_quantity ? 'border-destructive' : ''}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="yield_unit">
-                      Unit <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                      value={data.yield_unit}
-                      onValueChange={(value) => setData('yield_unit', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.value} value={unit.value}>
-                            {unit.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="prep_time">Prep Time (min)</Label>
-                    <Input
-                      id="prep_time"
-                      type="number"
-                      value={data.prep_time_minutes}
-                      onChange={(e) => setData('prep_time_minutes', e.target.value)}
-                      placeholder="15"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cook_time">Cook Time (min)</Label>
-                    <Input
-                      id="cook_time"
-                      type="number"
-                      value={data.cook_time_minutes}
-                      onChange={(e) => setData('cook_time_minutes', e.target.value)}
-                      placeholder="30"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty">Difficulty</Label>
-                  <Select
-                    value={data.difficulty}
-                    onValueChange={(value) => setData('difficulty', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {difficulty_levels.map((level) => (
-                        <SelectItem key={level.value} value={level.value}>
-                          {level.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Ingredients */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Ingredients</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addIngredient}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Ingredient
-                  </Button>
-                </div>
-                
-                {ingredients.length === 0 ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Add ingredients to build your recipe. Each ingredient should be an item from your inventory.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-3">
-                    {ingredients.map((ingredient, index) => (
-                      <div key={index} className="flex gap-3 items-start p-3 border rounded-lg">
-                        <div className="flex-1 grid gap-3 md:grid-cols-4">
-                          <div className="md:col-span-2">
-                            <ItemSelector
-                              value={ingredient.item_id || undefined}
-                              onValueChange={(value) => updateIngredient(index, 'item_id', value || 0)}
-                              items={items}
-                              showPrice={false}
-                              showSku={false}
-                              placeholder="Select ingredient"
-                            />
-                          </div>
-                          <div>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={ingredient.quantity}
-                              onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
-                              placeholder="Quantity"
-                            />
-                          </div>
-                          <div>
-                            <Select
-                              value={ingredient.unit}
-                              onValueChange={(value) => updateIngredient(index, 'unit', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {units.map((unit) => (
-                                  <SelectItem key={unit.value} value={unit.value}>
-                                    {unit.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeIngredient(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Instructions */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Instructions</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addStep}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Step
-                  </Button>
-                </div>
-                
-                {steps.length === 0 ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Add step-by-step instructions for preparing this recipe.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-3">
-                    {steps.map((step, index) => (
-                      <div key={index} className="flex gap-3 items-start">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium shrink-0">
-                          {step.order}
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <Textarea
-                            value={step.instruction}
-                            onChange={(e) => updateStep(index, 'instruction', e.target.value)}
-                            placeholder="Describe this step..."
-                            rows={2}
-                          />
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <Input
-                              type="number"
-                              value={step.duration_minutes || ''}
-                              onChange={(e) => updateStep(index, 'duration_minutes', parseInt(e.target.value) || undefined)}
-                              placeholder="Duration (min)"
-                              className="w-32"
-                            />
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeStep(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={processing}>
-                {editingRecipe ? 'Update Recipe' : 'Create Recipe'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* View Recipe Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

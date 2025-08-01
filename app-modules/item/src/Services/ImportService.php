@@ -32,8 +32,10 @@ class ImportService extends BaseService
         private readonly PricingService $pricingService,
         private readonly InventoryService $inventoryService,
         private readonly RecipeService $recipeService,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Import items from CSV file

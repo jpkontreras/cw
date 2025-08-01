@@ -31,8 +31,10 @@ class RecipeService extends BaseService
         private readonly RecipeRepositoryInterface $recipeRepository,
         private readonly ItemRepositoryInterface $itemRepository,
         private readonly InventoryRepositoryInterface $inventoryRepository,
-        private readonly FeatureFlagInterface $features,
-    ) {}
+        FeatureFlagInterface $features,
+    ) {
+        parent::__construct($features);
+    }
     
     /**
      * Create a new recipe
@@ -485,5 +487,52 @@ class RecipeService extends BaseService
     private function buildCostCacheKey(int $itemId, ?int $variantId): string
     {
         return sprintf('recipe_cost:%d:%s', $itemId, $variantId ?? 'base');
+    }
+    
+    /**
+     * Get all recipes with optional filters
+     */
+    public function getRecipes(array $filters = []): Collection
+    {
+        // Convert array to collection if needed
+        $recipes = collect($this->recipeRepository->all());
+        
+        // Apply filters
+        if (!empty($filters['search'])) {
+            $search = strtolower($filters['search']);
+            $recipes = $recipes->filter(function ($recipe) use ($search) {
+                return str_contains(strtolower($recipe->name ?? ''), $search) ||
+                       str_contains(strtolower($recipe->description ?? ''), $search);
+            });
+        }
+        
+        if (!empty($filters['category_id'])) {
+            $recipes = $recipes->filter(function ($recipe) use ($filters) {
+                $item = $this->itemRepository->find($recipe->itemId);
+                return $item && $item->categoryId == $filters['category_id'];
+            });
+        }
+        
+        if (!empty($filters['has_unavailable_ingredients'])) {
+            $recipes = $recipes->filter(function ($recipe) {
+                try {
+                    return !$this->checkIngredientAvailability($recipe->id, null);
+                } catch (\Exception $e) {
+                    return false;
+                }
+            });
+        }
+        
+        // Add cost and availability data to each recipe
+        return $recipes->map(function ($recipe) {
+            try {
+                $recipe->cost = $this->calculateRecipeCost($recipe->id);
+                $recipe->hasAvailableIngredients = $this->checkIngredientAvailability($recipe->id, null);
+            } catch (\Exception $e) {
+                $recipe->cost = null;
+                $recipe->hasAvailableIngredients = false;
+            }
+            return $recipe;
+        })->values();
     }
 }
