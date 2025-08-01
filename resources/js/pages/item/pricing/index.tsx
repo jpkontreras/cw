@@ -560,16 +560,12 @@ export default function PricingIndex({
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
-              <Card>
-                <CardContent className="p-0">
-                  <InertiaDataTable
-                    columns={columns}
-                    data={price_rules}
-                    pagination={pagination}
-                    filters={metadata?.filters}
-                  />
-                </CardContent>
-              </Card>
+              <InertiaDataTable
+                columns={columns}
+                data={price_rules}
+                pagination={pagination}
+                filters={metadata?.filters}
+              />
             </TabsContent>
 
             <TabsContent value="upcoming" className="mt-6">

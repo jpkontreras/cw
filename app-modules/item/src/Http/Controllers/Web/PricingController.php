@@ -31,14 +31,42 @@ class PricingController extends Controller
         $locationId = $request->input('location_id');
         $activeRules = $this->pricingService->getActiveRulesForLocation($locationId ?? 0);
         
+        // Mock data for now - in a real implementation, these would come from the service
+        $mockPriceRules = [];
+        $mockPagination = [
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => 20,
+            'total' => 0,
+            'from' => 0,
+            'to' => 0,
+        ];
+        
         return Inertia::render('item/pricing/index', [
-            'active_rules' => $activeRules,
-            'locations' => [], // Will be fetched from location module
-            'features' => [
-                'location_pricing' => $this->features->isEnabled('item.location_pricing'),
-                'time_based_pricing' => $this->features->isEnabled('item.time_based_pricing'),
-                'global_discounts' => $this->features->isEnabled('item.global_discounts'),
+            'price_rules' => $mockPriceRules,
+            'pagination' => $mockPagination,
+            'metadata' => [],
+            'rule_types' => [
+                ['value' => 'percentage_discount', 'label' => 'Percentage Discount'],
+                ['value' => 'fixed_discount', 'label' => 'Fixed Discount'],
+                ['value' => 'override', 'label' => 'Price Override'],
+                ['value' => 'multiplier', 'label' => 'Price Multiplier'],
             ],
+            'active_rules_count' => $activeRules->count(),
+            'total_discount_given' => 0,
+            'avg_discount_percentage' => 0, // This was missing and causing the error
+            'upcoming_rules' => [],
+            'expiring_rules' => [],
+            'features' => [
+                'time_based_pricing' => $this->features->isEnabled('item.time_based_pricing'),
+                'location_pricing' => $this->features->isEnabled('item.location_pricing'),
+                'customer_group_pricing' => false,
+                'quantity_pricing' => false,
+            ],
+            'items' => $this->itemService->getItemsForSelect(),
+            'categories' => [], // Will be fetched from taxonomy module
+            'locations' => [], // Will be fetched from location module
+            'customer_groups' => [], // Will be fetched from customer module
         ]);
     }
     

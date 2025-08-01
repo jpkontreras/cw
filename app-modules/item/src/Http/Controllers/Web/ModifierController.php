@@ -36,18 +36,46 @@ class ModifierController extends Controller
                 : 0,
         ];
         
+        // Transform modifier groups to include modifiers array
+        $transformedGroups = $modifierGroups->map(function($group) {
+            return [
+                'id' => $group->id,
+                'name' => $group->name,
+                'description' => $group->description,
+                'display_name' => $group->displayName ?? null,
+                'min_selections' => $group->minSelections ?? 0,
+                'max_selections' => $group->maxSelections ?? null,
+                'is_required' => $group->isRequired ?? false,
+                'display_order' => $group->displayOrder ?? 0,
+                'is_active' => $group->isActive ?? true,
+                'modifiers' => [], // Empty for now, should be populated with actual modifiers
+                'items_count' => 0, // Should be the count of items using this group
+                'created_at' => $group->createdAt ?? now(),
+                'updated_at' => $group->updatedAt ?? now(),
+            ];
+        });
+
         return Inertia::render('item/modifiers/index', [
-            'modifier_groups' => $modifierGroups,
+            'modifier_groups' => $transformedGroups,
             'stats' => $stats,
             'popular_modifiers' => [], // TODO: Implement popular modifiers tracking
-            'pagination' => null, // TODO: Add pagination if needed
-            'metadata' => null, // TODO: Add metadata if needed
+            'pagination' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => 20,
+                'total' => $transformedGroups->count(),
+                'from' => 1,
+                'to' => $transformedGroups->count(),
+            ],
+            'metadata' => [
+                'filters' => [],
+            ],
             'items' => [], // TODO: Get items if needed
             'features' => [
-                'nested_groups' => $this->features->isEnabled('item.nested_modifier_groups'),
-                'required_modifiers' => $this->features->isEnabled('item.required_modifiers'),
                 'modifier_inventory' => $this->features->isEnabled('item.modifier_inventory'),
                 'modifier_pricing' => $this->features->isEnabled('item.modifier_pricing'),
+                'conditional_modifiers' => false,
+                'modifier_images' => false,
             ],
         ]);
     }

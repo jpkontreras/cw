@@ -114,3 +114,35 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+/**
+ * Format a time string (HH:MM:SS) to a more readable format
+ * @param time - The time string to format (HH:MM:SS)
+ * @param includeSeconds - Whether to include seconds in the output (default: false)
+ * @returns Formatted time string
+ */
+export function formatTime(
+  time: string | null | undefined,
+  includeSeconds: boolean = false
+): string {
+  if (!time) return '';
+  
+  const parts = time.split(':');
+  if (parts.length < 2) return time;
+  
+  const hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const seconds = parts[2];
+  
+  // Convert to 12-hour format
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  
+  let formattedTime = `${displayHours}:${minutes}`;
+  if (includeSeconds && seconds) {
+    formattedTime += `:${seconds}`;
+  }
+  formattedTime += ` ${period}`;
+  
+  return formattedTime;
+}

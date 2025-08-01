@@ -317,9 +317,8 @@ class PricingService extends BaseService
      */
     public function getActiveRulesForLocation(int $locationId, ?Carbon $datetime = null): Collection
     {
-        $datetime = $datetime ?? now();
-        
-        return $this->pricingRepository->getActiveRulesForLocation($locationId, $datetime);
+        // The repository method already filters by current validity
+        return $this->pricingRepository->getActivePricingForLocation($locationId);
     }
     
     /**

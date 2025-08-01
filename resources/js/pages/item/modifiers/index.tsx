@@ -163,27 +163,6 @@ export default function ModifiersIndex({
 
   const columns: ColumnDef<ModifierGroup>[] = [
     {
-      id: 'expand',
-      cell: ({ row }) => {
-        const group = row.original;
-        const isExpanded = expandedGroups.includes(group.id);
-        return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => toggleGroupExpansion(group.id)}
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </Button>
-        );
-      },
-    },
-    {
       accessorKey: 'name',
       header: 'Modifier Group',
       cell: ({ row }) => {
@@ -333,19 +312,12 @@ export default function ModifiersIndex({
   };
 
   const handleDuplicate = (group: ModifierGroup) => {
-    setEditingGroup(null);
-    setData({
-      name: `${group.name} (Copy)`,
-      description: group.description || '',
-      display_name: group.display_name ? `${group.display_name} (Copy)` : '',
-      min_selections: group.min_selections.toString(),
-      max_selections: group.max_selections?.toString() || '',
-      is_required: group.is_required,
-      display_order: group.display_order.toString(),
-      is_active: false,
+    // Redirect to create page with pre-filled data
+    router.visit('/modifiers/create', {
+      data: {
+        duplicate_from: group.id
+      }
     });
-    setModifiers(group.modifiers.map(({ id, ...mod }) => mod));
-    setCreateGroupDialogOpen(true);
   };
 
   const handleAssignItems = (group: ModifierGroup) => {
@@ -364,61 +336,6 @@ export default function ModifiersIndex({
     }
   };
 
-  const addModifier = () => {
-    setModifiers([
-      ...modifiers,
-      {
-        name: '',
-        price_adjustment: 0,
-        is_available: true,
-        display_order: modifiers.length,
-        sku: '',
-        cost: 0,
-      },
-    ]);
-  };
-
-  const updateModifier = (index: number, field: keyof Modifier, value: any) => {
-    const updated = [...modifiers];
-    updated[index] = { ...updated[index], [field]: value };
-    setModifiers(updated);
-  };
-
-  const removeModifier = (index: number) => {
-    const updated = modifiers.filter((_, i) => i !== index);
-    // Reorder remaining modifiers
-    updated.forEach((mod, i) => {
-      mod.display_order = i;
-    });
-    setModifiers(updated);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (modifiers.length === 0) {
-      alert('Please add at least one modifier option');
-      return;
-    }
-    
-    const formData = {
-      ...data,
-      modifiers,
-    };
-    
-    const url = editingGroup ? `/modifiers/groups/${editingGroup.id}` : '/modifiers/groups';
-    const method = editingGroup ? put : post;
-    
-    method(url, {
-      data: formData,
-      onSuccess: () => {
-        setCreateGroupDialogOpen(false);
-        setEditingGroup(null);
-        setModifiers([]);
-        reset();
-      },
-    });
-  };
 
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -520,203 +437,76 @@ export default function ModifiersIndex({
             </TabsList>
 
             <TabsContent value="groups" className="mt-6">
-              <Card>
-                <CardContent className="p-0">
-                  {/* Custom table with expandable rows */}
-                  <div className="w-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12"></TableHead>
-                          <TableHead>Modifier Group</TableHead>
-                          <TableHead>Requirements</TableHead>
-                          <TableHead>Modifiers</TableHead>
-                          <TableHead>Applied To</TableHead>
-                          <TableHead>Order</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {modifier_groups.map((group) => (
-                          <>
-                            <TableRow key={group.id}>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => toggleGroupExpansion(group.id)}
-                                >
-                                  {expandedGroups.includes(group.id) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{group.name}</span>
-                                  {group.display_name && group.display_name !== group.name && (
-                                    <span className="text-xs text-muted-foreground">Display: {group.display_name}</span>
-                                  )}
-                                  {group.description && (
-                                    <span className="text-xs text-muted-foreground line-clamp-1">{group.description}</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  {group.is_required && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Required
-                                    </Badge>
-                                  )}
-                                  <div className="text-sm">
-                                    {group.min_selections === group.max_selections && group.max_selections ? (
-                                      <span>Select exactly {group.min_selections}</span>
-                                    ) : (
-                                      <span>
-                                        Select {group.min_selections}
-                                        {group.max_selections ? ` to ${group.max_selections}` : '+'}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Layers className="h-4 w-4 text-muted-foreground" />
-                                  <span>{group.modifiers.length} total</span>
-                                  {group.modifiers.filter(m => m.is_available).length < group.modifiers.length && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ({group.modifiers.filter(m => m.is_available).length} active)
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4 text-muted-foreground" />
-                                  <span>{group.items_count} {group.items_count === 1 ? 'item' : 'items'}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Hash className="h-3 w-3 text-muted-foreground" />
-                                  <span>{group.display_order}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={group.is_active ? 'success' : 'secondary'}>
-                                  {group.is_active ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                      <span className="sr-only">Open menu</span>
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEdit(group)}>
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Edit Group
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleAssignItems(group)}>
-                                      <Package className="mr-2 h-4 w-4" />
-                                      Assign to Items
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDuplicate(group)}>
-                                      <Copy className="mr-2 h-4 w-4" />
-                                      Duplicate
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleToggleActive(group)}>
-                                      <Power className="mr-2 h-4 w-4" />
-                                      {group.is_active ? 'Deactivate' : 'Activate'}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      className="text-destructive"
-                                      onClick={() => handleDelete(group.id)}
-                                    >
-                                      <Trash className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
+              {modifier_groups.length === 0 ? (
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="text-center py-12">
+                      <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No modifier groups created yet</p>
+                      <Button
+                        className="mt-4"
+                        onClick={() => router.visit('/modifiers/create')}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create First Group
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <InertiaDataTable
+                  columns={columns}
+                  data={modifier_groups}
+                  pagination={pagination}
+                  filters={metadata?.filters}
+                  expandable={{
+                    isExpanded: (row) => expandedGroups.includes(row.original.id),
+                    onToggle: (row) => toggleGroupExpansion(row.original.id),
+                    renderExpanded: (row) => (
+                      <div className="p-4 bg-muted/30">
+                        <h4 className="font-medium text-sm mb-3">Modifier Options</h4>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Price Adjustment</TableHead>
+                              {features.modifier_inventory && <TableHead>SKU</TableHead>}
+                              {features.modifier_pricing && <TableHead>Cost</TableHead>}
+                              <TableHead>Status</TableHead>
                             </TableRow>
-                            {expandedGroups.includes(group.id) && (
-                              <TableRow>
-                                <TableCell colSpan={8} className="bg-muted/30 p-4">
-                                  <div className="space-y-2">
-                                    <h4 className="font-medium text-sm mb-3">Modifier Options</h4>
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Name</TableHead>
-                                          <TableHead>Price Adjustment</TableHead>
-                                          {features.modifier_inventory && <TableHead>SKU</TableHead>}
-                                          {features.modifier_pricing && <TableHead>Cost</TableHead>}
-                                          <TableHead>Status</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {group.modifiers.map((modifier) => (
-                                          <TableRow key={modifier.id}>
-                                            <TableCell>{modifier.name}</TableCell>
-                                            <TableCell>
-                                              {modifier.price_adjustment > 0 && '+'}
-                                              {formatCurrency(modifier.price_adjustment)}
-                                            </TableCell>
-                                            {features.modifier_inventory && (
-                                              <TableCell>
-                                                {modifier.sku || '—'}
-                                              </TableCell>
-                                            )}
-                                            {features.modifier_pricing && (
-                                              <TableCell>
-                                                {modifier.cost ? formatCurrency(modifier.cost) : '—'}
-                                              </TableCell>
-                                            )}
-                                            <TableCell>
-                                              <Badge variant={modifier.is_available ? 'success' : 'secondary'}>
-                                                {modifier.is_available ? 'Available' : 'Unavailable'}
-                                              </Badge>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </div>
+                          </TableHeader>
+                          <TableBody>
+                            {row.original.modifiers.map((modifier) => (
+                              <TableRow key={modifier.id}>
+                                <TableCell>{modifier.name}</TableCell>
+                                <TableCell>
+                                  {modifier.price_adjustment > 0 && '+'}
+                                  {formatCurrency(modifier.price_adjustment)}
+                                </TableCell>
+                                {features.modifier_inventory && (
+                                  <TableCell>
+                                    {modifier.sku || '—'}
+                                  </TableCell>
+                                )}
+                                {features.modifier_pricing && (
+                                  <TableCell>
+                                    {modifier.cost ? formatCurrency(modifier.cost) : '—'}
+                                  </TableCell>
+                                )}
+                                <TableCell>
+                                  <Badge variant={modifier.is_available ? 'success' : 'secondary'}>
+                                    {modifier.is_available ? 'Available' : 'Unavailable'}
+                                  </Badge>
                                 </TableCell>
                               </TableRow>
-                            )}
-                          </>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    
-                    {modifier_groups.length === 0 && (
-                      <div className="text-center py-12">
-                        <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No modifier groups created yet</p>
-                        <Button
-                          className="mt-4"
-                          onClick={() => router.visit('/modifiers/create')}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create First Group
-                        </Button>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    ),
+                  }}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="popular" className="mt-6">
