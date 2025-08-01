@@ -1094,6 +1094,140 @@ resources/
 4. **Maintainability**: Easier to find and manage view files
 5. **Module Independence**: Modules remain focused on business logic only
 
+### Empty State Implementation
+
+#### Overview
+All list views and data-driven pages MUST implement proper empty states using the standardized `EmptyState` component. This provides a consistent user experience when no data is available and prevents showing irrelevant UI elements like stats cards or action buttons.
+
+#### EmptyState Component
+Located at `resources/js/components/empty-state.tsx`, this component provides:
+- Icon display with decorative background
+- Title and description text
+- Optional action buttons
+- Optional help text with links
+
+#### Implementation Pattern
+
+1. **Check for Empty Data**:
+   ```tsx
+   // At the top of your component
+   const isEmpty = data.length === 0;
+   ```
+
+2. **Conditionally Render Header Actions**:
+   ```tsx
+   <Page.Header
+     title="Page Title"
+     subtitle="Page description"
+     actions={
+       !isEmpty && (
+         <Page.Actions>
+           {/* Action buttons only shown when data exists */}
+         </Page.Actions>
+       )
+     }
+   />
+   ```
+
+3. **Conditionally Render Content**:
+   ```tsx
+   <Page.Content>
+     {isEmpty ? (
+       <EmptyState
+         icon={IconComponent}
+         title="No data yet"
+         description="Helpful description about what this page will show"
+         actions={
+           <Button onClick={() => router.visit('/create-route')}>
+             <Plus className="mr-2 h-4 w-4" />
+             Create First Item
+           </Button>
+         }
+         helpText={
+           <>
+             Learn more about <a href="#" className="text-primary hover:underline">this feature</a>
+           </>
+         }
+       />
+     ) : (
+       <>
+         {/* Stats cards */}
+         {/* Data table or content */}
+       </>
+     )}
+   </Page.Content>
+   ```
+
+#### Required Empty States
+All pages displaying lists or collections MUST implement empty states:
+- **List Views**: Orders, Items, Inventory, Pricing Rules, Modifiers, Recipes, etc.
+- **Dashboard Views**: When no data exists for charts or metrics
+- **Search Results**: When no results match the search criteria
+- **Filtered Views**: When filters result in no matching items
+
+#### Empty State Guidelines
+
+1. **Icons**: Use appropriate Lucide icons that match the content type
+2. **Title**: Clear, concise title describing what's missing
+3. **Description**: Helpful text explaining what the user can do
+4. **Actions**: Primary action button to create or add the first item
+5. **Help Text**: Links to documentation or guides (optional)
+
+#### Example Implementation
+```tsx
+// inventory/index.tsx
+const isEmpty = inventory.length === 0;
+
+return (
+  <PageLayout>
+    <PageLayout.Header
+      title="Inventory Management"
+      subtitle="Track and manage stock levels"
+      actions={
+        !isEmpty && (
+          <PageLayout.Actions>
+            <Button>Stock Take</Button>
+            <Button>New Adjustment</Button>
+          </PageLayout.Actions>
+        )
+      }
+    />
+    
+    <PageLayout.Content>
+      {isEmpty ? (
+        <EmptyState
+          icon={Package}
+          title="No inventory tracked yet"
+          description="Start tracking inventory for your items to monitor stock levels."
+          actions={
+            <Button onClick={() => router.visit('/items')}>
+              <Box className="mr-2 h-4 w-4" />
+              Go to Items
+            </Button>
+          }
+          helpText={
+            <>
+              Learn about <a href="#" className="text-primary hover:underline">inventory management</a>
+            </>
+          }
+        />
+      ) : (
+        <>
+          {/* Stats cards and data table */}
+        </>
+      )}
+    </PageLayout.Content>
+  </PageLayout>
+);
+```
+
+#### Benefits
+1. **Consistency**: All empty states look and behave the same way
+2. **Better UX**: Users understand what to do when no data exists
+3. **Cleaner UI**: Hides irrelevant elements like zero-value stats
+4. **Guided Actions**: Directs users to create their first item
+5. **Professional**: Polished appearance even with no data
+
 ## Web/API Best Practices
 
 ### Controller Separation

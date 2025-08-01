@@ -100,7 +100,7 @@ class OrderController extends Controller
         ];
 
         // Get active items from the repository
-        $activeItems = $this->itemRepository->getActive();
+        $activeItems = $this->itemRepository->getActiveItems();
         
         // Transform items for the frontend
         $items = $activeItems->map(function ($item) {

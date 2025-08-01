@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -491,6 +492,9 @@ export default function PricingIndex({
     { value: 6, label: 'Saturday' },
   ];
 
+  // Check if pricing rules are empty
+  const isEmpty = price_rules.length === 0;
+
   return (
     <AppLayout>
       <Head title="Pricing Rules" />
@@ -500,59 +504,84 @@ export default function PricingIndex({
           title="Pricing Rules"
           subtitle="Manage dynamic pricing, discounts, and special offers"
           actions={
-            <PageLayout.Actions>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSimulationDialogOpen(true)}
-              >
-                <Calculator className="mr-2 h-4 w-4" />
-                Price Simulator
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingRule(null);
-                  reset();
-                  setCreateDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Rule
-              </Button>
-            </PageLayout.Actions>
+            !isEmpty && (
+              <PageLayout.Actions>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSimulationDialogOpen(true)}
+                >
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Price Simulator
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingRule(null);
+                    reset();
+                    setCreateDialogOpen(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Rule
+                </Button>
+              </PageLayout.Actions>
+            )
           }
         />
         
         <PageLayout.Content>
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {statsCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                      <Icon className={cn('h-4 w-4', stat.color)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    {stat.alert && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                        Review expiring rules
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {isEmpty ? (
+            <EmptyState
+              icon={DollarSign}
+              title="No pricing rules yet"
+              description="Create dynamic pricing rules to offer discounts, set special prices for locations or times, and manage promotional pricing."
+              actions={
+                <Button onClick={() => {
+                  setEditingRule(null);
+                  reset();
+                  setCreateDialogOpen(true);
+                }}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Rule
+                </Button>
+              }
+              helpText={
+                <>
+                  Learn about <a href="#" className="text-primary hover:underline">pricing strategies</a>
+                </>
+              }
+            />
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                {statsCards.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <Card key={index}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {stat.title}
+                        </CardTitle>
+                        <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                          <Icon className={cn('h-4 w-4', stat.color)} />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        {stat.alert && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Review expiring rules
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          <Tabs defaultValue="all" className="w-full">
+              <Tabs defaultValue="all" className="w-full">
             <TabsList>
               <TabsTrigger value="all">All Rules</TabsTrigger>
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -656,6 +685,8 @@ export default function PricingIndex({
               </Card>
             </TabsContent>
           </Tabs>
+            </>
+          )}
         </PageLayout.Content>
       </PageLayout>
 

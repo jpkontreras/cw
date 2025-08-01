@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -342,6 +343,9 @@ export default function InventoryIndex({
     },
   ];
 
+  // Check if inventory is empty
+  const isEmpty = inventory.length === 0;
+
   return (
     <AppLayout>
       <Head title="Inventory Management" />
@@ -351,92 +355,113 @@ export default function InventoryIndex({
           title="Inventory Management"
           subtitle="Track and manage stock levels across all items"
           actions={
-            <PageLayout.Actions>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.visit('/inventory/stock-take')}
-              >
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Stock Take
-              </Button>
-              {features.stock_transfers && (
+            !isEmpty && (
+              <PageLayout.Actions>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => router.visit('/inventory/transfers')}
+                  onClick={() => router.visit('/inventory/stock-take')}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Transfers
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Stock Take
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.visit('/inventory/export')}
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => router.visit('/inventory/adjustments')}
-              >
-                <ArrowUpDown className="mr-2 h-4 w-4" />
-                New Adjustment
-              </Button>
-            </PageLayout.Actions>
+                {features.stock_transfers && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.visit('/inventory/transfers')}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Transfers
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.visit('/inventory/export')}
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => router.visit('/inventory/adjustments')}
+                >
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  New Adjustment
+                </Button>
+              </PageLayout.Actions>
+            )
           }
         />
         
         <PageLayout.Content>
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {statsCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                      <Icon className={cn('h-4 w-4', stat.color)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    {stat.alert && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                        Requires attention
-                      </p>
+          {isEmpty ? (
+            <EmptyState
+              icon={Package}
+              title="No inventory tracked yet"
+              description="Start tracking inventory for your items to monitor stock levels, set reorder points, and prevent stockouts."
+              actions={
+                <Button onClick={() => router.visit('/items')}>
+                  <Box className="mr-2 h-4 w-4" />
+                  Go to Items
+                </Button>
+              }
+              helpText={
+                <>
+                  Learn more about <a href="#" className="text-primary hover:underline">inventory management</a>
+                </>
+              }
+            />
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                {statsCards.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <Card key={index}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {stat.title}
+                        </CardTitle>
+                        <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                          <Icon className={cn('h-4 w-4', stat.color)} />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        {stat.alert && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Requires attention
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Low Stock Alert */}
+              {low_stock_items.length > 0 && (
+                <Alert className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <span className="font-medium">{low_stock_items.length} items</span> are running low on stock.
+                    {features.auto_reorder && (
+                      <Button 
+                        variant="link" 
+                        className="ml-2 p-0 h-auto"
+                        onClick={() => router.visit('/inventory/reorder-settings')}
+                      >
+                        Configure auto-reorder
+                      </Button>
                     )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          {/* Low Stock Alert */}
-          {low_stock_items.length > 0 && (
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <span className="font-medium">{low_stock_items.length} items</span> are running low on stock.
-                {features.auto_reorder && (
-                  <Button 
-                    variant="link" 
-                    className="ml-2 p-0 h-auto"
-                    onClick={() => router.visit('/inventory/reorder-settings')}
-                  >
-                    Configure auto-reorder
-                  </Button>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Tabs defaultValue="all" className="w-full">
+              <Tabs defaultValue="all" className="w-full">
             <TabsList>
               <TabsTrigger value="all">All Items</TabsTrigger>
               <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
@@ -563,6 +588,8 @@ export default function InventoryIndex({
                 </div>
               </CardContent>
             </Card>
+          )}
+            </>
           )}
         </PageLayout.Content>
       </PageLayout>

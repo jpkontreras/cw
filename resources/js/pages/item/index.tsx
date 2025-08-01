@@ -44,6 +44,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { type BreadcrumbItem } from '@/types';
+import { EmptyState } from '@/components/empty-state';
 
 interface Item {
   id: number;
@@ -386,110 +387,134 @@ function ItemsIndexContent({
         title="Items"
         subtitle="Manage your products, services, and combos"
         actions={
-          <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Import
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                  Import from CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.get('/items/import-template')}>
-                  Download template
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setExportDialogOpen(true)}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            
-            <Link href="/items/create">
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                New Item
+          items.length > 0 && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Import
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                    Import from CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.get('/items/import-template')}>
+                    Download template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setExportDialogOpen(true)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
               </Button>
-            </Link>
-          </>
+              
+              <Link href="/items/create">
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Item
+                </Button>
+              </Link>
+            </>
+          )
         }
       />
 
       <Page.Content>
-        <div className="space-y-6">
-        {/* Stats Cards */}
-        {statsCards.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {statsCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                      <Icon className={cn('h-4 w-4', stat.color)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        {items.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="No items in your inventory"
+            description="Add products, services, or combos to start building your catalog. Your items will appear here once created."
+            actions={
+              <Link href="/items/create">
+                <Button size="lg">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add First Item
+                </Button>
+              </Link>
+            }
+            helpText={
+              <>
+                Need help? Read our <a href="#" className="text-primary hover:underline">inventory guide</a>
+              </>
+            }
+          />
+        ) : (
+          <div className="space-y-6">
+          {/* Stats Cards */}
+          {statsCards.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {statsCards.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <Card key={index}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        {stat.title}
+                      </CardTitle>
+                      <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                        <Icon className={cn('h-4 w-4', stat.color)} />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stat.value}</div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            )}
+
+            {/* Bulk Actions */}
+            {selectedItems.length > 0 && (
+            <Alert>
+              <AlertDescription className="flex items-center justify-between">
+                <span>{selectedItems.length} items selected</span>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleBulkAction('make_available')}
+                  >
+                    Make Available
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleBulkAction('make_unavailable')}
+                  >
+                    Make Unavailable
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={() => handleBulkAction('delete')}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Bulk Actions */}
-          {selectedItems.length > 0 && (
-          <Alert>
-            <AlertDescription className="flex items-center justify-between">
-              <span>{selectedItems.length} items selected</span>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleBulkAction('make_available')}
-                >
-                  Make Available
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleBulkAction('make_unavailable')}
-                >
-                  Make Unavailable
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-destructive"
-                  onClick={() => handleBulkAction('delete')}
-                >
-                  Delete
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
+          {/* Data Table */}
+          <InertiaDataTable
+            columns={columns}
+            data={items}
+            pagination={pagination}
+            metadata={metadata}
+          />
+          </div>
         )}
-
-        {/* Data Table */}
-        <InertiaDataTable
-          columns={columns}
-          data={items}
-          pagination={pagination}
-          metadata={metadata}
-        />
 
         {/* Import Dialog */}
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
@@ -515,8 +540,7 @@ function ItemsIndexContent({
           </DialogHeader>
           {/* Export form would go here */}
           </DialogContent>
-          </Dialog>
-        </div>
+        </Dialog>
       </Page.Content>
     </>
   );

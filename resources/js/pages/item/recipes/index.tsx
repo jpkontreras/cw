@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -416,6 +417,9 @@ export default function RecipesIndex({
     },
   ];
 
+  // Check if recipes are empty
+  const isEmpty = recipes.length === 0;
+
   return (
     <AppLayout>
       <Head title="Recipes" />
@@ -425,63 +429,90 @@ export default function RecipesIndex({
           title="Recipes"
           subtitle="Manage recipes, ingredients, and cost calculations"
           actions={
-            <PageLayout.Actions>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.visit('/recipes/cost-analysis')}
-              >
-                <Calculator className="mr-2 h-4 w-4" />
-                Cost Analysis
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => router.visit('/recipes/create')}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Recipe
-              </Button>
-            </PageLayout.Actions>
+            !isEmpty && (
+              <PageLayout.Actions>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.visit('/recipes/cost-analysis')}
+                >
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Cost Analysis
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => router.visit('/recipes/create')}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Recipe
+                </Button>
+              </PageLayout.Actions>
+            )
           }
         />
         
         <PageLayout.Content>
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {statsCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                      <Icon className={cn('h-4 w-4', stat.color)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={cn('font-bold', stat.small ? 'text-lg' : 'text-2xl')}>
-                      {stat.value}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {isEmpty ? (
+            <EmptyState
+              icon={ChefHat}
+              title="No recipes yet"
+              description="Start by creating your first recipe to manage ingredients, calculate costs, and track profit margins."
+              actions={
+                <>
+                  <Button onClick={() => router.visit('/recipes/create')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Recipe
+                  </Button>
+                  <Button variant="outline" onClick={() => router.visit('/recipes/import')}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Import Recipes
+                  </Button>
+                </>
+              }
+              helpText={
+                <>
+                  Learn about <a href="#" className="text-primary hover:underline">recipe costing</a>
+                </>
+              }
+            />
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                {statsCards.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <Card key={index}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {stat.title}
+                        </CardTitle>
+                        <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                          <Icon className={cn('h-4 w-4', stat.color)} />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className={cn('font-bold', stat.small ? 'text-lg' : 'text-2xl')}>
+                          {stat.value}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          {/* Alerts */}
-          {low_margin_recipes.length > 0 && (
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <span className="font-medium">{low_margin_recipes.length} recipes</span> have profit margins below 30%.
-                Consider reviewing ingredient costs or adjusting menu prices.
-              </AlertDescription>
-            </Alert>
-          )}
+              {/* Alerts */}
+              {low_margin_recipes.length > 0 && (
+                <Alert className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <span className="font-medium">{low_margin_recipes.length} recipes</span> have profit margins below 30%.
+                    Consider reviewing ingredient costs or adjusting menu prices.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          <Tabs defaultValue="all" className="w-full">
+              <Tabs defaultValue="all" className="w-full">
             <TabsList>
               <TabsTrigger value="all">All Recipes</TabsTrigger>
               <TabsTrigger value="high-cost">High Cost</TabsTrigger>
@@ -489,38 +520,41 @@ export default function RecipesIndex({
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
-              <Card>
-                <CardContent className="p-0">
-                  {recipes.length > 0 ? (
+              {recipes.length === 0 ? (
+                <EmptyState
+                  icon={ChefHat}
+                  title="No recipes yet"
+                  description="Start by creating your first recipe to manage ingredients, calculate costs, and track profit margins."
+                  actions={
+                    <>
+                      <Button onClick={() => router.visit('/recipes/create')}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Recipe
+                      </Button>
+                      <Button variant="outline" onClick={() => router.visit('/recipes/import')}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Import Recipes
+                      </Button>
+                    </>
+                  }
+                  helpText={
+                    <>
+                      Learn about <a href="#" className="text-primary hover:underline">recipe costing</a>
+                    </>
+                  }
+                />
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
                     <InertiaDataTable
                       columns={columns}
                       data={recipes}
                       pagination={pagination}
                       filters={metadata?.filters}
                     />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-16 px-4">
-                      <div className="rounded-full bg-muted p-6 mb-6">
-                        <ChefHat className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2">No recipes yet</h3>
-                      <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                        Start by creating your first recipe to manage ingredients, calculate costs, and track profit margins.
-                      </p>
-                      <div className="flex gap-3">
-                        <Button onClick={() => router.visit('/recipes/create')}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Recipe
-                        </Button>
-                        <Button variant="outline" onClick={() => router.visit('/recipes/import')}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Import Recipes
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="high-cost" className="mt-6">
@@ -609,6 +643,8 @@ export default function RecipesIndex({
               </Card>
             </TabsContent>
           </Tabs>
+            </>
+          )}
         </PageLayout.Content>
       </PageLayout>
 

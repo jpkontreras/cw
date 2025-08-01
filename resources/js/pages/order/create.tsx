@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/empty-state';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import type { CreateOrderRequest, OrderType } from '@/types/modules/order';
 import { ORDER_TYPE_CONFIG } from '@/types/modules/order/constants';
 import { calculateTax, calculateTotal, formatCurrency } from '@/types/modules/order/utils';
 import { Head, useForm } from '@inertiajs/react';
-import { Clock, CreditCard, DollarSign, MapPin, Package, ShoppingBag, Truck, Utensils } from 'lucide-react';
+import { Clock, CreditCard, DollarSign, Package, Plus, ShoppingBag, Truck, Utensils } from 'lucide-react';
 import { FormEventHandler, useEffect, useMemo, useState } from 'react';
 
 interface Props {
@@ -258,7 +259,31 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                 <div className="bg-white px-4 sm:px-6 lg:px-8 pb-4">
                   <div className="mx-auto max-w-[1400px]">
                     <div className="space-y-12 pt-6 pb-4">
-                      {Object.entries(
+                      {items.length === 0 ? (
+                        <EmptyState
+                          icon={ShoppingBag}
+                          title="Start building your menu"
+                          description="Add delicious items to your menu to start accepting orders. Your customers are waiting!"
+                          actions={
+                            <>
+                              <Button size="lg" asChild>
+                                <a href="/items/create" className="inline-flex items-center gap-2">
+                                  <Plus className="h-5 w-5" />
+                                  Add your first item
+                                </a>
+                              </Button>
+                              <Button variant="outline" size="lg" asChild>
+                                <a href="/items">Browse items</a>
+                              </Button>
+                            </>
+                          }
+                          helpText={
+                            <>
+                              Need help? Check out our <a href="#" className="text-primary hover:underline">menu setup guide</a>
+                            </>
+                          }
+                        />
+                      ) : Object.entries(
                         items.reduce(
                           (acc, item) => {
                             if (!acc[item.category]) acc[item.category] = [];

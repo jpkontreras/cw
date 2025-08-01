@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import PageLayout from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -378,6 +379,9 @@ export default function ModifiersIndex({
     },
   ];
 
+  // Check if modifier groups are empty
+  const isEmpty = modifier_groups.length === 0;
+
   return (
     <AppLayout>
       <Head title="Modifiers" />
@@ -387,74 +391,78 @@ export default function ModifiersIndex({
           title="Modifiers"
           subtitle="Manage product customization options and modifier groups"
           actions={
-            <PageLayout.Actions>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.visit('/modifiers/bulk-assign')}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Bulk Assign
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => router.visit('/modifiers/create')}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Group
-              </Button>
-            </PageLayout.Actions>
+            !isEmpty && (
+              <PageLayout.Actions>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.visit('/modifiers/bulk-assign')}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Bulk Assign
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => router.visit('/modifiers/create')}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Group
+                </Button>
+              </PageLayout.Actions>
+            )
           }
         />
         
         <PageLayout.Content>
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {statsCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                      <Icon className={cn('h-4 w-4', stat.color)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {isEmpty ? (
+            <EmptyState
+              icon={Settings}
+              title="No modifier groups created yet"
+              description="Create modifier groups to allow customers to customize their orders with add-ons, size options, and special preferences."
+              actions={
+                <Button onClick={() => router.visit('/modifiers/create')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Group
+                </Button>
+              }
+              helpText={
+                <>
+                  Read our <a href="#" className="text-primary hover:underline">modifiers guide</a> to get started
+                </>
+              }
+            />
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                {statsCards.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <Card key={index}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {stat.title}
+                        </CardTitle>
+                        <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                          <Icon className={cn('h-4 w-4', stat.color)} />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          <Tabs defaultValue="groups" className="w-full">
+              <Tabs defaultValue="groups" className="w-full">
             <TabsList>
               <TabsTrigger value="groups">Modifier Groups</TabsTrigger>
               <TabsTrigger value="popular">Popular Modifiers</TabsTrigger>
             </TabsList>
 
             <TabsContent value="groups" className="mt-6">
-              {modifier_groups.length === 0 ? (
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="text-center py-12">
-                      <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No modifier groups created yet</p>
-                      <Button
-                        className="mt-4"
-                        onClick={() => router.visit('/modifiers/create')}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create First Group
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <InertiaDataTable
+              <InertiaDataTable
                   columns={columns}
                   data={modifier_groups}
                   pagination={pagination}
@@ -506,7 +514,6 @@ export default function ModifiersIndex({
                     ),
                   }}
                 />
-              )}
             </TabsContent>
 
             <TabsContent value="popular" className="mt-6">
@@ -554,6 +561,8 @@ export default function ModifiersIndex({
               </Card>
             </TabsContent>
           </Tabs>
+            </>
+          )}
         </PageLayout.Content>
       </PageLayout>
 
