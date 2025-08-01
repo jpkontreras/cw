@@ -858,4 +858,12 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
             ],
         ];
     }
+    
+    /**
+     * Get all items (including inactive)
+     */
+    public function getAllItems(): Collection
+    {
+        return collect($this->itemRepository->all())->map(fn($item) => ItemData::from($item));
+    }
 }

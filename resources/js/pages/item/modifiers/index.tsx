@@ -139,12 +139,11 @@ export default function ModifiersIndex({
   popular_modifiers,
   features
 }: PageProps) {
-  const [createGroupDialogOpen, setCreateGroupDialogOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<ModifierGroup | null>(null);
+  // Modal states removed - using separate pages for create/edit
   const [assignItemsDialogOpen, setAssignItemsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<ModifierGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<number[]>([]);
-  const [modifiers, setModifiers] = useState<Modifier[]>([]);
+  // Modifiers state removed - handled in create/edit pages
 
   const { data, setData, post, put, processing, errors, reset } = useForm({
     name: '',
@@ -330,19 +329,7 @@ export default function ModifiersIndex({
   };
 
   const handleEdit = (group: ModifierGroup) => {
-    setEditingGroup(group);
-    setData({
-      name: group.name,
-      description: group.description || '',
-      display_name: group.display_name || '',
-      min_selections: group.min_selections.toString(),
-      max_selections: group.max_selections?.toString() || '',
-      is_required: group.is_required,
-      display_order: group.display_order.toString(),
-      is_active: group.is_active,
-    });
-    setModifiers(group.modifiers);
-    setCreateGroupDialogOpen(true);
+    router.visit(`/modifiers/${group.id}/edit`);
   };
 
   const handleDuplicate = (group: ModifierGroup) => {
@@ -494,12 +481,7 @@ export default function ModifiersIndex({
               </Button>
               <Button
                 size="sm"
-                onClick={() => {
-                  setEditingGroup(null);
-                  setModifiers([]);
-                  reset();
-                  setCreateGroupDialogOpen(true);
-                }}
+                onClick={() => router.visit('/modifiers/create')}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 New Group
@@ -725,12 +707,7 @@ export default function ModifiersIndex({
                         <p className="text-muted-foreground">No modifier groups created yet</p>
                         <Button
                           className="mt-4"
-                          onClick={() => {
-                            setEditingGroup(null);
-                            setModifiers([]);
-                            reset();
-                            setCreateGroupDialogOpen(true);
-                          }}
+                          onClick={() => router.visit('/modifiers/create')}
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           Create First Group
@@ -790,241 +767,7 @@ export default function ModifiersIndex({
         </PageLayout.Content>
       </PageLayout>
 
-      {/* Create/Edit Group Dialog */}
-      <Dialog open={createGroupDialogOpen} onOpenChange={setCreateGroupDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>
-                {editingGroup ? 'Edit Modifier Group' : 'Create Modifier Group'}
-              </DialogTitle>
-              <DialogDescription>
-                Configure options that customers can select to customize items
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 my-6">
-              {/* Basic Info */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Basic Information</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">
-                      Group Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="name"
-                      value={data.name}
-                      onChange={(e) => setData('name', e.target.value)}
-                      placeholder="e.g., Size, Toppings, Sauce"
-                      className={errors.name ? 'border-destructive' : ''}
-                    />
-                    {errors.name && (
-                      <p className="text-sm text-destructive">{errors.name}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="display_name">Display Name</Label>
-                    <Input
-                      id="display_name"
-                      value={data.display_name}
-                      onChange={(e) => setData('display_name', e.target.value)}
-                      placeholder="Customer-facing name (optional)"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={data.description}
-                    onChange={(e) => setData('description', e.target.value)}
-                    placeholder="Brief description for staff reference"
-                    rows={2}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Selection Rules */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Selection Rules</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="min_selections">
-                      Min Selections <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="min_selections"
-                      type="number"
-                      min="0"
-                      value={data.min_selections}
-                      onChange={(e) => setData('min_selections', e.target.value)}
-                      className={errors.min_selections ? 'border-destructive' : ''}
-                    />
-                    {errors.min_selections && (
-                      <p className="text-sm text-destructive">{errors.min_selections}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="max_selections">Max Selections</Label>
-                    <Input
-                      id="max_selections"
-                      type="number"
-                      min="0"
-                      value={data.max_selections}
-                      onChange={(e) => setData('max_selections', e.target.value)}
-                      placeholder="No limit"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty for unlimited
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="display_order">Display Order</Label>
-                    <Input
-                      id="display_order"
-                      type="number"
-                      value={data.display_order}
-                      onChange={(e) => setData('display_order', e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="is_required">Required</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Customer must make a selection from this group
-                    </p>
-                  </div>
-                  <Switch
-                    id="is_required"
-                    checked={data.is_required}
-                    onCheckedChange={(checked) => setData('is_required', checked)}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Modifier Options */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Modifier Options</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addModifier}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Option
-                  </Button>
-                </div>
-                
-                {modifiers.length === 0 ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Add modifier options that customers can select. Each option can adjust the item price.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-3">
-                    {modifiers.map((modifier, index) => (
-                      <div key={index} className="flex gap-3 items-start p-3 border rounded-lg">
-                        <div className="cursor-move p-1">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 grid gap-3 md:grid-cols-4">
-                          <div>
-                            <Input
-                              value={modifier.name}
-                              onChange={(e) => updateModifier(index, 'name', e.target.value)}
-                              placeholder="Option name"
-                            />
-                          </div>
-                          <div>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                $
-                              </span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={modifier.price_adjustment}
-                                onChange={(e) => updateModifier(index, 'price_adjustment', parseFloat(e.target.value) || 0)}
-                                placeholder="0.00"
-                                className="pl-8"
-                              />
-                            </div>
-                          </div>
-                          {features.modifier_inventory && (
-                            <div>
-                              <Input
-                                value={modifier.sku || ''}
-                                onChange={(e) => updateModifier(index, 'sku', e.target.value)}
-                                placeholder="SKU"
-                              />
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={modifier.is_available}
-                              onCheckedChange={(checked) => updateModifier(index, 'is_available', checked)}
-                            />
-                            <Label className="text-sm">Available</Label>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeModifier(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Status */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="is_active">Active</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Group will be available for selection
-                  </p>
-                </div>
-                <Switch
-                  id="is_active"
-                  checked={data.is_active}
-                  onCheckedChange={(checked) => setData('is_active', checked)}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateGroupDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={processing}>
-                {editingGroup ? 'Update Group' : 'Create Group'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Create/Edit Group Dialog removed - using separate pages */}
 
       {/* Assign Items Dialog */}
       <Dialog open={assignItemsDialogOpen} onOpenChange={setAssignItemsDialogOpen}>

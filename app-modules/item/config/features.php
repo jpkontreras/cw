@@ -14,6 +14,10 @@ return [
             'enabled' => env('FEATURE_ITEM_MODIFIERS', true),
             'description' => 'Enable item modifiers and customization options',
         ],
+        'variants' => [
+            'enabled' => env('FEATURE_ITEM_VARIANTS', true),
+            'description' => 'Enable item variants (sizes, colors, etc.)',
+        ],
         'compound_items' => [
             'enabled' => env('FEATURE_ITEM_COMPOUND_ITEMS', true),
             'description' => 'Enable compound items (combos and bundles)',

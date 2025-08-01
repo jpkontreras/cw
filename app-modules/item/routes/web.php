@@ -25,6 +25,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::prefix('modifiers')->name('modifier.')->group(function () {
         Route::get('/', [ModifierController::class, 'index'])->name('index');
         Route::get('/create', [ModifierController::class, 'create'])->name('create');
+        Route::get('/bulk-assign', [ModifierController::class, 'bulkAssign'])->name('bulk-assign');
+        Route::post('/bulk-assign', [ModifierController::class, 'processBulkAssign'])->name('process-bulk-assign');
         Route::post('/', [ModifierController::class, 'store'])->name('store');
         Route::get('/{id}', [ModifierController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [ModifierController::class, 'edit'])->name('edit');

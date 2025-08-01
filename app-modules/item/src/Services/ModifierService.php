@@ -353,7 +353,7 @@ class ModifierService extends BaseService
      */
     public function getModifierGroups(array $filters = []): Collection
     {
-        return $this->modifierRepository->getGroups($filters);
+        return $this->modifierRepository->getActiveGroups();
     }
     
     /**
