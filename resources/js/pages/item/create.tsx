@@ -53,7 +53,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { ImagePicker } from '@/components/modules/item/image-picker';
+import { ImageField } from '@/components/ui/image-field';
 import { BundleSelector } from '@/components/modules/item/bundle-selector';
 
 interface Category {
@@ -102,7 +102,7 @@ export default function ItemCreate({ categories, item_types, features, available
   const { data, setData, post, processing, errors, reset } = useForm({
     name: '',
     description: '',
-    type: 'single',
+    type: 'product',
     category_id: '',
     base_price: '',
     base_cost: '',
@@ -113,7 +113,7 @@ export default function ItemCreate({ categories, item_types, features, available
     preparation_time: '',
     available_from: '',
     available_until: '',
-    image: null as File | null,
+    image_url: null as string | null,
     additional_images: [] as File[],
     variants: [] as Variant[],
     bundle_items: [] as BundleItem[],
@@ -137,9 +137,9 @@ export default function ItemCreate({ categories, item_types, features, available
     }
   }, [data.name]);
 
-  // Check if item type is compound (bundle/combo)
+  // Check if item type is compound (combo)
   useEffect(() => {
-    setIsCompoundType(data.type === 'bundle_combo');
+    setIsCompoundType(data.type === 'combo');
   }, [data.type]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -151,8 +151,10 @@ export default function ItemCreate({ categories, item_types, features, available
       // Ensure arrays are properly formatted
       tags: data.tags.filter(tag => tag.trim() !== ''),
       allergens: data.allergens.filter(allergen => allergen.trim() !== ''),
+      // Handle image URL
+      image_url: data.image_url,
       // Handle multiple images
-      images: [data.image, ...data.additional_images].filter(Boolean),
+      images: [...data.additional_images].filter(Boolean),
     };
     post('/items', {
       data: formData,
@@ -181,12 +183,6 @@ export default function ItemCreate({ categories, item_types, features, available
 
   const removeVariant = (index: number) => {
     setVariants(variants.filter((_, i) => i !== index));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setData('image', e.target.files[0]);
-    }
   };
 
   return (
@@ -306,16 +302,22 @@ export default function ItemCreate({ categories, item_types, features, available
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="single">
+                              <SelectItem value="product">
                                 <div className="flex items-center gap-2">
                                   <Package className="h-4 w-4" />
-                                  Single
+                                  Product
                                 </div>
                               </SelectItem>
-                              <SelectItem value="bundle_combo">
+                              <SelectItem value="service">
+                                <div className="flex items-center gap-2">
+                                  <Settings className="h-4 w-4" />
+                                  Service
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="combo">
                                 <div className="flex items-center gap-2">
                                   <Layers className="h-4 w-4" />
-                                  Bundle/Combo
+                                  Combo
                                 </div>
                               </SelectItem>
                             </SelectContent>
@@ -345,17 +347,13 @@ export default function ItemCreate({ categories, item_types, features, available
 
                     {/* Right side - 1/3 */}
                     <div>
-                      {/* Image Picker */}
-                      <div className="space-y-2">
-                        <Label>
-                          Product Image
-                          <span className="text-xs text-muted-foreground ml-2">(Optional)</span>
-                        </Label>
-                        <ImagePicker
-                          value={data.image}
-                          onChange={(file) => setData('image', file)}
-                        />
-                      </div>
+                      {/* Image Field */}
+                      <ImageField
+                        value={data.image_url}
+                        onChange={(url) => setData('image_url', url)}
+                        label="Product Image"
+                        error={errors.image_url}
+                      />
                     </div>
                   </div>
                 </CardContent>
