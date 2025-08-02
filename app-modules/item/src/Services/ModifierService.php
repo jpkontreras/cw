@@ -233,7 +233,7 @@ class ModifierService extends BaseService
             throw new ItemNotFoundException($itemId);
         }
         
-        $groups = $this->modifierRepository->getItemModifierGroups($itemId);
+        $groups = $this->modifierRepository->getGroupsForItem($itemId);
         
         // Build hierarchy if nested groups feature is enabled
         if ($this->features->isEnabled('item.nested_modifier_groups')) {
@@ -256,7 +256,7 @@ class ModifierService extends BaseService
             throw new ItemNotFoundException($itemId);
         }
         
-        $groups = $this->modifierRepository->getItemModifierGroups($itemId);
+        $groups = $this->modifierRepository->getGroupsForItem($itemId);
         $errors = [];
         $warnings = [];
         $validSelections = [];

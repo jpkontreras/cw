@@ -26,8 +26,8 @@ class ItemData extends BaseData
         
         public readonly ?string $barcode,
         
-        #[Required, Numeric, Min(0)]
-        public readonly float $basePrice,
+        #[Numeric, Min(0)]
+        public readonly ?float $basePrice,
         
         #[Numeric, Min(0)]
         public readonly float $baseCost = 0,
@@ -49,8 +49,8 @@ class ItemData extends BaseData
         #[Numeric, Min(0)]
         public readonly int $lowStockThreshold = 10,
         
-        #[In(['single', 'compound'])]
-        public readonly string $itemType = 'single',
+        #[Required, In(['product', 'service', 'combo'])]
+        public readonly string $type = 'product',
         
         public readonly ?array $allergens = null,
         
@@ -105,7 +105,7 @@ class ItemData extends BaseData
      */
     public function getProfitMargin(): float
     {
-        if ($this->baseCost <= 0) {
+        if ($this->baseCost <= 0 || $this->basePrice === null) {
             return 0;
         }
         

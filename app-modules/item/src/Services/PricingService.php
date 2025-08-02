@@ -56,8 +56,10 @@ class PricingService extends BaseService
             throw new ItemNotFoundException($itemId);
         }
         
-        // Start with base price
-        $basePrice = $item->basePrice;
+        // Start with base price (default to 0 if null)
+        $originalBasePrice = $item->basePrice ?? 0;
+        $basePrice = $originalBasePrice;
+        $variantAdjustment = 0;
         $modifierTotal = 0;
         $appliedRules = [];
         
@@ -65,7 +67,9 @@ class PricingService extends BaseService
         if ($variantId) {
             $variant = $this->itemRepository->findVariant($variantId);
             if ($variant && $variant->itemId == $itemId) {
-                $basePrice = $variant->price;
+                // Variants have price adjustments, not absolute prices
+                $variantAdjustment = $variant->priceAdjustment ?? 0;
+                $basePrice += $variantAdjustment;
             }
         }
         
@@ -125,12 +129,14 @@ class PricingService extends BaseService
             itemId: $itemId,
             variantId: $variantId,
             locationId: $locationId,
-            basePrice: $item->basePrice,
-            finalPrice: max(0, $finalPrice),
-            modifierTotal: $modifierTotal,
-            appliedRules: $appliedRules,
+            basePrice: $originalBasePrice,
+            variantAdjustment: $variantAdjustment,
+            modifierAdjustments: [], // TODO: This should be populated with modifier details
+            locationPrice: null, // TODO: This should be set if location pricing is applied
+            subtotal: $originalBasePrice + $variantAdjustment + $modifierTotal,
+            total: $finalPrice,
             currency: $this->getCurrency($locationId),
-            calculatedAt: $datetime
+            appliedRules: $appliedRules
         );
         
         // Cache result if enabled

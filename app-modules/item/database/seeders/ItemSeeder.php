@@ -42,13 +42,11 @@ class ItemSeeder extends Seeder
             'name' => 'Empanada',
             'description' => 'Traditional Chilean empanada',
             'type' => 'product',
-            'category_id' => 1, // Food category
             'base_price' => 2500,
-            'cost' => 800,
+            'base_cost' => 800,
             'sku' => 'EMP-001',
-            'track_stock' => true,
+            'track_inventory' => true,
             'is_available' => true,
-            'allow_modifiers' => true,
             'preparation_time' => 15,
             'sort_order' => 1,
         ]);
@@ -58,10 +56,10 @@ class ItemSeeder extends Seeder
             'item_id' => $empanada->id,
             'name' => 'Empanada de Pino',
             'sku' => 'EMP-001-PINO',
-            'price' => 2500,
-            'cost' => 800,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 0,
+            'is_default' => true,
+            'is_active' => true,
+            'stock_quantity' => 100,
             'sort_order' => 1,
         ]);
         
@@ -69,10 +67,9 @@ class ItemSeeder extends Seeder
             'item_id' => $empanada->id,
             'name' => 'Empanada de Queso',
             'sku' => 'EMP-001-QUESO',
-            'price' => 2200,
-            'cost' => 700,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => -300,
+            'is_active' => true,
+            'stock_quantity' => 80,
             'sort_order' => 2,
         ]);
         
@@ -80,10 +77,9 @@ class ItemSeeder extends Seeder
             'item_id' => $empanada->id,
             'name' => 'Empanada de Mariscos',
             'sku' => 'EMP-001-MAR',
-            'price' => 3500,
-            'cost' => 1200,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 1000,
+            'is_active' => true,
+            'stock_quantity' => 50,
             'sort_order' => 3,
         ]);
         
@@ -92,13 +88,11 @@ class ItemSeeder extends Seeder
             'name' => 'Completo',
             'description' => 'Chilean hot dog with avocado, tomato, and mayo',
             'type' => 'product',
-            'category_id' => 1,
             'base_price' => 3000,
-            'cost' => 1000,
+            'base_cost' => 1000,
             'sku' => 'COMP-001',
-            'track_stock' => true,
+            'track_inventory' => true,
             'is_available' => true,
-            'allow_modifiers' => true,
             'preparation_time' => 10,
             'sort_order' => 2,
         ]);
@@ -107,10 +101,10 @@ class ItemSeeder extends Seeder
             'item_id' => $completo->id,
             'name' => 'Completo Italiano',
             'sku' => 'COMP-001-IT',
-            'price' => 3200,
-            'cost' => 1100,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 200,
+            'is_default' => true,
+            'is_active' => true,
+            'stock_quantity' => 75,
             'sort_order' => 1,
         ]);
         
@@ -119,13 +113,11 @@ class ItemSeeder extends Seeder
             'name' => 'Churrasco',
             'description' => 'Grilled beef sandwich',
             'type' => 'product',
-            'category_id' => 1,
             'base_price' => 4500,
-            'cost' => 1500,
+            'base_cost' => 1500,
             'sku' => 'CHUR-001',
-            'track_stock' => true,
+            'track_inventory' => true,
             'is_available' => true,
-            'allow_modifiers' => true,
             'preparation_time' => 12,
             'sort_order' => 3,
         ]);
@@ -135,13 +127,11 @@ class ItemSeeder extends Seeder
             'name' => 'Papas Fritas',
             'description' => 'French fries',
             'type' => 'product',
-            'category_id' => 2, // Sides category
             'base_price' => 1500,
-            'cost' => 400,
+            'base_cost' => 400,
             'sku' => 'PAP-001',
-            'track_stock' => true,
+            'track_inventory' => true,
             'is_available' => true,
-            'allow_modifiers' => false,
             'preparation_time' => 8,
             'sort_order' => 1,
         ]);
@@ -157,13 +147,11 @@ class ItemSeeder extends Seeder
             'name' => 'Bebida',
             'description' => 'Soft drinks',
             'type' => 'product',
-            'category_id' => 3, // Beverages category
             'base_price' => 1500,
-            'cost' => 600,
+            'base_cost' => 600,
             'sku' => 'BEB-001',
-            'track_stock' => true,
+            'track_inventory' => true,
             'is_available' => true,
-            'allow_modifiers' => false,
             'preparation_time' => 0,
             'sort_order' => 1,
         ]);
@@ -172,10 +160,10 @@ class ItemSeeder extends Seeder
             'item_id' => $bebida->id,
             'name' => 'Coca-Cola 350ml',
             'sku' => 'BEB-001-CC350',
-            'price' => 1500,
-            'cost' => 600,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 0,
+            'is_default' => true,
+            'is_active' => true,
+            'stock_quantity' => 200,
             'sort_order' => 1,
         ]);
         
@@ -183,10 +171,9 @@ class ItemSeeder extends Seeder
             'item_id' => $bebida->id,
             'name' => 'Fanta 350ml',
             'sku' => 'BEB-001-FT350',
-            'price' => 1500,
-            'cost' => 600,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 0,
+            'is_active' => true,
+            'stock_quantity' => 150,
             'sort_order' => 2,
         ]);
         
@@ -194,10 +181,9 @@ class ItemSeeder extends Seeder
             'item_id' => $bebida->id,
             'name' => 'Sprite 350ml',
             'sku' => 'BEB-001-SP350',
-            'price' => 1500,
-            'cost' => 600,
-            'track_stock' => true,
-            'is_available' => true,
+            'price_adjustment' => 0,
+            'is_active' => true,
+            'stock_quantity' => 150,
             'sort_order' => 3,
         ]);
         
@@ -206,13 +192,11 @@ class ItemSeeder extends Seeder
             'name' => 'Jugo Natural',
             'description' => 'Fresh natural juice',
             'type' => 'product',
-            'category_id' => 3,
             'base_price' => 2500,
-            'cost' => 800,
+            'base_cost' => 800,
             'sku' => 'JUG-001',
-            'track_stock' => false,
+            'track_inventory' => false,
             'is_available' => true,
-            'allow_modifiers' => true,
             'preparation_time' => 5,
             'sort_order' => 2,
         ]);
@@ -405,7 +389,7 @@ class ItemSeeder extends Seeder
      */
     private function seedInventory(): void
     {
-        $items = Item::where('track_stock', true)->get();
+        $items = Item::where('track_inventory', true)->get();
         
         foreach ($items as $item) {
             ItemInventory::create([
@@ -417,14 +401,15 @@ class ItemSeeder extends Seeder
                 'min_quantity' => 20,
                 'reorder_quantity' => 50,
                 'max_quantity' => 300,
-                'unit_cost' => $item->cost,
+                'unit_cost' => $item->base_cost,
                 'last_counted_at' => now(),
                 'last_restocked_at' => now()->subDays(rand(1, 7)),
             ]);
             
             // Add inventory for variants
             foreach ($item->variants as $variant) {
-                if ($variant->track_stock) {
+                // ItemVariant doesn't have track_stock field, using item's track_inventory
+                if ($item->track_inventory) {
                     ItemInventory::create([
                         'item_id' => $item->id,
                         'variant_id' => $variant->id,
@@ -434,7 +419,7 @@ class ItemSeeder extends Seeder
                         'min_quantity' => 10,
                         'reorder_quantity' => 30,
                         'max_quantity' => 150,
-                        'unit_cost' => $variant->cost,
+                        'unit_cost' => $item->base_cost, // Use item's base cost
                         'last_counted_at' => now(),
                         'last_restocked_at' => now()->subDays(rand(1, 7)),
                     ]);

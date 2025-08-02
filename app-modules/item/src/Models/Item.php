@@ -25,7 +25,7 @@ class Item extends Model
         'track_inventory',
         'stock_quantity',
         'low_stock_threshold',
-        'item_type',
+        'type',
         'allergens',
         'nutritional_info',
         'sort_order',
@@ -59,7 +59,7 @@ class Item extends Model
         'track_inventory' => false,
         'stock_quantity' => 0,
         'low_stock_threshold' => 10,
-        'item_type' => 'single',
+        'type' => 'product',
         'sort_order' => 0,
     ];
     
@@ -72,15 +72,37 @@ class Item extends Model
         
         static::creating(function ($item) {
             if (empty($item->slug)) {
-                $item->slug = Str::slug($item->name);
+                $item->slug = static::generateUniqueSlug($item->name);
             }
         });
         
         static::updating(function ($item) {
             if ($item->isDirty('name') && !$item->isDirty('slug')) {
-                $item->slug = Str::slug($item->name);
+                $item->slug = static::generateUniqueSlug($item->name, $item->id);
             }
         });
+    }
+    
+    /**
+     * Generate a unique slug
+     */
+    protected static function generateUniqueSlug(string $name, ?int $excludeId = null): string
+    {
+        $slug = Str::slug($name);
+        $originalSlug = $slug;
+        $count = 1;
+        
+        while (static::where('slug', $slug)
+            ->when($excludeId, function ($query, $excludeId) {
+                return $query->where('id', '!=', $excludeId);
+            })
+            ->exists()
+        ) {
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+        
+        return $slug;
     }
     
     /**

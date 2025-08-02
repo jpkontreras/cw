@@ -76,14 +76,18 @@ interface ModifierGroup {
 }
 
 interface PriceCalculation {
-  base_price: number;
-  final_price: number;
-  modifier_total: number;
-  applied_rules: Array<{
+  basePrice: number;
+  total: number;
+  subtotal: number;
+  variantAdjustment: number;
+  modifierAdjustments: any[];
+  locationPrice: number | null;
+  appliedRules: Array<{
     type: string;
     name: string;
     adjustment: number;
   }>;
+  currency: string;
 }
 
 interface Inventory {
@@ -301,22 +305,23 @@ export default function ItemShow({
                             <div className="space-y-2">
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Base Price</span>
-                                <span>{formatCurrency(current_price.base_price)}</span>
+                                <span>{formatCurrency(current_price.basePrice)}</span>
                               </div>
-                              {current_price.applied_rules.map((rule, index) => (
-                                <div key={index} className="flex justify-between">
-                                  <span className="text-sm text-muted-foreground">{rule.name}</span>
-                                  <span className={cn(
-                                    rule.adjustment > 0 ? 'text-red-600' : 'text-green-600'
-                                  )}>
-                                    {rule.adjustment > 0 ? '+' : ''}{formatCurrency(rule.adjustment)}
-                                  </span>
-                                </div>
-                              ))}
+                              {current_price.appliedRules && current_price.appliedRules.length > 0 && 
+                                current_price.appliedRules.map((rule, index) => (
+                                  <div key={index} className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">{rule.name}</span>
+                                    <span className={cn(
+                                      rule.adjustment > 0 ? 'text-red-600' : 'text-green-600'
+                                    )}>
+                                      {rule.adjustment > 0 ? '+' : ''}{formatCurrency(rule.adjustment)}
+                                    </span>
+                                  </div>
+                                ))}
                               <Separator />
                               <div className="flex justify-between font-medium">
                                 <span>Final Price</span>
-                                <span className="text-lg">{formatCurrency(current_price.final_price)}</span>
+                                <span className="text-lg">{formatCurrency(current_price.total)}</span>
                               </div>
                             </div>
                           </div>

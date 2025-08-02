@@ -312,7 +312,7 @@ class ImportService extends BaseService
             $validator = Validator::make($itemData, [
                 'name' => 'required|string|max:255',
                 'type' => 'required|in:product,service,combo',
-                'base_price' => 'required|numeric|min:0',
+                'base_price' => 'nullable|numeric|min:0',
                 'sku' => 'nullable|string|unique:items,sku',
             ]);
             

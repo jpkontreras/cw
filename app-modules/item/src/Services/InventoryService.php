@@ -69,7 +69,7 @@ class InventoryService extends BaseService implements ResourceMetadataInterface
             minQuantity: $item->lowStockThreshold ?? 0,
             reorderQuantity: 0,
             maxQuantity: null,
-            unitCost: $item->basePrice,
+            unitCost: $item->baseCost ?? 0,
             lastRestockedAt: null,
             lastCountedAt: null,
         );
