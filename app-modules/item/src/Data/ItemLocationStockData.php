@@ -7,37 +7,39 @@ use Carbon\Carbon;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
 use Spatie\LaravelData\Attributes\Validation\Min;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
+#[TypeScript]
 class ItemLocationStockData extends BaseData
 {
     public function __construct(
         public readonly ?int $id,
-        
+
         #[Required, Numeric]
         public readonly int $itemId,
-        
+
         public readonly ?int $itemVariantId,
-        
+
         #[Required, Numeric]
         public readonly int $locationId,
-        
+
         #[Numeric, Min(0)]
         public readonly float $quantity = 0,
-        
+
         #[Numeric, Min(0)]
         public readonly float $reservedQuantity = 0,
-        
+
         #[Numeric, Min(0)]
         public readonly float $reorderPoint = 0,
-        
+
         #[Numeric, Min(0)]
         public readonly float $reorderQuantity = 0,
-        
+
         public readonly ?Carbon $createdAt = null,
-        
+
         public readonly ?Carbon $updatedAt = null,
     ) {}
-    
+
     /**
      * Get available quantity (total minus reserved)
      */
@@ -45,7 +47,7 @@ class ItemLocationStockData extends BaseData
     {
         return max(0, $this->quantity - $this->reservedQuantity);
     }
-    
+
     /**
      * Check if stock is available for given quantity
      */
@@ -53,7 +55,7 @@ class ItemLocationStockData extends BaseData
     {
         return $this->getAvailableQuantity() >= $requestedQuantity;
     }
-    
+
     /**
      * Check if reorder is needed
      */
@@ -61,7 +63,7 @@ class ItemLocationStockData extends BaseData
     {
         return $this->quantity <= $this->reorderPoint;
     }
-    
+
     /**
      * Check if out of stock
      */
@@ -69,7 +71,7 @@ class ItemLocationStockData extends BaseData
     {
         return $this->quantity <= 0;
     }
-    
+
     /**
      * Check if low stock (below reorder point but not out)
      */
@@ -77,7 +79,7 @@ class ItemLocationStockData extends BaseData
     {
         return $this->needsReorder() && !$this->isOutOfStock();
     }
-    
+
     /**
      * Get stock status label
      */
@@ -86,11 +88,11 @@ class ItemLocationStockData extends BaseData
         if ($this->isOutOfStock()) {
             return 'Out of Stock';
         }
-        
+
         if ($this->isLowStock()) {
             return 'Low Stock';
         }
-        
+
         return 'In Stock';
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+use Spatie\LaravelData\Mappers\SnakeCaseMapper;
+
 return [
     /*
      * The package will use this format when working with dates. If this option
@@ -48,7 +50,7 @@ return [
     'casts' => [
         DateTimeInterface::class => Spatie\LaravelData\Casts\DateTimeInterfaceCast::class,
         BackedEnum::class => Spatie\LaravelData\Casts\EnumCast::class,
-//        Enumerable::class => Spatie\LaravelData\Casts\EnumerableCast::class,
+        //        Enumerable::class => Spatie\LaravelData\Casts\EnumerableCast::class,
     ],
 
     /*
@@ -132,8 +134,8 @@ return [
      * global strategy here, or override it on a specific data object.
      */
     'name_mapping_strategy' => [
-        'input' => null,
-        'output' => null,
+        'input' => SnakeCaseMapper::class,
+        'output' => SnakeCaseMapper::class,
     ],
 
     /*

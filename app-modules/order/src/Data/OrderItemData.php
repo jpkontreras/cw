@@ -16,7 +16,6 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
  * Order item data transfer object
  */
 #[TypeScript]
-#[MapInputName(SnakeCaseMapper::class)]
 class OrderItemData extends BaseData
 {
     public function __construct(
@@ -141,5 +140,4 @@ class OrderItemData extends BaseData
     {
         return $this->kitchenStatus === 'served' || $this->servedAt !== null;
     }
-
 }

@@ -17,7 +17,6 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
  * Order data transfer object
  */
 #[TypeScript]
-#[MapInputName(SnakeCaseMapper::class)]
 class OrderData extends BaseData
 {
     public function __construct(
@@ -184,5 +183,4 @@ class OrderData extends BaseData
         // For now, return total if not paid
         return $this->isPaid() ? 0.0 : $this->totalAmount;
     }
-
 }
