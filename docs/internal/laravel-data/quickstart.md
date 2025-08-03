@@ -93,8 +93,8 @@ Let's see what's happening:
 
 1. Laravel boots up, and the router directs to the DataController
 2. Because we're injecting PostData, two things happen
-    - PostData will generate validation rules based on the property types and validate the request
-    - The PostData object is automatically created from the request
+   - PostData will generate validation rules based on the property types and validate the request
+   - The PostData object is automatically created from the request
 3. We're now in the \_\_invoke method with a valid PostData object
 
 You can always check the generated validation rules of a data object like this:
@@ -119,7 +119,7 @@ array:4 ["title"=> array:2 [
 ]
 ```
 
-As you can see, we're missing the date rule on the published\_at property. By default, this package will automatically generate the following rules:
+As you can see, we're missing the date rule on the published_at property. By default, this package will automatically generate the following rules:
 
 - required when a property cannot be null
 - nullable when a property can be null
@@ -128,7 +128,7 @@ As you can see, we're missing the date rule on the published\_at property. By de
 - boolean when a property type is bool
 - numeric when a property type is float
 - array when a property type is array
-- enum:* when a property type is a native enum
+- enum:\* when a property type is a native enum
 
 You can read more about the process of automated rule generation here.
 
@@ -175,7 +175,7 @@ Let's send the following payload to the controller:
 {"title":"Hello laravel-data","content":"This is an introduction post for the new package","status":"published","published_at":"2021-09-24T13:31:20+00:00"}
 ```
 
-We get the PostData object populated with the values in the JSON payload, neat! But how did the package convert the published\_at string into a CarbonImmutable object?
+We get the PostData object populated with the values in the JSON payload, neat! But how did the package convert the published_at string into a CarbonImmutable object?
 
 It is possible to define casts within the data.php config file. By default, the casts list looks like this:
 
@@ -274,7 +274,7 @@ useSpatie\LaravelData\Attributes\DataCollectionOf;classAuthorDataextendsData{/**
 }
 ```
 
-Notice that we've typed the $posts property as an array of PostData objects using a docblock.  This will be very useful later on! The package always needs to know what type of data objects are stored in an array. Of course, when you're storing other types then data objects this is not required but recommended.
+Notice that we've typed the $posts property as an array of PostData objects using a docblock. This will be very useful later on! The package always needs to know what type of data objects are stored in an array. Of course, when you're storing other types then data objects this is not required but recommended.
 
 We can now create an author object as such:
 
@@ -404,7 +404,7 @@ This will give the following array:
 ```
 array:5 ["title"=>"Hello laravel-data""content"=>"This is an introduction post for the new package""status"=> App\Enums\PostStatus {
     +name:"published"+value:"published"}"image"=>null"published_at"=> Carbon\CarbonImmutable {
-  		... 
+  		...
   }
 ]
 ```
@@ -518,7 +518,7 @@ classAuthorDataextendsData{/**
 When we now create a new author:
 
 ```
-$author=Author::create(['name'=>'Ruben Van Assche']);$author->posts()->create([        
+$author=Author::create(['name'=>'Ruben Van Assche']);$author->posts()->create([
     ['title'=>'Hello laravel-data','content'=>'This is an introduction post for the new package','status'=>'draft','published_at'=>null,
     ]
 ]);AuthorData::from($author);
@@ -600,63 +600,3 @@ So that's it, a quick overview of this package. We barely scratched the surface 
 - including properties using the URL query string
 - inertia support for lazy properties
 - and so much more ... you'll find all the information here in the docs
-
-About us
-
-Creating a data object
-
-Help us improve this page
-
-### On this page
-
-- Using requests
-- Casting data
-- Customizing the creation of a data object
-- Nesting data objects and arrays of data objects
-- Usage in controllers
-- Using transformers
-- Generating a blueprint
-- Lazy properties
-- Conclusion
-
-Medialibrary.pro
-
-UI components for the Media Library
-
-Learn more
-
-Help us improve this page
-
-- Products
-- Open Source
-- Courses
-- Web Development
-
-VacanciesAboutBlogDocsGuidelinesMerch ↗
-
-Log in
-
-Kruikstraat 22, Box 12
-
-2018 Antwerp, Belgium
-
-info@spatie.be
-
-+32 3 292 56 79
-
-- GitHub
-- Instagram
-- LinkedIn
-- Twitter
-- Bluesky
-- Mastodon
-- YouTube
-
-- Privacy
-- Disclaimer
-
-+32 3 292 56 79
-
-Our office is closed now, email us instead
-
-ESC
