@@ -40,10 +40,10 @@ class PaginatedResourceData extends Data
     /**
      * Create from Laravel's LengthAwarePaginator
      * 
-     * @template T
+     * @template T of Data
      * @param LengthAwarePaginator $paginator
-     * @param class-string<T>|null $dataClass
-     * @param array<string, mixed> $metadata
+     * @param class-string<T>|null $dataClass The Data class to transform items to
+     * @param array<string, mixed> $metadata Additional metadata to include
      * @return self
      */
     public static function fromPaginator(
@@ -53,9 +53,11 @@ class PaginatedResourceData extends Data
     ): self {
         // Transform items to DTOs if data class provided
         $items = $paginator->items();
+        
+        // Use DataCollection for proper laravel-data support
         $data = $dataClass 
-            ? array_map(fn($item) => $dataClass::from($item), $items)
-            : $items;
+            ? $dataClass::collection($items)
+            : DataCollection::make($items);
 
         // Build links array compatible with Laravel pagination
         $links = [];

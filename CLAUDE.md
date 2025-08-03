@@ -92,6 +92,177 @@ Modules communicate through interfaces, never direct model imports. This ensures
 4. **Service Layer** - Orchestrate cross-module operations
 5. **Strict Boundaries** - Models store foreign keys only
 
+### Laravel-Data Usage Requirements
+
+**CRITICAL**: All modules MUST follow these laravel-data patterns to ensure consistency and maintainability:
+
+#### 1. **Validation** - Controllers MUST use Data object validation
+```php
+// ❌ WRONG - Never use Laravel's validate()
+public function store(Request $request) {
+    $validated = $request->validate([...]); // FORBIDDEN
+}
+
+// ❌ WRONG - Never use Form Requests
+public function store(CreateOrderRequest $request) { // FORBIDDEN
+
+// ✅ CORRECT - Always use Data object validation
+public function store(Request $request) {
+    $data = CreateOrderData::validateAndCreate($request);
+    // or
+    $data = CreateOrderData::from($request)->validate();
+}
+```
+
+#### 2. **Property Naming** - DTOs use camelCase, databases use snake_case
+```php
+// Data objects use camelCase
+class OrderData extends BaseData {
+    public readonly string $orderNumber;  // ✅ camelCase
+    public readonly string $order_number; // ❌ WRONG
+}
+
+// Automatic mapping via config handles conversion
+// No manual mapping arrays needed!
+```
+
+#### 3. **Repository Returns** - MUST return Data objects
+```php
+// ❌ WRONG - Never return Eloquent models
+public function find(int $id): ?Order {
+    return Order::find($id);
+}
+
+// ✅ CORRECT - Always return Data objects
+public function find(int $id): ?OrderData {
+    $order = Order::find($id);
+    return $order ? OrderData::from($order) : null;
+}
+
+// Collections must return DataCollection
+public function all(): DataCollection {
+    return OrderData::collection(Order::all());
+}
+```
+
+#### 4. **Lazy Loading** - Collections and expensive properties MUST be lazy
+```php
+// ✅ CORRECT - Lazy loaded collections
+class OrderData extends BaseData {
+    public function __construct(
+        public int $id,
+        public Lazy|DataCollection $items, // Lazy collection
+    ) {}
+    
+    public static function fromModel(Order $order): self {
+        return new self(
+            id: $order->id,
+            items: Lazy::whenLoaded('items', $order, 
+                fn() => OrderItemData::collection($order->items)
+            ),
+        );
+    }
+}
+```
+
+#### 5. **Computed Properties** - Use attributes, not methods
+```php
+// ❌ WRONG - Don't use methods for derived values
+public function getStatusLabel(): string {
+    return match($this->status) {...};
+}
+
+// ✅ CORRECT - Use computed properties
+use Spatie\LaravelData\Attributes\Computed;
+
+#[Computed]
+public function statusLabel(): string {
+    return match($this->status) {...};
+}
+```
+
+#### 8. **Custom Validation Rules** - Use rules() method
+```php
+// Add custom validation rules
+public static function rules(ValidationContext $context): array {
+    return [
+        'email' => ['required', 'email', 'unique:users'],
+        'age' => ['required', 'integer', 'min:18'],
+    ];
+}
+
+// Skip validation for specific properties
+use Spatie\LaravelData\Attributes\WithoutValidation;
+
+class OrderData extends BaseData {
+    public function __construct(
+        public string $id,
+        #[WithoutValidation] // Skip validation for computed values
+        public ?string $displayName,
+    ) {}
+}
+```
+
+#### 9. **Data Collections** - Use proper typing
+```php
+// ❌ WRONG - Generic array type
+/** @var array<PostData> */
+public array $posts;
+
+// ✅ CORRECT - Use DataCollection with attribute
+use Spatie\LaravelData\Attributes\DataCollectionOf;
+
+#[DataCollectionOf(PostData::class)]
+public DataCollection $posts;
+
+// Creating collections
+$posts = PostData::collection($models);
+```
+
+#### 10. **Magic Creation Methods** - Custom from methods
+```php
+class UserData extends BaseData {
+    // Create from Eloquent model with relations
+    public static function fromModel(User $user): self {
+        return new self(
+            id: $user->id,
+            name: $user->name,
+            posts: Lazy::whenLoaded('posts', $user, 
+                fn() => PostData::collection($user->posts)
+            ),
+        );
+    }
+    
+    // Create from string format
+    public static function fromString(string $data): self {
+        [$id, $name] = explode('|', $data);
+        return new self((int) $id, $name, ...);
+    }
+}
+```
+
+#### 6. **Model Casting** - Complex fields MUST use data casts
+```php
+// In your Eloquent model
+protected $casts = [
+    'metadata' => MetadataData::class,      // ✅ Cast to data object
+    'settings' => SettingsData::class,      // ✅
+    'metadata' => 'array',                  // ❌ Use data object instead
+];
+```
+
+#### 7. **No Manual Property Mapping**
+```php
+// ❌ WRONG - Never create manual mapping arrays
+$fieldMap = [
+    'orderNumber' => 'order_number',
+    'customerName' => 'customer_name',
+];
+
+// ✅ CORRECT - Let laravel-data handle it automatically
+// The SnakeCaseMapper in config/data.php handles this
+```
+
 ### Quick Pattern Reference
 
 ```php
@@ -100,15 +271,26 @@ interface ItemRepositoryInterface {
     public function find(int $id): ?ItemData;
 }
 
-// 2. Create DTO (in module's Data/)
-class ItemData extends Data {
+// 2. Create DTO (in module's Data/) with validation
+use Spatie\LaravelData\Attributes\Validation\Required;
+use Spatie\LaravelData\Attributes\Computed;
+
+class ItemData extends BaseData {
     public function __construct(
-        public readonly int $id,
-        public readonly string $name,
+        #[Required] public readonly int $id,
+        #[Required] public readonly string $name,
+        public readonly ?string $description,
+        public readonly float $price,
+        public Lazy|DataCollection $categories, // Lazy loaded
     ) {}
+    
+    #[Computed]
+    public function formattedPrice(): string {
+        return '$' . number_format($this->price, 2);
+    }
 }
 
-// 3. Implement Repository
+// 3. Implement Repository (returns DTOs only)
 class ItemRepository implements ItemRepositoryInterface {
     public function find(int $id): ?ItemData {
         $item = Item::find($id);
@@ -134,13 +316,18 @@ All business logic MUST live in services, shared by both Web and API controllers
 ```php
 // Service handles business logic
 class OrderService {
-    public function createOrder(array $data): OrderData { /* logic */ }
+    public function createOrder(CreateOrderData $data): OrderData { 
+        // Business logic here
+        return $this->orderRepository->create($data->toArray());
+    }
 }
 
 // Web Controller returns Inertia view
 class Web\OrderController {
     public function store(Request $request, OrderService $service) {
-        $order = $service->createOrder($request->validated());
+        // MUST use data object validation
+        $data = CreateOrderData::validateAndCreate($request);
+        $order = $service->createOrder($data);
         return Inertia::render('order/show', ['order' => $order]);
     }
 }
@@ -148,7 +335,9 @@ class Web\OrderController {
 // API Controller returns JSON
 class Api\OrderController {
     public function store(Request $request, OrderService $service) {
-        $order = $service->createOrder($request->validated());
+        // Same validation pattern
+        $data = CreateOrderData::validateAndCreate($request);
+        $order = $service->createOrder($data);
         return response()->json($order);
     }
 }
@@ -279,6 +468,37 @@ class OrderData extends Data {
 
 DTOs handle both request validation and API responses - no separate Form Requests or Resources needed.
 
+### Additional Laravel-Data Features
+
+#### Generating Empty Blueprints
+```php
+// Generate empty data for frontend forms
+$emptyOrder = OrderData::empty();
+// Returns: ['orderNumber' => null, 'items' => [], ...]
+
+// With default values
+$template = OrderData::empty([
+    'status' => OrderStatus::DRAFT,
+    'locationId' => auth()->user()->location_id,
+]);
+```
+
+#### Field References in Validation
+```php
+use Spatie\LaravelData\Support\Validation\References\FieldReference;
+use Spatie\LaravelData\Support\Validation\References\RouteParameterReference;
+
+class OrderData extends BaseData {
+    public function __construct(
+        #[RequiredIf('status', OrderStatus::CONFIRMED)]
+        public ?string $paymentMethod,
+        
+        #[Unique('orders', 'number', ignore: new RouteParameterReference('order'))]
+        public string $orderNumber,
+    ) {}
+}
+```
+
 ## Important Reminders
 
 1. **All commands use Laravel Sail**: Every `artisan` command should be prefixed with `sail`
@@ -289,3 +509,61 @@ DTOs handle both request validation and API responses - no separate Form Request
 6. **Service layer is mandatory**: All business logic goes in services, not controllers
 7. **Feature flags for everything**: New features should be behind feature flags
 8. **Test both web and API**: Every feature needs tests for both interfaces
+9. **Cache data structures in production**: Run `sail artisan data:cache-structures` before deployment
+
+## Common Laravel-Data Mistakes to Avoid
+
+### ❌ DON'T Do These:
+```php
+// 1. Manual validation in controllers
+$request->validate([...]); // NEVER
+
+// 2. Return models from repositories
+return Order::find($id); // WRONG
+
+// 3. Manual property mapping
+$fieldMap = ['orderNumber' => 'order_number']; // NO
+
+// 4. Methods for computed values
+public function getFullName() { return ...; } // USE @Computed
+
+// 5. Non-lazy collections
+public DataCollection $items; // MUST be Lazy|DataCollection
+
+// 6. Form Requests
+public function store(CreateOrderRequest $request) // FORBIDDEN
+
+// 7. Snake case in DTOs
+public string $order_number; // USE camelCase
+
+// 8. Array casting in models
+'metadata' => 'array' // USE Data object cast
+```
+
+### ✅ ALWAYS Do These:
+```php
+// 1. Data object validation
+$data = CreateOrderData::validateAndCreate($request);
+
+// 2. Return DTOs from repositories
+return $order ? OrderData::from($order) : null;
+
+// 3. Let config handle mapping
+// config/data.php handles snake_case <-> camelCase
+
+// 4. Use computed properties
+#[Computed]
+public function fullName(): string { return ...; }
+
+// 5. Lazy load collections
+public Lazy|DataCollection $items;
+
+// 6. Simple Request injection
+public function store(Request $request)
+
+// 7. CamelCase in DTOs
+public string $orderNumber;
+
+// 8. Data object casts
+'metadata' => MetadataData::class
+```
