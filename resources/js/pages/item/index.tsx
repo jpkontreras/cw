@@ -108,33 +108,38 @@ function ItemsIndexContent({
           const allSelected = items.length > 0 && items.every(item => selectedItems.includes(item.id));
           const someSelected = items.some(item => selectedItems.includes(item.id));
           return (
-            <Checkbox
-              checked={allSelected}
-              // indeterminate={someSelected && !allSelected}
-              onCheckedChange={(value) => {
-                if (value) {
-                  setSelectedItems(items.map(item => item.id));
-                } else {
-                  setSelectedItems([]);
-                }
-              }}
-              aria-label="Select all"
-            />
+            <div className="flex w-8 justify-center">
+              <Checkbox
+                checked={allSelected}
+                // indeterminate={someSelected && !allSelected}
+                onCheckedChange={(value) => {
+                  if (value) {
+                    setSelectedItems(items.map(item => item.id));
+                  } else {
+                    setSelectedItems([]);
+                  }
+                }}
+                aria-label="Select all"
+              />
+            </div>
           );
         },
         cell: ({ row }) => (
-          <Checkbox
-            checked={selectedItems.includes(row.original.id)}
-            onCheckedChange={(value) => {
-              if (value) {
-                setSelectedItems([...selectedItems, row.original.id]);
-              } else {
-                setSelectedItems(selectedItems.filter(id => id !== row.original.id));
-              }
-            }}
-            aria-label="Select row"
-          />
+          <div className="flex w-8 justify-center">
+            <Checkbox
+              checked={selectedItems.includes(row.original.id)}
+              onCheckedChange={(value) => {
+                if (value) {
+                  setSelectedItems([...selectedItems, row.original.id]);
+                } else {
+                  setSelectedItems(selectedItems.filter(id => id !== row.original.id));
+                }
+              }}
+              aria-label="Select row"
+            />
+          </div>
         ),
+        size: 32,
         enableSorting: false,
         enableHiding: false,
       },
@@ -512,6 +517,7 @@ function ItemsIndexContent({
             data={items}
             pagination={pagination}
             metadata={metadata}
+            rowClickRoute="/items/:id"
           />
           </div>
         )}

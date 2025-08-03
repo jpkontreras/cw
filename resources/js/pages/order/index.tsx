@@ -170,7 +170,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
             </div>
 
             {/* Orders Data Table */}
-            {pagination && metadata && <InertiaDataTable data={orders || []} pagination={pagination} metadata={metadata} />}
+            {pagination && metadata && <InertiaDataTable data={orders || []} pagination={pagination} metadata={metadata} rowClickRoute="/orders/:id" />}
           </div>
         )}
       </Page.Content>

@@ -48,7 +48,8 @@ import {
   Clock,
   Calculator,
   Tag,
-  Images
+  Images,
+  Trash2
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -61,7 +62,63 @@ interface Category {
   name: string;
 }
 
+interface ExistingImage {
+  id: number;
+  url: string;
+  is_primary: boolean;
+}
+
+interface ExistingVariant {
+  id?: number;
+  name: string;
+  price: number;
+  cost: number | null;
+  sku: string | null;
+  track_stock: boolean;
+  is_available: boolean;
+  current_stock?: number;
+}
+
+interface BundleItem {
+  id: number;
+  name: string;
+  price: number;
+  sku?: string;
+  quantity: number;
+}
+
+interface Item {
+  id: number;
+  name: string;
+  description: string | null;
+  type: 'product' | 'service' | 'combo';
+  category_id: number | null;
+  base_price?: number | null;
+  basePrice?: number | null;
+  base_cost?: number | null;
+  baseCost?: number | null;
+  sku: string | null;
+  barcode: string | null;
+  track_inventory?: boolean;
+  trackInventory?: boolean;
+  is_available?: boolean;
+  isAvailable?: boolean;
+  allow_modifiers?: boolean;
+  allowModifiers?: boolean;
+  preparation_time?: number | null;
+  preparationTime?: number | null;
+  available_from: string | null;
+  available_until: string | null;
+  images: ExistingImage[];
+  variants: ExistingVariant[];
+  bundle_items: BundleItem[];
+  modifier_groups: number[];
+  tags: string[];
+  allergens: string[];
+}
+
 interface PageProps {
+  item: Item;
   categories: Category[];
   item_types: Array<{ value: string; label: string }>;
   features: {
@@ -78,65 +135,67 @@ interface PageProps {
   }>;
 }
 
-interface BundleItem {
-  id: number;
-  name: string;
-  price: number;
-  sku?: string;
-  quantity: number;
-}
-
 interface Variant {
+  id?: number;
   name: string;
   price_adjustment: number;
   stock_quantity: number;
   is_active: boolean;
   is_default: boolean;
+  _destroy?: boolean;
 }
 
-export default function ItemCreate({ categories, item_types, features, available_items = [] }: PageProps) {
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [bundleItems, setBundleItems] = useState<BundleItem[]>([]);
-  const [isCompoundType, setIsCompoundType] = useState(false);
+export default function ItemEdit({ item, categories, item_types, features, available_items = [] }: PageProps) {
+  // Convert existing variants to edit format
+  const convertExistingVariants = (existingVariants: ExistingVariant[]): Variant[] => {
+    return existingVariants.map((variant, index) => ({
+      id: variant.id,
+      name: variant.name,
+      price_adjustment: variant.price - (item.base_price || 0),
+      stock_quantity: variant.current_stock || 0,
+      is_active: variant.is_available,
+      is_default: index === 0,
+    }));
+  };
 
-  const { data, setData, post, processing, errors, reset } = useForm<any>({
-    name: '',
-    description: '',
-    type: 'product',
-    category_id: '',
-    base_price: '',
-    base_cost: '',
-    sku: '',
-    barcode: '',
-    track_inventory: true,
-    is_available: true,
-    allow_modifiers: false,
-    preparation_time: '',
-    available_from: '',
-    available_until: '',
-    image_url: null as string | null,
+  const [variants, setVariants] = useState<Variant[]>(convertExistingVariants(item.variants));
+  const [bundleItems, setBundleItems] = useState<BundleItem[]>(item.bundle_items || []);
+  const [isCompoundType, setIsCompoundType] = useState(item.type === 'combo');
+  const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
+
+  // Handle both camelCase and snake_case properties
+  const basePrice = item.basePrice ?? item.base_price;
+  const baseCost = item.baseCost ?? item.base_cost;
+  const trackInventory = item.trackInventory ?? item.track_inventory;
+  const isAvailable = item.isAvailable ?? item.is_available;
+  const allowModifiers = item.allowModifiers ?? item.allow_modifiers;
+  const preparationTime = item.preparationTime ?? item.preparation_time;
+
+  const { data, setData, put, processing, errors, reset } = useForm<any>({
+    name: item.name || '',
+    description: item.description || '',
+    type: item.type || 'product',
+    category_id: item.category_id ? item.category_id.toString() : '',
+    base_price: basePrice ? basePrice.toString() : '',
+    base_cost: baseCost ? baseCost.toString() : '',
+    sku: item.sku || '',
+    barcode: item.barcode || '',
+    track_inventory: trackInventory ?? true,
+    is_available: isAvailable ?? true,
+    allow_modifiers: allowModifiers ?? false,
+    preparation_time: preparationTime ? preparationTime.toString() : '',
+    available_from: item.available_from || '',
+    available_until: item.available_until || '',
+    image_url: item.images.find(img => img.is_primary)?.url || null,
     additional_images: [] as File[],
     variants: [] as Variant[],
     bundle_items: [] as BundleItem[],
-    modifier_groups: [] as number[],
-    tags: [] as string[],
-    allergens: [] as string[],
+    modifier_groups: item.modifier_groups || [],
+    tags: item.tags || [],
+    allergens: item.allergens || [],
     nutritional_info: {},
+    deleted_image_ids: [] as number[],
   });
-
-  // Auto-generate SKU from name
-  useEffect(() => {
-    if (data.name) {
-      const generatedSku = data.name
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .substring(0, 10)
-        + '-' + Date.now().toString().slice(-4);
-      setData('sku', generatedSku);
-    }
-  }, [data.name]);
 
   // Check if item type is compound (combo)
   useEffect(() => {
@@ -147,7 +206,7 @@ export default function ItemCreate({ categories, item_types, features, available
     e.preventDefault();
     const formData = {
       ...data,
-      variants: features.variants ? variants : [],
+      variants: features.variants ? variants.filter(v => !v._destroy) : [],
       bundle_items: isCompoundType ? bundleItems : [],
       // Ensure arrays are properly formatted
       tags: data.tags.filter(tag => tag.trim() !== ''),
@@ -156,8 +215,11 @@ export default function ItemCreate({ categories, item_types, features, available
       image_url: data.image_url,
       // Handle multiple images
       images: [...data.additional_images].filter(Boolean),
+      // Include deleted image IDs
+      deleted_image_ids: deletedImageIds,
     };
-    post('/items', formData);
+    
+    put(`/items/${item.id}`, formData);
   };
 
   const addVariant = () => {
@@ -180,23 +242,38 @@ export default function ItemCreate({ categories, item_types, features, available
   };
 
   const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
+    const variant = variants[index];
+    if (variant.id) {
+      // Mark existing variant for deletion
+      const updated = [...variants];
+      updated[index] = { ...updated[index], _destroy: true };
+      setVariants(updated);
+    } else {
+      // Remove new variant
+      setVariants(variants.filter((_, i) => i !== index));
+    }
   };
+
+  const deleteExistingImage = (imageId: number) => {
+    setDeletedImageIds([...deletedImageIds, imageId]);
+  };
+
+  const existingImages = item.images.filter(img => !deletedImageIds.includes(img.id));
 
   return (
     <AppLayout>
-      <Head title="Create Item" />
+      <Head title={`Edit ${item.name}`} />
       
       <PageLayout>
         <PageLayout.Header
-          title="Create Item"
-          subtitle="Add a new product, service, or combo to your inventory"
+          title="Edit Item"
+          subtitle={`Editing: ${item.name}`}
           actions={
             <PageLayout.Actions>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.visit('/items')}
+                onClick={() => router.visit(`/items/${item.id}`)}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
@@ -207,7 +284,7 @@ export default function ItemCreate({ categories, item_types, features, available
                 disabled={processing}
               >
                 <Save className="mr-2 h-4 w-4" />
-                Save Item
+                Save Changes
               </Button>
             </PageLayout.Actions>
           }
@@ -574,7 +651,7 @@ export default function ItemCreate({ categories, item_types, features, available
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {variants.length === 0 ? (
+                        {variants.filter(v => !v._destroy).length === 0 ? (
                           <div className="text-center py-8">
                             <div className="rounded-full bg-muted p-3 w-fit mx-auto mb-4">
                               <Layers className="h-6 w-6 text-muted-foreground" />
@@ -593,94 +670,100 @@ export default function ItemCreate({ categories, item_types, features, available
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {variants.map((variant, index) => (
-                              <div key={index} className="border rounded-lg p-4 space-y-4">
-                                <div className="flex justify-between items-start">
-                                  <h4 className="font-medium">Variant {index + 1}</h4>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeVariant(index)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <div className="grid gap-4">
-                                  <div className="space-y-2">
-                                    <Label>Variant Name</Label>
-                                    <Input
-                                      value={variant.name}
-                                      onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                                      placeholder="e.g., Large, Medium, Small"
-                                    />
+                            {variants.map((variant, index) => {
+                              if (variant._destroy) return null;
+                              
+                              return (
+                                <div key={index} className="border rounded-lg p-4 space-y-4">
+                                  <div className="flex justify-between items-start">
+                                    <h4 className="font-medium">
+                                      {variant.id ? `${variant.name} (Existing)` : `Variant ${index + 1}`}
+                                    </h4>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeVariant(index)}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
                                   </div>
                                   
-                                  <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="grid gap-4">
                                     <div className="space-y-2">
-                                      <Label>Price Adjustment</Label>
-                                      <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                          {variant.price_adjustment >= 0 ? '+$' : '-$'}
-                                        </span>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          value={Math.abs(variant.price_adjustment)}
-                                          onChange={(e) => {
-                                            const value = parseFloat(e.target.value) || 0;
-                                            updateVariant(index, 'price_adjustment', variant.price_adjustment >= 0 ? value : -value);
-                                          }}
-                                          className="pl-10"
-                                        />
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">
-                                        Added to base price
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Stock Quantity</Label>
+                                      <Label>Variant Name</Label>
                                       <Input
-                                        type="number"
-                                        value={variant.stock_quantity}
-                                        onChange={(e) => updateVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
+                                        value={variant.name}
+                                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                                        placeholder="e.g., Large, Medium, Small"
                                       />
                                     </div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex gap-6">
-                                  <div className="flex items-center space-x-2">
-                                    <Switch
-                                      checked={variant.is_active}
-                                      onCheckedChange={(checked) => updateVariant(index, 'is_active', checked)}
-                                    />
-                                    <Label>Active</Label>
+                                    
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                      <div className="space-y-2">
+                                        <Label>Price Adjustment</Label>
+                                        <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            {variant.price_adjustment >= 0 ? '+$' : '-$'}
+                                          </span>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={Math.abs(variant.price_adjustment)}
+                                            onChange={(e) => {
+                                              const value = parseFloat(e.target.value) || 0;
+                                              updateVariant(index, 'price_adjustment', variant.price_adjustment >= 0 ? value : -value);
+                                            }}
+                                            className="pl-10"
+                                          />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                          Added to base price
+                                        </p>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Stock Quantity</Label>
+                                        <Input
+                                          type="number"
+                                          value={variant.stock_quantity}
+                                          onChange={(e) => updateVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
                                   
-                                  <div className="flex items-center space-x-2">
-                                    <Switch
-                                      checked={variant.is_default}
-                                      onCheckedChange={(checked) => {
-                                        // Ensure only one default variant
-                                        if (checked) {
-                                          setVariants(variants.map((v, i) => ({
-                                            ...v,
-                                            is_default: i === index
-                                          })));
-                                        } else {
-                                          updateVariant(index, 'is_default', false);
-                                        }
-                                      }}
-                                    />
-                                    <Label>Default</Label>
+                                  <div className="flex gap-6">
+                                    <div className="flex items-center space-x-2">
+                                      <Switch
+                                        checked={variant.is_active}
+                                        onCheckedChange={(checked) => updateVariant(index, 'is_active', checked)}
+                                      />
+                                      <Label>Active</Label>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                      <Switch
+                                        checked={variant.is_default}
+                                        onCheckedChange={(checked) => {
+                                          // Ensure only one default variant
+                                          if (checked) {
+                                            setVariants(variants.map((v, i) => ({
+                                              ...v,
+                                              is_default: i === index
+                                            })));
+                                          } else {
+                                            updateVariant(index, 'is_default', false);
+                                          }
+                                        }}
+                                      />
+                                      <Label>Default</Label>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                             
                             <Button
                               type="button"
@@ -727,14 +810,16 @@ export default function ItemCreate({ categories, item_types, features, available
                           {data.allow_modifiers && (
                             <div className="space-y-4 pt-4 border-t">
                               <p className="text-sm text-muted-foreground">
-                                Select modifier groups that can be applied to this item
+                                Configure modifier groups for this item
                               </p>
-                              <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                                <Sliders className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                                <p className="text-sm text-muted-foreground">
-                                  Modifier groups will be available after saving the item
-                                </p>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.visit(`/items/${item.id}/modifiers`)}
+                              >
+                                <Sliders className="mr-2 h-4 w-4" />
+                                Manage Modifier Groups
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -801,9 +886,15 @@ export default function ItemCreate({ categories, item_types, features, available
                           <p className="text-sm text-muted-foreground">
                             Detailed cost breakdown and recipe management
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            will be available after saving the item
-                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={() => router.visit(`/items/${item.id}/recipe`)}
+                          >
+                            Manage Recipe
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -825,12 +916,40 @@ export default function ItemCreate({ categories, item_types, features, available
                           The first image will be used as the primary display image
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {/* Existing Images */}
+                          {existingImages.map((image) => (
+                            <div key={image.id} className="relative group">
+                              <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                                <img
+                                  src={image.url}
+                                  alt={`Product image ${image.id}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteExistingImage(image.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                              {image.is_primary && (
+                                <Badge className="absolute bottom-2 left-2 text-xs">
+                                  Primary
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                          
+                          {/* New Images */}
                           {data.additional_images.map((image, index) => (
-                            <div key={index} className="relative group">
+                            <div key={`new-${index}`} className="relative group">
                               <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                                 <img
                                   src={URL.createObjectURL(image)}
-                                  alt={`Product image ${index + 1}`}
+                                  alt={`New product image ${index + 1}`}
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -846,6 +965,9 @@ export default function ItemCreate({ categories, item_types, features, available
                               >
                                 <X className="h-3 w-3" />
                               </Button>
+                              <Badge variant="secondary" className="absolute bottom-2 left-2 text-xs">
+                                New
+                              </Badge>
                             </div>
                           ))}
                           
@@ -975,13 +1097,13 @@ export default function ItemCreate({ categories, item_types, features, available
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.visit('/items')}
+                onClick={() => router.visit(`/items/${item.id}`)}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={processing}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Item
+                Save Changes
               </Button>
             </div>
           </form>

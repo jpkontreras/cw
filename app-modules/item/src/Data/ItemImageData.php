@@ -38,6 +38,12 @@ class ItemImageData extends BaseData
      */
     public function getImageUrl(): string
     {
+        // If it's already a full URL, return as is
+        if (filter_var($this->imagePath, FILTER_VALIDATE_URL)) {
+            return $this->imagePath;
+        }
+        
+        // Otherwise, build the URL
         return asset('storage/' . $this->imagePath);
     }
     
@@ -47,6 +53,10 @@ class ItemImageData extends BaseData
     public function getThumbnailUrl(): string
     {
         if ($this->thumbnailPath) {
+            // If it's already a full URL, return as is
+            if (filter_var($this->thumbnailPath, FILTER_VALIDATE_URL)) {
+                return $this->thumbnailPath;
+            }
             return asset('storage/' . $this->thumbnailPath);
         }
         

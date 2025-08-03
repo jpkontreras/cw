@@ -6,10 +6,14 @@
  * @returns Formatted currency string
  */
 export function formatCurrency(
-  amount: number,
+  amount: number | null | undefined,
   currency: string = 'CLP',
   locale: string = 'es-CL'
 ): string {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '—';
+  }
+  
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,

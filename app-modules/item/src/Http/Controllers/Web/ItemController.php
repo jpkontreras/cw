@@ -83,19 +83,53 @@ class ItemController extends Controller
             'type' => 'required|string|in:product,service,combo',
             'category_id' => 'nullable|integer',
             'base_price' => 'nullable|numeric|min:0',
-            'cost' => 'nullable|numeric|min:0',
+            'base_cost' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|unique:items,sku',
             'barcode' => 'nullable|string|unique:items,barcode',
-            'track_stock' => 'boolean',
+            'track_inventory' => 'boolean',
             'is_available' => 'boolean',
             'allow_modifiers' => 'boolean',
             'preparation_time' => 'nullable|integer|min:0',
-            'image' => 'nullable|image|max:2048',
+            'image_url' => 'nullable|string|url',
             'variants' => 'nullable|array',
-            'modifiers' => 'nullable|array',
+            'modifier_groups' => 'nullable|array',
         ]);
         
-        $item = $this->itemService->createItem($validated);
+        // Transform the data for the service
+        $data = $validated;
+        
+        // Handle image URL - convert to images array format expected by service
+        if (!empty($validated['image_url'])) {
+            // Extract path from URL if it's a full URL
+            $imagePath = $validated['image_url'];
+            if (str_starts_with($imagePath, url('/'))) {
+                // Remove the base URL to get just the path
+                $imagePath = str_replace(url('/'), '', $imagePath);
+                $imagePath = ltrim($imagePath, '/');
+            }
+            // Remove 'storage/' prefix if present as it will be added by the model
+            if (str_starts_with($imagePath, 'storage/')) {
+                $imagePath = substr($imagePath, 8);
+            }
+            
+            $data['images'] = [
+                [
+                    'image_path' => $imagePath,
+                    'is_primary' => true,
+                    'sort_order' => 0,
+                    'item_id' => 0, // Will be set by the service
+                ]
+            ];
+            unset($data['image_url']);
+        }
+        
+        // Map track_stock to track_inventory for consistency
+        if (isset($data['track_inventory'])) {
+            $data['track_stock'] = $data['track_inventory'];
+            unset($data['track_inventory']);
+        }
+        
+        $item = $this->itemService->createItem($data);
         
         return redirect()->route('item.show', $item->id)
             ->with('success', 'Item created successfully');
@@ -106,16 +140,35 @@ class ItemController extends Controller
      */
     public function show(int $id): Response
     {
-        $item = $this->itemService->getItemWithRelations($id);
+        $itemWithRelations = $this->itemService->getItemWithRelations($id);
         
-        if (!$item) {
+        if (!$itemWithRelations) {
             abort(404);
         }
         
         $locationId = request()->input('location_id');
         
+        // Flatten the item data structure for the frontend
+        $itemData = array_merge(
+            $itemWithRelations->item->toArray(),
+            [
+                'images' => collect($itemWithRelations->images ?? [])->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'url' => $image->getImageUrl(),
+                        'isPrimary' => $image->isPrimary,
+                        'is_primary' => $image->isPrimary, // Legacy support
+                    ];
+                })->toArray(),
+                'variants' => $itemWithRelations->variants ?? [],
+                'category_name' => $itemWithRelations->categories && count($itemWithRelations->categories) > 0 
+                    ? 'Category ' . $itemWithRelations->categories[0] // Placeholder until taxonomy module provides names
+                    : null,
+            ]
+        );
+        
         return Inertia::render('item/show', [
-            'item' => $item,
+            'item' => $itemData,
             'modifier_groups' => $this->features->isEnabled('item.modifiers') 
                 ? $this->modifierService->getItemModifierGroups($id) 
                 : [],
@@ -125,6 +178,7 @@ class ItemController extends Controller
             'inventory' => $this->features->isEnabled('item.inventory_tracking')
                 ? $this->inventoryService->getInventoryLevel($id, null, $locationId)
                 : null,
+            'recipe' => $itemWithRelations->recipe,
             'features' => [
                 'variants' => $this->features->isEnabled('item.variants'),
                 'modifiers' => $this->features->isEnabled('item.modifiers'),
@@ -140,14 +194,36 @@ class ItemController extends Controller
      */
     public function edit(int $id): Response
     {
-        $item = $this->itemService->getItemWithRelations($id);
+        $itemWithRelations = $this->itemService->getItemWithRelations($id);
         
-        if (!$item) {
+        if (!$itemWithRelations) {
             abort(404);
         }
         
+        // Flatten the item data structure for the frontend
+        $itemData = array_merge(
+            $itemWithRelations->item->toArray(),
+            [
+                'images' => collect($itemWithRelations->images ?? [])->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'url' => $image->getImageUrl(),
+                        'is_primary' => $image->isPrimary,
+                    ];
+                })->toArray(),
+                'variants' => $itemWithRelations->variants ?? [],
+                'bundle_items' => $itemWithRelations->bundleItems ?? [],
+                'modifier_groups' => $itemWithRelations->modifierGroups ?? [],
+                'tags' => $itemWithRelations->tags ?? [],
+                'allergens' => $itemWithRelations->allergens ?? [],
+                'category_id' => $itemWithRelations->categories && count($itemWithRelations->categories) > 0 
+                    ? $itemWithRelations->categories[0] 
+                    : null,
+            ]
+        );
+        
         return Inertia::render('item/edit', [
-            'item' => $item,
+            'item' => $itemData,
             'categories' => [], // Will be fetched from taxonomy module
             'item_types' => $this->itemService->getItemTypes(),
             'features' => [
@@ -176,19 +252,58 @@ class ItemController extends Controller
             'type' => 'required|string|in:product,service,combo',
             'category_id' => 'nullable|integer',
             'base_price' => 'nullable|numeric|min:0',
-            'cost' => 'nullable|numeric|min:0',
+            'base_cost' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|unique:items,sku,' . $id,
             'barcode' => 'nullable|string|unique:items,barcode,' . $id,
-            'track_stock' => 'boolean',
+            'track_inventory' => 'boolean',
             'is_available' => 'boolean',
             'allow_modifiers' => 'boolean',
             'preparation_time' => 'nullable|integer|min:0',
-            'image' => 'nullable|image|max:2048',
+            'image_url' => 'nullable|string|url',
             'variants' => 'nullable|array',
-            'modifiers' => 'nullable|array',
+            'modifier_groups' => 'nullable|array',
         ]);
         
-        $item = $this->itemService->updateItem($id, $validated);
+        // Transform the data for the service
+        $data = $validated;
+        
+        // Handle image URL - convert to images array format expected by service
+        if (isset($validated['image_url'])) {
+            if (!empty($validated['image_url'])) {
+                // Extract path from URL if it's a full URL
+                $imagePath = $validated['image_url'];
+                if (str_starts_with($imagePath, url('/'))) {
+                    // Remove the base URL to get just the path
+                    $imagePath = str_replace(url('/'), '', $imagePath);
+                    $imagePath = ltrim($imagePath, '/');
+                }
+                // Remove 'storage/' prefix if present as it will be added by the model
+                if (str_starts_with($imagePath, 'storage/')) {
+                    $imagePath = substr($imagePath, 8);
+                }
+                
+                $data['images'] = [
+                    [
+                        'image_path' => $imagePath,
+                        'is_primary' => true,
+                        'sort_order' => 0,
+                        'item_id' => $id,
+                    ]
+                ];
+            } else {
+                // Clear images if image_url is empty
+                $data['images'] = [];
+            }
+            unset($data['image_url']);
+        }
+        
+        // Map track_stock to track_inventory for consistency
+        if (isset($data['track_inventory'])) {
+            $data['track_stock'] = $data['track_inventory'];
+            unset($data['track_inventory']);
+        }
+        
+        $item = $this->itemService->updateItem($id, $data);
         
         return redirect()->route('item.show', $item->id)
             ->with('success', 'Item updated successfully');

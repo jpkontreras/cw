@@ -19,9 +19,11 @@ import { MultiSelectFilter } from './filters';
 interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
   columns?: ColumnDef<TData, TValue>[];
   className?: string;
+  onRowClick?: (item: TData) => void;
+  rowClickRoute?: string;
 }
 
-export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, columns, className }: InertiaDataTableProps<TData, TValue>) {
+export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, columns, className, onRowClick, rowClickRoute }: InertiaDataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
 
@@ -599,9 +601,24 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const item = row.original as any;
-                const handleRowClick = () => {
-                  if (item.id) {
-                    router.visit(`/orders/${item.id}`);
+                const handleRowClick = (e: React.MouseEvent) => {
+                  // Don't navigate if clicking on a button, link, or dropdown
+                  const target = e.target as HTMLElement;
+                  if (
+                    target.tagName === 'BUTTON' || 
+                    target.tagName === 'A' ||
+                    target.closest('button') || 
+                    target.closest('a') ||
+                    target.closest('[role="menuitem"]') ||
+                    target.closest('[role="menu"]')
+                  ) {
+                    return;
+                  }
+                  
+                  if (onRowClick) {
+                    onRowClick(item);
+                  } else if (rowClickRoute && item.id) {
+                    router.visit(rowClickRoute.replace(':id', item.id));
                   }
                 };
                 

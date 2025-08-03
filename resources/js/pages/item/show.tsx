@@ -44,7 +44,13 @@ import {
   Info,
   Plus,
   ShoppingCart,
-  Settings
+  Settings,
+  Tag,
+  Barcode,
+  Building2,
+  Percent,
+  Timer,
+  Calculator
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -55,8 +61,12 @@ interface Variant {
   sku: string | null;
   price: number;
   cost: number | null;
-  track_stock: boolean;
-  is_available: boolean;
+  trackStock?: boolean;
+  isAvailable?: boolean;
+  currentStock?: number;
+  // Legacy snake_case support
+  track_stock?: boolean;
+  is_available?: boolean;
   current_stock?: number;
 }
 
@@ -64,15 +74,22 @@ interface ModifierGroup {
   id: number;
   name: string;
   description: string | null;
-  min_selections: number;
-  max_selections: number;
-  is_required: boolean;
+  minSelections?: number;
+  maxSelections?: number;
+  isRequired?: boolean;
   modifiers: Array<{
     id: number;
     name: string;
-    price_adjustment: number;
-    is_available: boolean;
+    priceAdjustment?: number;
+    isAvailable?: boolean;
+    // Legacy snake_case support
+    price_adjustment?: number;
+    is_available?: boolean;
   }>;
+  // Legacy snake_case support
+  min_selections?: number;
+  max_selections?: number;
+  is_required?: boolean;
 }
 
 interface PriceCalculation {
@@ -115,22 +132,30 @@ interface Item {
   description: string | null;
   type: 'product' | 'service' | 'combo';
   category_name: string | null;
-  base_price: number;
-  cost: number | null;
+  basePrice: number | null;
+  baseCost: number | null;
   sku: string | null;
   barcode: string | null;
-  track_stock: boolean;
-  is_available: boolean;
-  allow_modifiers: boolean;
-  preparation_time: number | null;
-  created_at: string;
-  updated_at: string;
+  trackInventory: boolean;
+  isAvailable: boolean;
+  preparationTime: number | null;
+  createdAt: string;
+  updatedAt: string;
   variants: Variant[];
   images: Array<{
     id: number;
     url: string;
-    is_primary: boolean;
+    isPrimary: boolean;
   }>;
+  // Legacy snake_case support
+  base_price?: number | null;
+  base_cost?: number | null;
+  track_stock?: boolean;
+  is_available?: boolean;
+  preparation_time?: number | null;
+  created_at?: string;
+  updated_at?: string;
+  allow_modifiers?: boolean;
 }
 
 interface PageProps {
@@ -163,14 +188,32 @@ export default function ItemShow({
   features,
   stats
 }: PageProps) {
-  const primaryImage = item.images.find(img => img.is_primary) || item.images[0];
-  const margin = item.cost ? ((item.base_price - item.cost) / item.base_price * 100).toFixed(1) : null;
+  // Handle both camelCase and snake_case properties
+  const basePrice = item.basePrice ?? item.base_price;
+  const cost = item.baseCost ?? item.base_cost ?? (item as any).cost;
+  const isAvailable = item.isAvailable ?? item.is_available;
+  const trackStock = item.trackInventory ?? item.track_stock;
+  const preparationTime = item.preparationTime ?? item.preparation_time;
+  const createdAt = item.createdAt ?? item.created_at;
+  const updatedAt = item.updatedAt ?? item.updated_at;
+  const allowModifiers = item.allow_modifiers ?? false;
+  
+  const primaryImage = item.images?.find(img => img.isPrimary ?? (img as any).is_primary) || item.images?.[0];
+  const margin = cost && basePrice ? ((basePrice - cost) / basePrice * 100).toFixed(1) : null;
   
   const typeStyles = {
     product: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     service: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     combo: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   };
+  
+  const typeIcons = {
+    product: Package,
+    service: Settings,
+    combo: Building2,
+  };
+  
+  const TypeIcon = typeIcons[item.type] || Package;
 
   const stockStatus = inventory ? {
     level: (inventory.quantity_on_hand / (inventory.reorder_quantity * 2)) * 100,
@@ -189,8 +232,8 @@ export default function ItemShow({
           title={
             <div className="flex items-center gap-3">
               <span>{item.name}</span>
-              <Badge variant={item.is_available ? 'success' : 'secondary'}>
-                {item.is_available ? 'Available' : 'Unavailable'}
+              <Badge variant={isAvailable ? 'success' : 'secondary'}>
+                {isAvailable ? 'Available' : 'Unavailable'}
               </Badge>
               <Badge variant="secondary" className={cn(typeStyles[item.type])}>
                 {item.type}
@@ -220,6 +263,133 @@ export default function ItemShow({
         />
         
         <PageLayout.Content>
+          {/* Hero Section with Image */}
+          <div className="mb-6">
+            <Card className="overflow-hidden">
+              <div className="grid md:grid-cols-2 gap-0">
+                {/* Image Section */}
+                <div className="relative bg-gray-50 dark:bg-gray-900">
+                  {primaryImage ? (
+                    <img
+                      src={primaryImage.url}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full min-h-[400px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+                      <div className="text-center p-12">
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full opacity-20" />
+                          </div>
+                          <TypeIcon className="h-16 w-16 mx-auto text-gray-400 dark:text-gray-600 relative z-10" />
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">No image available</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => router.visit(`/items/${item.id}/edit#images`)}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Image
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Type Badge Overlay */}
+                  <div className="absolute top-4 left-4">
+                    <Badge variant="secondary" className={cn('gap-1', typeStyles[item.type])}>
+                      <TypeIcon className="h-3 w-3" />
+                      {item.type}
+                    </Badge>
+                  </div>
+                  
+                  {/* Status Badge Overlay */}
+                  <div className="absolute top-4 right-4">
+                    <Badge variant={isAvailable ? 'success' : 'secondary'}>
+                      {isAvailable ? 'Available' : 'Unavailable'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                {/* Details Section */}
+                <div className="p-6 lg:p-8 space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">{item.name}</h2>
+                    <p className="text-muted-foreground">
+                      {item.description || 'No description available'}
+                    </p>
+                  </div>
+                  
+                  <Separator />
+                  
+                  {/* Key Details Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Tag className="h-4 w-4" />
+                        <span>Category</span>
+                      </div>
+                      <p className="font-medium">{item.category_name || 'Uncategorized'}</p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Timer className="h-4 w-4" />
+                        <span>Prep Time</span>
+                      </div>
+                      <p className="font-medium">
+                        {preparationTime ? `${preparationTime} min` : '—'}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Hash className="h-4 w-4" />
+                        <span>SKU</span>
+                      </div>
+                      <p className="font-medium font-mono text-sm">{item.sku || '—'}</p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Barcode className="h-4 w-4" />
+                        <span>Barcode</span>
+                      </div>
+                      <p className="font-medium font-mono text-sm">{item.barcode || '—'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Price Display */}
+                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Base Price</span>
+                      {margin && (
+                        <Badge variant="outline" className="gap-1">
+                          <Percent className="h-3 w-3" />
+                          {margin}% margin
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-3xl font-bold">
+                        {basePrice !== null ? formatCurrency(basePrice) : '—'}
+                      </span>
+                      {cost !== null && (
+                        <span className="text-sm text-muted-foreground">
+                          Cost: {formatCurrency(cost)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+          
+          {/* Main Content Area */}
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
@@ -236,161 +406,188 @@ export default function ItemShow({
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-6">
-                  {/* Basic Info */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Item Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">SKU</p>
-                          <p className="font-medium">{item.sku || '—'}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Barcode</p>
-                          <p className="font-medium">{item.barcode || '—'}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Category</p>
-                          <p className="font-medium">{item.category_name || 'Uncategorized'}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Preparation Time</p>
-                          <p className="font-medium">
-                            {item.preparation_time ? `${item.preparation_time} minutes` : '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Pricing Overview */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-medium flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          Base Price
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-bold">
+                          {basePrice !== null ? formatCurrency(basePrice) : 'Not set'}
+                        </p>
+                        {basePrice === null && (
+                          <p className="text-xs text-muted-foreground mt-1">Set a price to start selling</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-medium flex items-center gap-2">
+                          <Calculator className="h-4 w-4" />
+                          Cost
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-bold">
+                          {cost !== null ? formatCurrency(cost) : 'Not set'}
+                        </p>
+                        {cost === null && (
+                          <p className="text-xs text-muted-foreground mt-1">Track costs for profit analysis</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-medium flex items-center gap-2">
+                          <Percent className="h-4 w-4" />
+                          Margin
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-bold">
+                          {margin ? `${margin}%` : '—'}
+                        </p>
+                        {!margin && (
+                          <p className="text-xs text-muted-foreground mt-1">Requires price and cost</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                  {/* Pricing Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5" />
-                        Pricing
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Base Price</p>
-                          <p className="text-2xl font-bold">{formatCurrency(item.base_price)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Cost</p>
-                          <p className="text-2xl font-bold">
-                            {item.cost ? formatCurrency(item.cost) : '—'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {margin && (
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Profit Margin</span>
-                            <span className="font-medium">{margin}%</span>
+                  {/* Dynamic Pricing Card */}
+                  {current_price && features.dynamic_pricing && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5" />
+                          Current Pricing
+                        </CardTitle>
+                        <CardDescription>
+                          Price with active rules and adjustments
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between py-2">
+                            <span className="text-sm text-muted-foreground">Base Price</span>
+                            <span className="font-medium">{formatCurrency(current_price.basePrice)}</span>
                           </div>
-                          <Progress value={parseFloat(margin)} className="mt-2" />
-                        </div>
-                      )}
-
-                      {current_price && features.dynamic_pricing && (
-                        <>
-                          <Separator />
-                          <div className="space-y-3">
-                            <h4 className="text-sm font-medium">Current Pricing</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Base Price</span>
-                                <span>{formatCurrency(current_price.basePrice)}</span>
-                              </div>
-                              {current_price.appliedRules && current_price.appliedRules.length > 0 && 
-                                current_price.appliedRules.map((rule, index) => (
-                                  <div key={index} className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">{rule.name}</span>
-                                    <span className={cn(
-                                      rule.adjustment > 0 ? 'text-red-600' : 'text-green-600'
-                                    )}>
-                                      {rule.adjustment > 0 ? '+' : ''}{formatCurrency(rule.adjustment)}
-                                    </span>
-                                  </div>
-                                ))}
+                          {current_price.appliedRules && current_price.appliedRules.length > 0 && (
+                            <>
                               <Separator />
-                              <div className="flex justify-between font-medium">
-                                <span>Final Price</span>
-                                <span className="text-lg">{formatCurrency(current_price.total)}</span>
-                              </div>
-                            </div>
+                              {current_price.appliedRules.map((rule, index) => (
+                                <div key={index} className="flex justify-between py-2">
+                                  <span className="text-sm text-muted-foreground">{rule.name}</span>
+                                  <span className={cn(
+                                    'font-medium',
+                                    rule.adjustment > 0 ? 'text-red-600' : 'text-green-600'
+                                  )}>
+                                    {rule.adjustment > 0 ? '+' : ''}{formatCurrency(rule.adjustment)}
+                                  </span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                          <Separator />
+                          <div className="flex justify-between py-2">
+                            <span className="font-medium">Final Price</span>
+                            <span className="text-xl font-bold">{formatCurrency(current_price.total)}</span>
                           </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Inventory Card */}
-                  {features.inventory && item.track_stock && inventory && (
+                  {features.inventory && trackStock && inventory && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Box className="h-5 w-5" />
-                          Inventory
+                          Inventory Status
                         </CardTitle>
+                        <CardDescription>
+                          Real-time stock levels and tracking
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="space-y-2">
+                        {/* Stock Level Visual */}
+                        <div className="space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Stock Level</span>
+                            <div>
+                              <p className="text-2xl font-bold">{inventory.quantity_on_hand}</p>
+                              <p className="text-sm text-muted-foreground">units available</p>
+                            </div>
                             <Badge variant={stockStatus?.status === 'critical' ? 'destructive' : 
-                                          stockStatus?.status === 'low' ? 'warning' : 'success'}>
+                                          stockStatus?.status === 'low' ? 'warning' : 'success'} 
+                                   className="h-8 px-3">
                               {stockStatus?.status === 'critical' ? 'Critical' :
-                               stockStatus?.status === 'low' ? 'Low Stock' : 'Good'}
+                               stockStatus?.status === 'low' ? 'Low Stock' : 'In Stock'}
                             </Badge>
                           </div>
-                          <Progress value={stockStatus?.level} className="h-3" />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">On Hand</p>
-                            <p className="text-xl font-semibold">{inventory.quantity_on_hand}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Reserved</p>
-                            <p className="text-xl font-semibold">{inventory.quantity_reserved}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Min Level</p>
-                            <p className="font-medium">{inventory.min_quantity}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Reorder Point</p>
-                            <p className="font-medium">{inventory.reorder_quantity}</p>
-                          </div>
+                          <Progress value={stockStatus?.level} className="h-2" />
                         </div>
                         
                         <Separator />
                         
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Last Counted</span>
-                            <span>{formatDate(inventory.last_counted_at)}</span>
+                        {/* Stock Details Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Reserved</p>
+                            <p className="text-lg font-semibold">{inventory.quantity_reserved}</p>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Last Restocked</span>
-                            <span>{formatDate(inventory.last_restocked_at)}</span>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Available</p>
+                            <p className="text-lg font-semibold">
+                              {inventory.quantity_on_hand - inventory.quantity_reserved}
+                            </p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Min Level</p>
+                            <p className="font-semibold">{inventory.min_quantity}</p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Reorder At</p>
+                            <p className="font-semibold">{inventory.reorder_quantity}</p>
                           </div>
                         </div>
                         
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={() => router.visit(`/inventory?item_id=${item.id}`)}
-                        >
-                          Manage Inventory
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => router.visit(`/inventory/adjustments?item_id=${item.id}`)}
+                          >
+                            <Plus className="mr-1 h-3 w-3" />
+                            Adjust Stock
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => router.visit(`/inventory?item_id=${item.id}`)}
+                          >
+                            View History
+                          </Button>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground space-y-1 pt-2">
+                          <div className="flex justify-between">
+                            <span>Last counted</span>
+                            <span>{formatDate(inventory.last_counted_at)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Last restocked</span>
+                            <span>{formatDate(inventory.last_restocked_at)}</span>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   )}
@@ -403,34 +600,43 @@ export default function ItemShow({
                           <Beaker className="h-5 w-5" />
                           Recipe
                         </CardTitle>
+                        <CardDescription>
+                          Production recipe and costs
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Yield</p>
-                            <p className="font-medium">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Yield</p>
+                            <p className="font-semibold">
                               {recipe.yield_quantity} {recipe.yield_unit}
                             </p>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Ingredients</p>
-                            <p className="font-medium">{recipe.ingredients_count} items</p>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Ingredients</p>
+                            <p className="font-semibold">{recipe.ingredients_count} items</p>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Total Cost</p>
-                            <p className="font-medium">{formatCurrency(recipe.total_cost)}</p>
+                        </div>
+                        
+                        <div className="border rounded-lg p-4 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Total Cost</span>
+                            <span className="font-medium">{formatCurrency(recipe.total_cost)}</span>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Cost per Portion</p>
-                            <p className="font-medium">{formatCurrency(recipe.portion_cost)}</p>
+                          <Separator />
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Cost per Portion</span>
+                            <span className="text-lg font-bold">{formatCurrency(recipe.portion_cost)}</span>
                           </div>
                         </div>
                         
                         <Button 
                           variant="outline" 
+                          size="sm"
                           className="w-full"
                           onClick={() => router.visit(`/recipes/${recipe.id}`)}
                         >
+                          <FileText className="mr-2 h-3 w-3" />
                           View Recipe Details
                         </Button>
                       </CardContent>
@@ -467,12 +673,12 @@ export default function ItemShow({
                               <TableCell>{variant.cost ? formatCurrency(variant.cost) : '—'}</TableCell>
                               {features.inventory && (
                                 <TableCell>
-                                  {variant.track_stock ? variant.current_stock || 0 : '—'}
+                                  {(variant.trackStock ?? variant.track_stock) ? (variant.currentStock ?? variant.current_stock ?? 0) : '—'}
                                 </TableCell>
                               )}
                               <TableCell>
-                                <Badge variant={variant.is_available ? 'success' : 'secondary'}>
-                                  {variant.is_available ? 'Available' : 'Unavailable'}
+                                <Badge variant={(variant.isAvailable ?? variant.is_available) ? 'success' : 'secondary'}>
+                                  {(variant.isAvailable ?? variant.is_available) ? 'Available' : 'Unavailable'}
                                 </Badge>
                               </TableCell>
                             </TableRow>
@@ -514,12 +720,12 @@ export default function ItemShow({
                               <TableRow key={modifier.id}>
                                 <TableCell>{modifier.name}</TableCell>
                                 <TableCell>
-                                  {modifier.price_adjustment > 0 && '+'}
-                                  {formatCurrency(modifier.price_adjustment)}
+                                  {((modifier.priceAdjustment ?? modifier.price_adjustment) ?? 0) > 0 && '+'}
+                                  {formatCurrency((modifier.priceAdjustment ?? modifier.price_adjustment) ?? 0)}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant={modifier.is_available ? 'success' : 'secondary'}>
-                                    {modifier.is_available ? 'Available' : 'Unavailable'}
+                                  <Badge variant={(modifier.isAvailable ?? modifier.is_available) ? 'success' : 'secondary'}>
+                                    {(modifier.isAvailable ?? modifier.is_available) ? 'Available' : 'Unavailable'}
                                   </Badge>
                                 </TableCell>
                               </TableRow>
@@ -535,21 +741,23 @@ export default function ItemShow({
                   {stats ? (
                     <>
                       <div className="grid gap-4 md:grid-cols-2">
-                        <Card>
+                        <Card className="relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-400/10 rounded-full -mr-16 -mt-16" />
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Sold</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                            <ShoppingCart className="h-4 w-4 text-muted-foreground relative z-10" />
                           </CardHeader>
                           <CardContent>
-                            <div className="text-2xl font-bold">{stats.total_sold}</div>
+                            <div className="text-2xl font-bold">{stats.total_sold.toLocaleString()}</div>
                             <p className="text-xs text-muted-foreground">units sold to date</p>
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className="relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 dark:bg-green-400/10 rounded-full -mr-16 -mt-16" />
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <DollarSign className="h-4 w-4 text-muted-foreground relative z-10" />
                           </CardHeader>
                           <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(stats.revenue)}</div>
@@ -557,10 +765,11 @@ export default function ItemShow({
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className="relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 dark:bg-purple-400/10 rounded-full -mr-16 -mt-16" />
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            <TrendingUp className="h-4 w-4 text-muted-foreground relative z-10" />
                           </CardHeader>
                           <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(stats.avg_order_value)}</div>
@@ -568,23 +777,63 @@ export default function ItemShow({
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className="relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 dark:bg-orange-400/10 rounded-full -mr-16 -mt-16" />
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Popularity Rank</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                            <BarChart3 className="h-4 w-4 text-muted-foreground relative z-10" />
                           </CardHeader>
                           <CardContent>
                             <div className="text-2xl font-bold">#{stats.popularity_rank}</div>
                             <p className="text-xs text-muted-foreground">in your menu</p>
+                            <Progress value={100 - (stats.popularity_rank * 10)} className="mt-2 h-1" />
                           </CardContent>
                         </Card>
                       </div>
+                      
+                      {/* Performance Insights */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Performance Insights</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Profit Margin</span>
+                              <span className="font-medium">
+                                {cost && basePrice ? 
+                                  `${((basePrice - cost) / basePrice * 100).toFixed(1)}%` : '—'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Avg Daily Sales</span>
+                              <span className="font-medium">
+                                {stats.total_sold > 0 ? Math.round(stats.total_sold / 30) : 0} units
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Revenue per Unit</span>
+                              <span className="font-medium">
+                                {stats.total_sold > 0 ? formatCurrency(stats.revenue / stats.total_sold) : '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </>
                   ) : (
                     <Card>
-                      <CardContent className="flex flex-col items-center justify-center py-12">
-                        <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No analytics data available yet</p>
+                      <CardContent className="flex flex-col items-center justify-center py-16">
+                        <div className="relative mb-6">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full opacity-20" />
+                          </div>
+                          <BarChart3 className="h-12 w-12 text-muted-foreground relative z-10" />
+                        </div>
+                        <p className="text-lg font-medium mb-2">No analytics data yet</p>
+                        <p className="text-sm text-muted-foreground text-center max-w-sm">
+                          Analytics will appear here once this item starts generating sales
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -593,47 +842,26 @@ export default function ItemShow({
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Image */}
-              {primaryImage ? (
-                <Card>
-                  <CardContent className="p-0">
-                    <img
-                      src={primaryImage.url}
-                      alt={item.name}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">No image available</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+            <div className="space-y-4">
 
               {/* Quick Actions */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {features.inventory && item.track_stock && (
+                  {features.dynamic_pricing && basePrice === null && (
                     <Button 
-                      variant="outline" 
+                      variant="default" 
                       className="w-full justify-start"
-                      onClick={() => router.visit(`/inventory/adjustments?item_id=${item.id}`)}
+                      onClick={() => router.visit(`/items/${item.id}/edit#pricing`)}
                     >
-                      <Box className="mr-2 h-4 w-4" />
-                      Adjust Stock
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Set Price
                     </Button>
                   )}
                   
-                  {features.dynamic_pricing && (
+                  {features.dynamic_pricing && basePrice !== null && (
                     <Button 
                       variant="outline" 
                       className="w-full justify-start"
@@ -644,7 +872,18 @@ export default function ItemShow({
                     </Button>
                   )}
                   
-                  {features.modifiers && item.allow_modifiers && (
+                  {features.inventory && trackStock && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => router.visit(`/inventory/adjustments?item_id=${item.id}`)}
+                    >
+                      <Box className="mr-2 h-4 w-4" />
+                      Adjust Stock
+                    </Button>
+                  )}
+                  
+                  {features.modifiers && allowModifiers && (
                     <Button 
                       variant="outline" 
                       className="w-full justify-start"
@@ -670,49 +909,41 @@ export default function ItemShow({
 
               {/* Meta Information */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">ID:</span>
-                    <span className="font-mono">{item.id}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Created:</span>
-                    <span>{formatDate(item.created_at)}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Updated:</span>
-                    <span>{formatDate(item.updated_at)}</span>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Box className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Stock Tracking:</span>
-                      <Badge variant={item.track_stock ? 'default' : 'secondary'}>
-                        {item.track_stock ? 'Enabled' : 'Disabled'}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground mb-1">ID</p>
+                      <p className="font-mono font-medium">#{item.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground mb-1">Stock</p>
+                      <Badge variant={trackStock ? 'default' : 'secondary'} className="text-xs">
+                        {trackStock ? 'Tracked' : 'Not Tracked'}
                       </Badge>
                     </div>
-                    
-                    {features.modifiers && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Settings className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Modifiers:</span>
-                        <Badge variant={item.allow_modifiers ? 'default' : 'secondary'}>
-                          {item.allow_modifiers ? 'Allowed' : 'Not Allowed'}
+                    <div>
+                      <p className="text-muted-foreground mb-1">Created</p>
+                      <p className="font-medium">{formatDate(createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground mb-1">Updated</p>
+                      <p className="font-medium">{formatDate(updatedAt)}</p>
+                    </div>
+                  </div>
+                  
+                  {features.modifiers && (
+                    <div className="pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Modifiers</span>
+                        <Badge variant={allowModifiers ? 'default' : 'secondary'} className="text-xs">
+                          {allowModifiers ? 'Allowed' : 'Not Allowed'}
                         </Badge>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
