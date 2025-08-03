@@ -67,7 +67,7 @@ class CreateOrderData extends BaseData
      */
     public function getEstimatedSubtotal(): float
     {
-        return $this->items->sum(fn($item) => $item->quantity * $item->unit_price);
+        return $this->items->sum(fn($item) => $item->quantity * $item->unitPrice);
     }
 
     /**
@@ -87,7 +87,7 @@ class CreateOrderData extends BaseData
             'type' => ['required', 'in:dine_in,takeout,delivery,catering'],
             'tableNumber' => ['nullable', 'integer', 'min:1', 'required_if:type,dine_in'],
             'deliveryAddress' => ['nullable', 'string', 'required_if:type,delivery'],
-            'items.*.item_id' => ['required', 'integer', 'min:1'],
+            'items.*.itemId' => ['required', 'integer', 'min:1'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'customerPhone' => ['nullable', 'string', 'regex:/^[0-9+\-\s()]+$/'],
             'customerEmail' => ['nullable', 'email'],

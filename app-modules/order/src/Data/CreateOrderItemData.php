@@ -20,13 +20,13 @@ class CreateOrderItemData extends BaseData
 {
     public function __construct(
         #[Required, Numeric]
-        public readonly int $item_id,
+        public readonly int $itemId,
         
         #[Required, Numeric, Min(1)]
         public readonly int $quantity,
         
         #[Numeric, Min(0)]
-        public readonly float $unit_price = 0,
+        public readonly float $unitPrice = 0,
         
         #[StringType]
         public readonly ?string $notes = null,
@@ -48,7 +48,7 @@ class CreateOrderItemData extends BaseData
             $modifiersTotal = array_sum(array_map(fn($mod) => (float)($mod['price'] ?? 0), $this->modifiers));
         }
         
-        return ($this->unit_price + $modifiersTotal) * $this->quantity;
+        return ($this->unitPrice + $modifiersTotal) * $this->quantity;
     }
 
     /**

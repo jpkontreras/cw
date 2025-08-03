@@ -90,20 +90,20 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             // Create order items
             foreach ($data->items as $itemData) {
                 // Get item details from item repository
-                $item = $this->itemRepository->find($itemData->item_id);
+                $item = $this->itemRepository->find($itemData->itemId);
                 if (!$item) {
-                    throw new InvalidOrderException("Item with ID {$itemData->item_id} not found");
+                    throw new InvalidOrderException("Item with ID {$itemData->itemId} not found");
                 }
                 
                 // Get price based on location if provided
-                $unitPrice = $itemData->unit_price ?: $this->itemRepository->getCurrentPrice(
-                    $itemData->item_id, 
+                $unitPrice = $itemData->unitPrice ?: $this->itemRepository->getCurrentPrice(
+                    $itemData->itemId, 
                     $data->locationId
                 );
                 
                 $this->orderItemRepository->create([
                     'order_id' => $order->id,
-                    'item_id' => $itemData->item_id,
+                    'item_id' => $itemData->itemId,
                     'item_name' => $item->name,
                     'quantity' => $itemData->quantity,
                     'unit_price' => $unitPrice,

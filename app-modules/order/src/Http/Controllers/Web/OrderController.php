@@ -145,9 +145,9 @@ class OrderController extends Controller
                 'specialInstructions' => $requestData['specialInstructions'] ?? null,
                 'items' => array_map(function ($item) {
                     return [
-                        'item_id' => $item['item_id'] ?? null,  // Frontend already sends snake_case for this
+                        'itemId' => $item['itemId'] ?? $item['item_id'] ?? null,  // Support both camelCase and snake_case for backward compatibility
                         'quantity' => $item['quantity'] ?? 1,
-                        'unit_price' => 0, // Will be set by service
+                        'unitPrice' => $item['unitPrice'] ?? $item['unit_price'] ?? 0, // Will be set by service
                         'notes' => $item['notes'] ?? null,
                         'modifiers' => $item['modifiers'] ?? [],
                     ];

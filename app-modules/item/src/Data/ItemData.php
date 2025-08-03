@@ -29,47 +29,47 @@ class ItemData extends BaseData
         public readonly ?string $barcode,
 
         #[Numeric, Min(0)]
-        public readonly ?float $base_price,
+        public readonly ?float $basePrice,
 
         #[Numeric, Min(0)]
-        public readonly float $base_cost = 0,
+        public readonly float $baseCost = 0,
 
         #[Numeric, Min(0)]
-        public readonly int $preparation_time = 0,
+        public readonly int $preparationTime = 0,
 
-        public readonly bool $is_active = true,
+        public readonly bool $isActive = true,
 
-        public readonly bool $is_available = true,
+        public readonly bool $isAvailable = true,
 
-        public readonly bool $is_featured = false,
+        public readonly bool $isFeatured = false,
 
-        public readonly bool $track_inventory = false,
-
-        #[Numeric, Min(0)]
-        public readonly int $stock_quantity = 0,
+        public readonly bool $trackInventory = false,
 
         #[Numeric, Min(0)]
-        public readonly int $low_stock_threshold = 10,
+        public readonly int $stockQuantity = 0,
+
+        #[Numeric, Min(0)]
+        public readonly int $lowStockThreshold = 10,
 
         #[Required, In(['product', 'service', 'combo'])]
         public readonly string $type = 'product',
 
         public readonly ?array $allergens = null,
 
-        public readonly ?array $nutritional_info = null,
+        public readonly ?array $nutritionalInfo = null,
 
         #[Numeric, Min(0)]
-        public readonly int $sort_order = 0,
+        public readonly int $sortOrder = 0,
 
-        public readonly ?Carbon $available_from = null,
+        public readonly ?Carbon $availableFrom = null,
 
-        public readonly ?Carbon $available_until = null,
+        public readonly ?Carbon $availableUntil = null,
 
-        public readonly ?Carbon $created_at = null,
+        public readonly ?Carbon $createdAt = null,
 
-        public readonly ?Carbon $updated_at = null,
+        public readonly ?Carbon $updatedAt = null,
 
-        public readonly ?Carbon $deleted_at = null,
+        public readonly ?Carbon $deletedAt = null,
     ) {}
 
     /**
@@ -77,17 +77,17 @@ class ItemData extends BaseData
      */
     public function isCurrentlyAvailable(): bool
     {
-        if (!$this->is_available || !$this->is_active) {
+        if (!$this->isAvailable || !$this->isActive) {
             return false;
         }
 
         $now = now();
 
-        if ($this->available_from && $now->isBefore($this->available_from)) {
+        if ($this->availableFrom && $now->isBefore($this->availableFrom)) {
             return false;
         }
 
-        if ($this->available_until && $now->isAfter($this->available_until)) {
+        if ($this->availableUntil && $now->isAfter($this->availableUntil)) {
             return false;
         }
 
