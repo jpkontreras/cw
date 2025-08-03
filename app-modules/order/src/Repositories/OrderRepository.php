@@ -272,6 +272,10 @@ class OrderRepository implements OrderRepositoryInterface
         if (!empty($filters['status'])) {
             if (is_array($filters['status'])) {
                 $query->whereIn('status', $filters['status']);
+            } elseif (str_contains($filters['status'], ',')) {
+                // Handle comma-separated values
+                $statuses = array_map('trim', explode(',', $filters['status']));
+                $query->whereIn('status', $statuses);
             } else {
                 $query->where('status', $filters['status']);
             }
@@ -281,17 +285,21 @@ class OrderRepository implements OrderRepositoryInterface
         if (!empty($filters['type'])) {
             if (is_array($filters['type'])) {
                 $query->whereIn('type', $filters['type']);
+            } elseif (str_contains($filters['type'], ',')) {
+                // Handle comma-separated values
+                $types = array_map('trim', explode(',', $filters['type']));
+                $query->whereIn('type', $types);
             } else {
                 $query->where('type', $filters['type']);
             }
         }
 
         // Location filter
-        if (!empty($filters['location_id'])) {
-            if (is_array($filters['location_id'])) {
-                $query->whereIn('location_id', $filters['location_id']);
+        if (!empty($filters['locationId'])) {
+            if (is_array($filters['locationId'])) {
+                $query->whereIn('location_id', $filters['locationId']);
             } else {
-                $query->where('location_id', $filters['location_id']);
+                $query->where('location_id', $filters['locationId']);
             }
         }
 

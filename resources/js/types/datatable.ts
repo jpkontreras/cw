@@ -1,17 +1,17 @@
 // DataTable Type Definitions
 
 export interface DataTablePagination {
-  current_page: number;
-  last_page: number;
-  per_page: number;
+  currentPage: number;
+  lastPage: number;
+  perPage: number;
   total: number;
   from: number | null;
   to: number | null;
   path: string;
-  first_page_url: string;
-  last_page_url: string;
-  next_page_url: string | null;
-  prev_page_url: string | null;
+  firstPageUrl: string;
+  lastPageUrl: string;
+  nextPageUrl: string | null;
+  prevPageUrl: string | null;
   links: PaginationLink[];
 }
 

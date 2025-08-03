@@ -75,71 +75,71 @@ interface PriceRule {
   type: 'percentage_discount' | 'fixed_discount' | 'override' | 'multiplier';
   value: number;
   priority: number;
-  start_date: string | null;
-  end_date: string | null;
-  time_start: string | null;
-  time_end: string | null;
-  days_of_week: number[] | null;
-  is_active: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  timeStart: string | null;
+  timeEnd: string | null;
+  daysOfWeek: number[] | null;
+  isActive: boolean;
   conditions: {
-    item_ids?: number[];
-    category_ids?: number[];
-    location_ids?: number[];
-    customer_group_ids?: number[];
-    min_quantity?: number;
-    max_quantity?: number;
+    itemIds?: number[];
+    categoryIds?: number[];
+    locationIds?: number[];
+    customerGroupIds?: number[];
+    minQuantity?: number;
+    maxQuantity?: number;
   };
-  applied_count: number;
-  total_discount_amount: number;
+  appliedCount: number;
+  totalDiscountAmount: number;
 }
 
 interface PriceSimulation {
-  item_name: string;
-  base_price: number;
-  final_price: number;
-  applied_rules: Array<{
-    rule_name: string;
+  itemName: string;
+  basePrice: number;
+  finalPrice: number;
+  appliedRules: Array<{
+    ruleName: string;
     adjustment: number;
   }>;
 }
 
 interface PageProps {
-  price_rules: PriceRule[];
+  priceRules: PriceRule[];
   pagination: any;
   metadata: any;
-  rule_types: Array<{ value: string; label: string }>;
-  active_rules_count: number;
-  total_discount_given: number;
-  avg_discount_percentage: number;
-  upcoming_rules: PriceRule[];
-  expiring_rules: PriceRule[];
+  ruleTypes: Array<{ value: string; label: string }>;
+  activeRulesCount: number;
+  totalDiscountGiven: number;
+  avgDiscountPercentage: number;
+  upcomingRules: PriceRule[];
+  expiringRules: PriceRule[];
   features: {
-    time_based_pricing: boolean;
-    location_pricing: boolean;
-    customer_group_pricing: boolean;
-    quantity_pricing: boolean;
+    timeBasedPricing: boolean;
+    locationPricing: boolean;
+    customerGroupPricing: boolean;
+    quantityPricing: boolean;
   };
-  items: Array<{ id: number; name: string; base_price: number }>;
+  items: Array<{ id: number; name: string; basePrice: number }>;
   categories: Array<{ id: number; name: string }>;
   locations: Array<{ id: number; name: string }>;
-  customer_groups: Array<{ id: number; name: string }>;
+  customerGroups: Array<{ id: number; name: string }>;
 }
 
 export default function PricingIndex({ 
-  price_rules, 
+  priceRules, 
   pagination, 
   metadata,
-  rule_types,
-  active_rules_count,
-  total_discount_given,
-  avg_discount_percentage,
-  upcoming_rules,
-  expiring_rules,
+  ruleTypes,
+  activeRulesCount,
+  totalDiscountGiven,
+  avgDiscountPercentage,
+  upcomingRules,
+  expiringRules,
   features,
   items,
   categories,
   locations,
-  customer_groups
+  customerGroups
 }: PageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<PriceRule | null>(null);
@@ -187,9 +187,9 @@ export default function PricingIndex({
               <Badge variant="outline" className="text-xs">
                 Priority: {rule.priority}
               </Badge>
-              {rule.applied_count > 0 && (
+              {rule.appliedCount > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  Applied {rule.applied_count} times
+                  Applied {rule.appliedCount} times
                 </span>
               )}
             </div>
@@ -242,17 +242,17 @@ export default function PricingIndex({
         const rule = row.original;
         const conditions = [];
         
-        if (rule.conditions.item_ids?.length) {
-          conditions.push(`${rule.conditions.item_ids.length} items`);
+        if (rule.conditions.itemIds?.length) {
+          conditions.push(`${rule.conditions.itemIds.length} items`);
         }
-        if (rule.conditions.category_ids?.length) {
-          conditions.push(`${rule.conditions.category_ids.length} categories`);
+        if (rule.conditions.categoryIds?.length) {
+          conditions.push(`${rule.conditions.categoryIds.length} categories`);
         }
-        if (rule.conditions.location_ids?.length) {
-          conditions.push(`${rule.conditions.location_ids.length} locations`);
+        if (rule.conditions.locationIds?.length) {
+          conditions.push(`${rule.conditions.locationIds.length} locations`);
         }
-        if (rule.conditions.min_quantity) {
-          conditions.push(`Min qty: ${rule.conditions.min_quantity}`);
+        if (rule.conditions.minQuantity) {
+          conditions.push(`Min qty: ${rule.conditions.minQuantity}`);
         }
         
         return (
@@ -274,9 +274,9 @@ export default function PricingIndex({
       header: 'Schedule',
       cell: ({ row }) => {
         const rule = row.original;
-        const hasDateRange = rule.start_date || rule.end_date;
-        const hasTimeRange = rule.time_start && rule.time_end;
-        const hasDays = rule.days_of_week && rule.days_of_week.length > 0;
+        const hasDateRange = rule.startDate || rule.endDate;
+        const hasTimeRange = rule.timeStart && rule.timeEnd;
+        const hasDays = rule.daysOfWeek && rule.daysOfWeek.length > 0;
         
         return (
           <div className="space-y-1 text-sm">
@@ -284,8 +284,8 @@ export default function PricingIndex({
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs">
-                  {rule.start_date ? formatDate(rule.start_date) : 'Start'} - 
-                  {rule.end_date ? formatDate(rule.end_date) : 'End'}
+                  {rule.startDate ? formatDate(rule.startDate) : 'Start'} - 
+                  {rule.endDate ? formatDate(rule.endDate) : 'End'}
                 </span>
               </div>
             )}
@@ -293,7 +293,7 @@ export default function PricingIndex({
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs">
-                  {formatTime(rule.time_start)} - {formatTime(rule.time_end)}
+                  {formatTime(rule.timeStart)} - {formatTime(rule.timeEnd)}
                 </span>
               </div>
             )}
@@ -312,7 +312,7 @@ export default function PricingIndex({
         return (
           <div className="text-right">
             <div className="font-medium">
-              {formatCurrency(rule.total_discount_amount)}
+              {formatCurrency(rule.totalDiscountAmount)}
             </div>
             <span className="text-xs text-muted-foreground">
               discount given
@@ -325,8 +325,8 @@ export default function PricingIndex({
       accessorKey: 'is_active',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
-          {row.original.is_active ? 'Active' : 'Inactive'}
+        <Badge variant={row.original.isActive ? 'success' : 'secondary'}>
+          {row.original.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
     },
@@ -353,7 +353,7 @@ export default function PricingIndex({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleToggleActive(rule)}>
                 <Power className="mr-2 h-4 w-4" />
-                {rule.is_active ? 'Deactivate' : 'Activate'}
+                {rule.isActive ? 'Deactivate' : 'Activate'}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
@@ -377,18 +377,18 @@ export default function PricingIndex({
       type: rule.type,
       value: rule.value.toString(),
       priority: rule.priority.toString(),
-      start_date: rule.start_date || '',
-      end_date: rule.end_date || '',
-      time_start: rule.time_start || '',
-      time_end: rule.time_end || '',
-      days_of_week: rule.days_of_week || [],
-      is_active: rule.is_active,
-      item_ids: rule.conditions.item_ids || [],
-      category_ids: rule.conditions.category_ids || [],
-      location_ids: rule.conditions.location_ids || [],
-      customer_group_ids: rule.conditions.customer_group_ids || [],
-      min_quantity: rule.conditions.min_quantity?.toString() || '',
-      max_quantity: rule.conditions.max_quantity?.toString() || '',
+      startDate: rule.startDate || '',
+      endDate: rule.endDate || '',
+      timeStart: rule.timeStart || '',
+      timeEnd: rule.timeEnd || '',
+      daysOfWeek: rule.daysOfWeek || [],
+      isActive: rule.isActive,
+      itemIds: rule.conditions.itemIds || [],
+      categoryIds: rule.conditions.categoryIds || [],
+      locationIds: rule.conditions.locationIds || [],
+      customerGroupIds: rule.conditions.customerGroupIds || [],
+      minQuantity: rule.conditions.minQuantity?.toString() || '',
+      maxQuantity: rule.conditions.maxQuantity?.toString() || '',
     });
     setCreateDialogOpen(true);
   };
@@ -400,18 +400,18 @@ export default function PricingIndex({
       type: rule.type,
       value: rule.value.toString(),
       priority: rule.priority.toString(),
-      start_date: rule.start_date || '',
-      end_date: rule.end_date || '',
-      time_start: rule.time_start || '',
-      time_end: rule.time_end || '',
-      days_of_week: rule.days_of_week || [],
+      startDate: rule.startDate || '',
+      endDate: rule.endDate || '',
+      timeStart: rule.timeStart || '',
+      timeEnd: rule.timeEnd || '',
+      daysOfWeek: rule.daysOfWeek || [],
       is_active: false,
-      item_ids: rule.conditions.item_ids || [],
-      category_ids: rule.conditions.category_ids || [],
-      location_ids: rule.conditions.location_ids || [],
-      customer_group_ids: rule.conditions.customer_group_ids || [],
-      min_quantity: rule.conditions.min_quantity?.toString() || '',
-      max_quantity: rule.conditions.max_quantity?.toString() || '',
+      itemIds: rule.conditions.itemIds || [],
+      categoryIds: rule.conditions.categoryIds || [],
+      locationIds: rule.conditions.locationIds || [],
+      customerGroupIds: rule.conditions.customerGroupIds || [],
+      minQuantity: rule.conditions.minQuantity?.toString() || '',
+      maxQuantity: rule.conditions.maxQuantity?.toString() || '',
     });
     setCreateDialogOpen(true);
   };
@@ -445,7 +445,7 @@ export default function PricingIndex({
     post('/pricing/simulate', {
       data: simData,
       onSuccess: (page: any) => {
-        setSimulationResults(page.props.simulation_results);
+        setSimulationResults(page.props.simulationResults);
       },
     });
   };
@@ -453,32 +453,32 @@ export default function PricingIndex({
   const statsCards = [
     {
       title: 'Active Rules',
-      value: active_rules_count,
+      value: activeRulesCount,
       icon: Target,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     },
     {
       title: 'Total Discounts',
-      value: formatCurrency(total_discount_given),
+      value: formatCurrency(totalDiscountGiven),
       icon: TrendingDown,
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
     },
     {
       title: 'Avg Discount',
-      value: `${avg_discount_percentage.toFixed(1)}%`,
+      value: `${avgDiscountPercentage.toFixed(1)}%`,
       icon: Percent,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     },
     {
       title: 'Expiring Soon',
-      value: expiring_rules.length,
+      value: expiringRules.length,
       icon: AlertCircle,
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-      alert: expiring_rules.length > 0,
+      alert: expiringRules.length > 0,
     },
   ];
 
@@ -493,7 +493,7 @@ export default function PricingIndex({
   ];
 
   // Check if pricing rules are empty
-  const isEmpty = price_rules.length === 0;
+  const isEmpty = priceRules.length === 0;
 
   return (
     <AppLayout>
@@ -591,7 +591,7 @@ export default function PricingIndex({
             <TabsContent value="all" className="mt-6">
               <InertiaDataTable
                 columns={columns}
-                data={price_rules}
+                data={priceRules}
                 pagination={pagination}
                 filters={metadata?.filters}
               />
@@ -606,14 +606,14 @@ export default function PricingIndex({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {upcoming_rules.length > 0 ? (
+                  {upcomingRules.length > 0 ? (
                     <div className="space-y-4">
-                      {upcoming_rules.map((rule) => (
+                      {upcomingRules.map((rule) => (
                         <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div>
                             <h4 className="font-medium">{rule.name}</h4>
                             <p className="text-sm text-muted-foreground mt-1">
-                              Starts {formatDate(rule.start_date!)}
+                              Starts {formatDate(rule.startDate!)}
                             </p>
                           </div>
                           <Button
@@ -646,14 +646,14 @@ export default function PricingIndex({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {expiring_rules.length > 0 ? (
+                  {expiringRules.length > 0 ? (
                     <div className="space-y-4">
-                      {expiring_rules.map((rule) => (
+                      {expiringRules.map((rule) => (
                         <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg border-amber-200 dark:border-amber-900">
                           <div>
                             <h4 className="font-medium">{rule.name}</h4>
                             <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-                              Expires {formatDate(rule.end_date!)}
+                              Expires {formatDate(rule.endDate!)}
                             </p>
                           </div>
                           <div className="flex gap-2">
@@ -758,7 +758,7 @@ export default function PricingIndex({
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {rule_types.map((type) => (
+                        {ruleTypes.map((type) => (
                           <SelectItem key={type.value} value={type.value}>
                             {type.label}
                           </SelectItem>
@@ -798,7 +798,7 @@ export default function PricingIndex({
                     <Input
                       id="start_date"
                       type="date"
-                      value={data.start_date}
+                      value={data.startDate}
                       onChange={(e) => setData('start_date', e.target.value)}
                     />
                   </div>
@@ -808,20 +808,20 @@ export default function PricingIndex({
                     <Input
                       id="end_date"
                       type="date"
-                      value={data.end_date}
+                      value={data.endDate}
                       onChange={(e) => setData('end_date', e.target.value)}
                     />
                   </div>
                 </div>
                 
-                {features.time_based_pricing && (
+                {features.timeBasedPricing && (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="time_start">Start Time</Label>
                       <Input
                         id="time_start"
                         type="time"
-                        value={data.time_start}
+                        value={data.timeStart}
                         onChange={(e) => setData('time_start', e.target.value)}
                       />
                     </div>
@@ -831,7 +831,7 @@ export default function PricingIndex({
                       <Input
                         id="time_end"
                         type="time"
-                        value={data.time_end}
+                        value={data.timeEnd}
                         onChange={(e) => setData('time_end', e.target.value)}
                       />
                     </div>
@@ -859,7 +859,7 @@ export default function PricingIndex({
                   </Select>
                 </div>
                 
-                {features.location_pricing && (
+                {features.locationPricing && (
                   <div className="space-y-2">
                     <Label>Locations</Label>
                     <Select>
@@ -878,7 +878,7 @@ export default function PricingIndex({
                   </div>
                 )}
                 
-                {features.quantity_pricing && (
+                {features.quantityPricing && (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="min_quantity">Min Quantity</Label>

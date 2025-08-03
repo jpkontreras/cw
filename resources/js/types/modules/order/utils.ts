@@ -73,7 +73,7 @@ export const getKitchenStatusLabel = (status: KitchenStatus): string => {
 
 // Order calculations
 export const calculateSubtotal = (items: OrderItem[]): number => {
-  return items.reduce((sum, item) => sum + item.total_price, 0);
+  return items.reduce((sum, item) => sum + item.totalPrice, 0);
 };
 
 export const calculateTax = (subtotal: number): number => {

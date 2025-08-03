@@ -453,8 +453,8 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $query = Order::query();
 
         // Apply same filters as listing
-        if (!empty($filters['location_id'])) {
-            $query->where('location_id', $filters['location_id']);
+        if (!empty($filters['locationId'])) {
+            $query->where('location_id', $filters['locationId']);
         }
 
         // Date filter for stats (default to today)
@@ -507,14 +507,14 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $completionRate = $totalOrders > 0 ? ($completedOrders / $totalOrders) * 100 : 0;
 
         return [
-            'total_orders' => $totalOrders,
-            'today_orders' => $todayOrders,
-            'active_orders' => $activeOrders,
-            'ready_to_serve' => $readyToServe,
-            'pending_payment' => $pendingPayment,
-            'revenue_today' => $revenueToday,
-            'average_order_value' => round($avgOrderValue, 2),
-            'completion_rate' => round($completionRate, 1),
+            'totalOrders' => $totalOrders,
+            'todayOrders' => $todayOrders,
+            'activeOrders' => $activeOrders,
+            'readyToServe' => $readyToServe,
+            'pendingPayment' => $pendingPayment,
+            'revenueToday' => $revenueToday,
+            'averageOrderValue' => round($avgOrderValue, 2),
+            'completionRate' => round($completionRate, 1),
         ];
     }
 
@@ -524,7 +524,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     public function getDashboardData(array $filters = []): array
     {
         $period = $filters['period'] ?? 'today';
-        $locationId = $filters['location_id'] ?? null;
+        $locationId = $filters['locationId'] ?? null;
 
         // Get metrics
         $metrics = $this->getDashboardMetrics($period, $locationId);
@@ -766,7 +766,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         
         // Location filter (not a column but a filter)
         $locationFilter = FilterMetadata::multiSelect(
-            'location_id',
+            'locationId',
             'Location',
             [], // Should come from location service
             'Filter by location',
@@ -787,7 +787,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         );
         
         // Add the non-column filters
-        $columns['location_id'] = ColumnMetadata::text('location_id', 'Location', false, false)
+        $columns['locationId'] = ColumnMetadata::text('locationId', 'Location', false, false)
             ->withFilter($locationFilter);
             
         $columns['date'] = ColumnMetadata::text('date', 'Date', false, false)
@@ -795,7 +795,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         
         return new ResourceMetadata(
             columns: ColumnMetadata::collect(array_values($columns), DataCollection::class),
-            defaultFilters: ['search', 'status', 'type', 'location_id', 'date'],
+            defaultFilters: ['search', 'status', 'type', 'locationId', 'date'],
             defaultSort: '-created_at',
             filterPresets: $this->getFilterPresets(),
             exportFormats: ['csv', 'excel', 'pdf'],

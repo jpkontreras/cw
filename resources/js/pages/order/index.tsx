@@ -17,7 +17,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
     () => [
       {
         title: "Today's Orders",
-        value: stats?.todayOrders || stats?.today_orders || 0,
+        value: stats?.todayOrders || 0,
         icon: ShoppingCart,
         color: 'text-blue-600',
         indicatorColor: 'bg-blue-500',
@@ -26,7 +26,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
       },
       {
         title: 'Active Orders',
-        value: stats?.activeOrders || stats?.active_orders || 0,
+        value: stats?.activeOrders || 0,
         icon: Clock,
         color: 'text-orange-600',
         indicatorColor: 'bg-orange-500',
@@ -35,7 +35,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
       },
       {
         title: 'Ready to Serve',
-        value: stats?.readyToServe || stats?.ready_to_serve || 0,
+        value: stats?.readyToServe || 0,
         icon: CheckCircle,
         color: 'text-green-600',
         indicatorColor: 'bg-green-500',
@@ -44,7 +44,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
       },
       {
         title: 'Pending Payment',
-        value: stats?.pendingPayment || stats?.pending_payment || 0,
+        value: stats?.pendingPayment || 0,
         icon: CreditCard,
         color: 'text-purple-600',
         indicatorColor: 'bg-purple-500',

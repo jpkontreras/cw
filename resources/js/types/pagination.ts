@@ -6,17 +6,17 @@ export interface LaravelPaginationLink {
 }
 
 export interface LaravelPaginationMeta<T = any> {
-  current_page: number;
+  currentPage: number;
   data: T[];
-  first_page_url: string;
+  firstPageUrl: string;
   from: number | null;
-  last_page: number;
-  last_page_url: string;
+  lastPage: number;
+  lastPageUrl: string;
   links: LaravelPaginationLink[];
-  next_page_url: string | null;
+  nextPageUrl: string | null;
   path: string;
-  per_page: number;
-  prev_page_url: string | null;
+  perPage: number;
+  prevPageUrl: string | null;
   to: number | null;
   total: number;
 }
@@ -30,12 +30,12 @@ export interface LaravelPagination<T = any> {
     next: string | null;
   };
   meta: {
-    current_page: number;
+    currentPage: number;
     from: number | null;
-    last_page: number;
+    lastPage: number;
     links: LaravelPaginationLink[];
     path: string;
-    per_page: number;
+    perPage: number;
     to: number | null;
     total: number;
   };
@@ -44,16 +44,16 @@ export interface LaravelPagination<T = any> {
 // Simple pagination format (what we're currently using)
 export interface SimplePagination<T = any> {
   data: T[];
-  current_page: number;
-  first_page_url: string;
+  currentPage: number;
+  firstPageUrl: string;
   from: number | null;
-  last_page: number;
-  last_page_url: string;
+  lastPage: number;
+  lastPageUrl: string;
   links: LaravelPaginationLink[];
-  next_page_url: string | null;
+  nextPageUrl: string | null;
   path: string;
-  per_page: number;
-  prev_page_url: string | null;
+  perPage: number;
+  prevPageUrl: string | null;
   to: number | null;
   total: number;
 }
@@ -89,25 +89,25 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
   if ('meta' in pagination && pagination.meta) {
     return {
       data: pagination.data,
-      current_page: pagination.meta.current_page,
-      first_page_url: `${pagination.meta.path}?page=1`,
+      currentPage: pagination.meta.currentPage,
+      firstPageUrl: `${pagination.meta.path}?page=1`,
       from: pagination.meta.from,
-      last_page: pagination.meta.last_page,
-      last_page_url: `${pagination.meta.path}?page=${pagination.meta.last_page}`,
+      lastPage: pagination.meta.lastPage,
+      lastPageUrl: `${pagination.meta.path}?page=${pagination.meta.lastPage}`,
       links: pagination.meta.links,
-      next_page_url: pagination.links.next,
+      nextPageUrl: pagination.links.next,
       path: pagination.meta.path,
-      per_page: pagination.meta.per_page,
-      prev_page_url: pagination.links.prev,
+      perPage: pagination.meta.perPage,
+      prevPageUrl: pagination.links.prev,
       to: pagination.meta.to,
       total: pagination.meta.total,
     };
   }
 
   // Legacy format - create links array
-  const currentPage = (pagination as any).current_page || (pagination as any).currentPage || 1;
-  const lastPage = (pagination as any).last_page || (pagination as any).lastPage || 1;
-  const perPage = (pagination as any).per_page || (pagination as any).perPage || 15;
+  const currentPage = (pagination as any).currentPage || (pagination as any).current_page || 1;
+  const lastPage = (pagination as any).lastPage || (pagination as any).last_page || 1;
+  const perPage = (pagination as any).perPage || (pagination as any).per_page || 15;
   const total = pagination.total || 0;
   const from = total > 0 ? (currentPage - 1) * perPage + 1 : null;
   const to = total > 0 ? Math.min(currentPage * perPage, total) : null;
@@ -138,16 +138,16 @@ export function normalizePagination<T>(pagination: PaginationData<T>): SimplePag
 
   return {
     data: pagination.data,
-    current_page: currentPage,
-    first_page_url: '?page=1',
+    currentPage: currentPage,
+    firstPageUrl: '?page=1',
     from,
-    last_page: lastPage,
-    last_page_url: `?page=${lastPage}`,
+    lastPage: lastPage,
+    lastPageUrl: `?page=${lastPage}`,
     links,
-    next_page_url: currentPage < lastPage ? `?page=${currentPage + 1}` : null,
+    nextPageUrl: currentPage < lastPage ? `?page=${currentPage + 1}` : null,
     path: '',
-    per_page: perPage,
-    prev_page_url: currentPage > 1 ? `?page=${currentPage - 1}` : null,
+    perPage: perPage,
+    prevPageUrl: currentPage > 1 ? `?page=${currentPage - 1}` : null,
     to,
     total,
   };

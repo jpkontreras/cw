@@ -36,8 +36,8 @@ export type OrderStatusHistory = Colame.Order.Data.OrderStatusHistoryData;
 
 export interface OrderItemModifier {
   id: string;
-  modifier_id: number;
-  modifier_name: string;
+  modifierId: number;
+  modifierName: string;
   price: number;
   quantity: number;
 }
@@ -54,13 +54,13 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
-export type OrderType = 'dine_in' | 'takeout' | 'delivery' | 'catering';
+export type OrderType = 'dineIn' | 'takeout' | 'delivery' | 'catering';
 
 export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'refunded';
 
 export type KitchenStatus = 'pending' | 'preparing' | 'ready' | 'served';
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other';
+export type PaymentMethod = 'cash' | 'creditCard' | 'debitCard' | 'mobilePayment' | 'giftCard' | 'other';
 
 // Component prop types
 export interface OrderListPageProps {
@@ -72,13 +72,13 @@ export interface OrderListPageProps {
     filters: OrderFilters;
     stats?: {
       totalOrders: number;
+      todayOrders: number;
       activeOrders: number;
       readyToServe: number;
+      pendingPayment: number;
       revenueToday: number;
-      total_orders?: number; // for backwards compatibility
-      active_orders?: number; // for backwards compatibility
-      ready_to_serve?: number; // for backwards compatibility
-      revenue_today?: number; // for backwards compatibility
+      averageOrderValue: number;
+      completionRate: number;
     };
   };
 }

@@ -81,7 +81,7 @@ export const ORDER_TYPE_CONFIG: Record<
     requiresDelivery?: boolean;
   }
 > = {
-  dine_in: {
+  dineIn: {
     label: 'Dine In',
     icon: 'utensils',
     requiresTable: true,
@@ -175,19 +175,19 @@ export const PAYMENT_METHOD_CONFIG: Record<
     label: 'Cash',
     icon: 'banknote',
   },
-  credit_card: {
+  creditCard: {
     label: 'Credit Card',
     icon: 'credit-card',
   },
-  debit_card: {
+  debitCard: {
     label: 'Debit Card',
     icon: 'credit-card',
   },
-  mobile_payment: {
+  mobilePayment: {
     label: 'Mobile Payment',
     icon: 'smartphone',
   },
-  gift_card: {
+  giftCard: {
     label: 'Gift Card',
     icon: 'gift',
   },
@@ -223,7 +223,7 @@ export const ORDER_VALIDATION = {
 
 // Default values
 export const ORDER_DEFAULTS = {
-  type: 'dine_in' as OrderType,
+  type: 'dineIn' as OrderType,
   priority: 'normal' as const,
   status: 'draft' as OrderStatus,
   paymentStatus: 'pending' as PaymentStatus,

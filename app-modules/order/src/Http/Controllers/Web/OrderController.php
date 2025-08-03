@@ -38,7 +38,7 @@ class OrderController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
-        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page', 'orderNumber', 'customerName', 'paymentStatus']);
+        $filters = $request->only(['status', 'type', 'locationId', 'date', 'search', 'sort', 'page', 'orderNumber', 'customerName', 'paymentStatus']);
         $perPage = (int) $request->input('per_page', 20);
 
         // Get paginated orders with filters and metadata
@@ -58,8 +58,8 @@ class OrderController extends Controller
         ];
 
         // Update location options in metadata
-        if (isset($responseData['metadata']['columns']['location_id'])) {
-            $responseData['metadata']['columns']['location_id']['filter']['options'] = $locations;
+        if (isset($responseData['metadata']['columns']['locationId'])) {
+            $responseData['metadata']['columns']['locationId']['filter']['options'] = $locations;
         }
 
         // Get stats for the dashboard cards
@@ -424,7 +424,7 @@ class OrderController extends Controller
      */
     public function dashboard(Request $request): Response
     {
-        $filters = $request->only(['period', 'location_id']);
+        $filters = $request->only(['period', 'locationId']);
         $dashboardData = $this->orderService->getDashboardData($filters);
 
         return Inertia::render('order/dashboard', $dashboardData);
@@ -435,7 +435,7 @@ class OrderController extends Controller
      */
     public function operations(Request $request): Response
     {
-        $locationId = $request->input('location_id');
+        $locationId = $request->input('locationId');
 
         // Get active orders
         $ordersQuery = Order::query()
