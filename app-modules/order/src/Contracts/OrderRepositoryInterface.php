@@ -6,7 +6,7 @@ namespace Colame\Order\Contracts;
 
 use App\Core\Contracts\FilterableRepositoryInterface;
 use Colame\Order\Data\OrderData;
-use Colame\Order\Data\OrderWithRelationsData;
+use Spatie\LaravelData\DataCollection;
 
 /**
  * Order repository interface for domain operations
@@ -26,22 +26,22 @@ interface OrderRepositoryInterface extends FilterableRepositoryInterface
     /**
      * Get all orders
      */
-    public function all(): array;
+    public function all(): DataCollection;
 
     /**
      * Get orders by status
      */
-    public function getByStatus(string $status): array;
+    public function getByStatus(string $status): DataCollection;
 
     /**
      * Get orders for a specific location
      */
-    public function getByLocation(int $locationId): array;
+    public function getByLocation(int $locationId): DataCollection;
 
     /**
      * Get orders for a specific user
      */
-    public function getByUser(int $userId): array;
+    public function getByUser(int $userId): DataCollection;
 
     /**
      * Create new order
@@ -71,7 +71,7 @@ interface OrderRepositoryInterface extends FilterableRepositoryInterface
     /**
      * Get active orders for kitchen display
      */
-    public function getActiveKitchenOrders(int $locationId): array;
+    public function getActiveKitchenOrders(int $locationId): DataCollection;
 
     /**
      * Get order statistics for a date range

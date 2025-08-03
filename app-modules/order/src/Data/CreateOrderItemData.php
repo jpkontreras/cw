@@ -25,7 +25,6 @@ class CreateOrderItemData extends BaseData
         #[Required, Numeric, Min(1)]
         public readonly int $quantity,
         
-        #[Numeric, Min(0)]
         public readonly float $unitPrice = 0,
         
         #[StringType]
@@ -60,6 +59,17 @@ class CreateOrderItemData extends BaseData
             'modifiers.*.id' => ['required_with:modifiers', 'integer'],
             'modifiers.*.name' => ['required_with:modifiers', 'string'],
             'modifiers.*.price' => ['required_with:modifiers', 'numeric', 'min:0'],
+        ];
+    }
+
+    /**
+     * Custom validation attributes (field names for error messages)
+     */
+    public static function attributes(): array
+    {
+        return [
+            'itemId' => 'item',
+            'unitPrice' => 'unit price',
         ];
     }
 }

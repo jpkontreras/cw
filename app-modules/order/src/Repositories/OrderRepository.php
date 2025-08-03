@@ -14,6 +14,8 @@ use Colame\Order\Models\OrderStatusHistory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 /**
  * Order repository implementation
@@ -47,47 +49,48 @@ class OrderRepository implements OrderRepositoryInterface
     /**
      * Get all orders
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return Order::all()
-            ->map(fn($order) => $this->modelToData($order))
-            ->toArray();
+        return OrderData::collect(Order::all(), DataCollection::class);
     }
 
     /**
      * Get orders by status
      */
-    public function getByStatus(string $status): array
+    public function getByStatus(string $status): DataCollection
     {
-        return Order::where('status', $status)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($order) => $this->modelToData($order))
-            ->toArray();
+        return OrderData::collect(
+            Order::where('status', $status)
+                ->orderBy('created_at', 'desc')
+                ->get(),
+            DataCollection::class
+        );
     }
 
     /**
      * Get orders for a specific location
      */
-    public function getByLocation(int $locationId): array
+    public function getByLocation(int $locationId): DataCollection
     {
-        return Order::where('location_id', $locationId)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($order) => $this->modelToData($order))
-            ->toArray();
+        return OrderData::collect(
+            Order::where('location_id', $locationId)
+                ->orderBy('created_at', 'desc')
+                ->get(),
+            DataCollection::class
+        );
     }
 
     /**
      * Get orders for a specific user
      */
-    public function getByUser(int $userId): array
+    public function getByUser(int $userId): DataCollection
     {
-        return Order::where('user_id', $userId)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($order) => $this->modelToData($order))
-            ->toArray();
+        return OrderData::collect(
+            Order::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->get(),
+            DataCollection::class
+        );
     }
 
     /**
@@ -174,18 +177,19 @@ class OrderRepository implements OrderRepositoryInterface
     /**
      * Get active orders for kitchen display
      */
-    public function getActiveKitchenOrders(int $locationId): array
+    public function getActiveKitchenOrders(int $locationId): DataCollection
     {
-        return Order::where('location_id', $locationId)
+        $orders = Order::where('location_id', $locationId)
             ->whereIn('status', [
                 Order::STATUS_CONFIRMED,
                 Order::STATUS_PREPARING,
                 Order::STATUS_READY,
             ])
+            ->with('items')
             ->orderBy('placed_at', 'asc')
-            ->get()
-            ->map(fn($order) => $this->modelToData($order, true))
-            ->toArray();
+            ->get();
+        
+        return OrderData::collect($orders, DataCollection::class);
     }
 
     /**
@@ -227,7 +231,21 @@ class OrderRepository implements OrderRepositoryInterface
             $order->load('items');
         }
         
-        return OrderData::from($order);
+        return OrderData::fromModel($order);
+    }
+
+    /**
+     * Transform a model to DTO
+     * 
+     * Implementation of BaseRepositoryInterface::toData
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof Order) {
+            return null;
+        }
+        
+        return $this->modelToData($model);
     }
 
     /**
@@ -406,16 +424,16 @@ class OrderRepository implements OrderRepositoryInterface
     public function getSortableFields(): array
     {
         return [
-            'order_number',
-            'customer_name',
+            'orderNumber',
+            'customerName',
             'status',
             'type',
-            'total_amount',
-            'payment_status',
-            'created_at',
-            'updated_at',
-            'placed_at',
-            'completed_at',
+            'totalAmount',
+            'paymentStatus',
+            'createdAt',
+            'updatedAt',
+            'placedAt',
+            'completedAt',
         ];
     }
 
@@ -466,18 +484,6 @@ class OrderRepository implements OrderRepositoryInterface
         // Parse sort string (e.g., "-createdAt,orderNumber")
         $sorts = explode(',', $sort);
         
-        // Map camelCase to database columns
-        $fieldMap = [
-            'orderNumber' => 'order_number',
-            'customerName' => 'customer_name',
-            'totalAmount' => 'total_amount',
-            'paymentStatus' => 'payment_status',
-            'createdAt' => 'created_at',
-            'updatedAt' => 'updated_at',
-            'placedAt' => 'placed_at',
-            'completedAt' => 'completed_at',
-        ];
-        
         foreach ($sorts as $sortField) {
             $sortField = trim($sortField);
             if (empty($sortField)) {
@@ -490,10 +496,10 @@ class OrderRepository implements OrderRepositoryInterface
                 $sortField = substr($sortField, 1);
             }
             
-            // Map camelCase to snake_case database column
-            $dbField = $fieldMap[$sortField] ?? $sortField;
-            
-            if (in_array($dbField, $this->getSortableFields())) {
+            // laravel-data will handle camelCase to snake_case mapping
+            if (in_array($sortField, $this->getSortableFields())) {
+                // Convert camelCase to snake_case for database query
+                $dbField = \Illuminate\Support\Str::snake($sortField);
                 $query->orderBy($dbField, $direction);
             }
         }

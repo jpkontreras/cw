@@ -38,9 +38,9 @@ interface BaseRepositoryInterface
     /**
      * Get all entities as DTOs
      * 
-     * @return array<T> Array of DTOs
+     * @return DataCollection<int, T> Collection of DTOs
      */
-    public function all(): array;
+    public function all(): DataCollection;
 
     /**
      * Get paginated entities

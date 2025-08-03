@@ -61,7 +61,7 @@ abstract class BaseService
         Collection|EloquentCollection|array $items, 
         string $dataClass
     ): DataCollection {
-        return $dataClass::collection($items);
+        return $dataClass::collect($items, DataCollection::class);
     }
 
     /**

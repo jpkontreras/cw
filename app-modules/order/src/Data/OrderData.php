@@ -6,11 +6,10 @@ namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
 use Colame\Order\Models\Order;
+use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Lazy;
-use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
@@ -44,7 +43,7 @@ class OrderData extends BaseData
         public readonly ?string $cancelReason = null,
         public readonly ?array $metadata = null,
         #[DataCollectionOf(OrderItemData::class)]
-        public readonly ?DataCollection $items = null,
+        public readonly Lazy|DataCollection|null $items = null,
         public readonly ?\DateTimeInterface $placedAt = null,
         public readonly ?\DateTimeInterface $confirmedAt = null,
         public readonly ?\DateTimeInterface $preparingAt = null,
@@ -59,9 +58,56 @@ class OrderData extends BaseData
     ) {}
 
     /**
+     * Create from Eloquent model
+     */
+    public static function fromModel(Order $order): self
+    {
+        return new self(
+            id: $order->id,
+            orderNumber: $order->order_number,
+            userId: $order->user_id,
+            locationId: $order->location_id,
+            status: $order->status,
+            type: $order->type,
+            priority: $order->priority,
+            subtotal: $order->subtotal,
+            taxAmount: $order->tax_amount,
+            tipAmount: $order->tip_amount,
+            discountAmount: $order->discount_amount,
+            totalAmount: $order->total_amount,
+            paymentStatus: $order->payment_status,
+            customerName: $order->customer_name,
+            customerPhone: $order->customer_phone,
+            customerEmail: $order->customer_email,
+            deliveryAddress: $order->delivery_address,
+            tableNumber: $order->table_number,
+            waiterId: $order->waiter_id,
+            notes: $order->notes,
+            specialInstructions: $order->special_instructions,
+            cancelReason: $order->cancel_reason,
+            metadata: $order->metadata,
+            items: Lazy::whenLoaded('items', $order, 
+                fn() => OrderItemData::collect($order->items, DataCollection::class)
+            ),
+            placedAt: $order->placed_at,
+            confirmedAt: $order->confirmed_at,
+            preparingAt: $order->preparing_at,
+            readyAt: $order->ready_at,
+            deliveringAt: $order->delivering_at,
+            deliveredAt: $order->delivered_at,
+            completedAt: $order->completed_at,
+            cancelledAt: $order->cancelled_at,
+            scheduledAt: $order->scheduled_at,
+            createdAt: $order->created_at,
+            updatedAt: $order->updated_at,
+        );
+    }
+
+    /**
      * Get order status label
      */
-    public function getStatusLabel(): string
+    #[Computed]
+    public function statusLabel(): string
     {
         return match ($this->status) {
             'draft' => 'Draft',
@@ -81,7 +127,8 @@ class OrderData extends BaseData
     /**
      * Get order type label
      */
-    public function getTypeLabel(): string
+    #[Computed]
+    public function typeLabel(): string
     {
         return match ($this->type) {
             'dine_in' => 'Dine In',
@@ -95,7 +142,8 @@ class OrderData extends BaseData
     /**
      * Get payment status label
      */
-    public function getPaymentStatusLabel(): string
+    #[Computed]
+    public function paymentStatusLabel(): string
     {
         return match ($this->paymentStatus) {
             'pending' => 'Pending',
@@ -109,6 +157,7 @@ class OrderData extends BaseData
     /**
      * Check if order can be cancelled
      */
+    #[Computed]
     public function canBeCancelled(): bool
     {
         return in_array($this->status, ['draft', 'placed', 'confirmed']);
@@ -117,6 +166,7 @@ class OrderData extends BaseData
     /**
      * Check if order can be modified
      */
+    #[Computed]
     public function canBeModified(): bool
     {
         return in_array($this->status, ['draft', 'placed']);
@@ -125,7 +175,8 @@ class OrderData extends BaseData
     /**
      * Get order duration in minutes
      */
-    public function getDurationInMinutes(): ?int
+    #[Computed]
+    public function durationInMinutes(): ?int
     {
         if (!$this->placedAt || !$this->completedAt) {
             return null;
@@ -137,6 +188,7 @@ class OrderData extends BaseData
     /**
      * Check if order is active
      */
+    #[Computed]
     public function isActive(): bool
     {
         return !in_array($this->status, ['completed', 'cancelled', 'refunded']);
@@ -145,6 +197,7 @@ class OrderData extends BaseData
     /**
      * Check if order is paid
      */
+    #[Computed]
     public function isPaid(): bool
     {
         return $this->paymentStatus === 'paid';
@@ -153,6 +206,7 @@ class OrderData extends BaseData
     /**
      * Check if order is high priority
      */
+    #[Computed]
     public function isHighPriority(): bool
     {
         return $this->priority === 'high';
@@ -161,6 +215,7 @@ class OrderData extends BaseData
     /**
      * Check if order requires delivery
      */
+    #[Computed]
     public function requiresDelivery(): bool
     {
         return $this->type === 'delivery';
@@ -169,6 +224,7 @@ class OrderData extends BaseData
     /**
      * Check if order requires table
      */
+    #[Computed]
     public function requiresTable(): bool
     {
         return $this->type === 'dine_in';
@@ -177,7 +233,8 @@ class OrderData extends BaseData
     /**
      * Get remaining amount to pay
      */
-    public function getRemainingAmount(): float
+    #[Computed]
+    public function remainingAmount(): float
     {
         // This would need to be calculated based on payment transactions
         // For now, return total if not paid

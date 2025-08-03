@@ -309,10 +309,10 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Get active orders for kitchen
      */
-    public function getKitchenOrders(int $locationId): array
+    public function getKitchenOrders(int $locationId): DataCollection
     {
         if (!$this->isFeatureEnabled('order.kitchen_display')) {
-            return [];
+            return new DataCollection(OrderData::class, []);
         }
 
         return $this->orderRepository->getActiveKitchenOrders($locationId);

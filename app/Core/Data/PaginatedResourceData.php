@@ -55,9 +55,12 @@ class PaginatedResourceData extends Data
         $items = $paginator->items();
         
         // Use DataCollection for proper laravel-data support
-        $data = $dataClass 
-            ? $dataClass::collection($items)
-            : DataCollection::make($items);
+        if ($dataClass && is_string($dataClass) && class_exists($dataClass)) {
+            // Use the collect method which is the proper way in laravel-data
+            $data = $dataClass::collect($items, DataCollection::class);
+        } else {
+            $data = DataCollection::make($items);
+        }
 
         // Build links array compatible with Laravel pagination
         $links = [];

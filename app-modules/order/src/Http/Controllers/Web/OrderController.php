@@ -16,6 +16,7 @@ use Colame\Order\Services\OrderStatusService;
 use Colame\Item\Contracts\ItemRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -128,40 +129,21 @@ class OrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
-            // Convert camelCase to snake_case for Laravel data
-            $requestData = $request->all();
-
-            // Map frontend field names to match DTO constructor parameter names (camelCase)
-            $mappedData = [
+            // Create order data from request with validation
+            $payload = array_merge($request->all(), [
                 'userId' => $request->user()?->id,
-                'locationId' => $requestData['locationId'] ?? 1,  // Default to location 1 if not provided
-                'type' => $requestData['type'] ?? 'dine_in',
-                'tableNumber' => $requestData['tableNumber'] ?? null,
-                'customerName' => $requestData['customerName'] ?? null,
-                'customerPhone' => $requestData['customerPhone'] ?? null,
-                'customerEmail' => $requestData['customerEmail'] ?? null,
-                'deliveryAddress' => $requestData['deliveryAddress'] ?? null,
-                'notes' => $requestData['notes'] ?? null,
-                'specialInstructions' => $requestData['specialInstructions'] ?? null,
-                'items' => array_map(function ($item) {
-                    return [
-                        'itemId' => $item['itemId'] ?? $item['item_id'] ?? null,  // Support both camelCase and snake_case for backward compatibility
-                        'quantity' => $item['quantity'] ?? 1,
-                        'unitPrice' => $item['unitPrice'] ?? $item['unit_price'] ?? 0, // Will be set by service
-                        'notes' => $item['notes'] ?? null,
-                        'modifiers' => $item['modifiers'] ?? [],
-                    ];
-                }, $requestData['items'] ?? []),
-                'offerCodes' => $requestData['offerCodes'] ?? null,
-                'metadata' => $requestData['metadata'] ?? null,
-            ];
-
-            $data = CreateOrderData::from($mappedData);
+            ]);
+            $data = CreateOrderData::validateAndCreate($payload);
             $order = $this->orderService->createOrder($data);
 
             return redirect()
                 ->route('orders.show', $order->id)
                 ->with('success', 'Order created successfully');
+        } catch (ValidationException $e) {
+            return redirect()
+                ->back()
+                ->withErrors($e->errors())
+                ->withInput();
         } catch (OrderException $e) {
             return redirect()
                 ->back()
@@ -221,12 +203,17 @@ class OrderController extends Controller
     public function update(Request $request, Order $order): RedirectResponse
     {
         try {
-            $data = UpdateOrderData::from($request->all());
+            $data = UpdateOrderData::validateAndCreate($request->all());
             $updatedOrder = $this->orderService->updateOrder($order->id, $data);
 
             return redirect()
                 ->route('orders.show', $updatedOrder->id)
                 ->with('success', 'Order updated successfully');
+        } catch (ValidationException $e) {
+            return redirect()
+                ->back()
+                ->withErrors($e->errors())
+                ->withInput();
         } catch (OrderException $e) {
             return redirect()
                 ->back()
@@ -370,7 +357,7 @@ class OrderController extends Controller
 
         // TODO: Implement receipt view
         return Inertia::render('order/receipt', [
-            'order' => OrderData::from($order),
+            'order' => OrderData::fromModel($order),
         ]);
     }
 
@@ -395,12 +382,13 @@ class OrderController extends Controller
      */
     public function cancel(Request $request, Order $order): RedirectResponse
     {
-        $request->validate([
-            'reason' => ['required', 'string', 'min:5', 'max:500'],
-        ]);
-
         try {
-            $this->orderService->cancelOrder($order->id, $request->input('reason'));
+            // Use a simple DTO for cancel validation
+            $validated = $this->validateWith($request, [
+                'reason' => ['required', 'string', 'min:5', 'max:500'],
+            ]);
+
+            $this->orderService->cancelOrder($order->id, $validated['reason'] ?? '');
 
             return redirect()
                 ->route('orders.show', $order->id)
@@ -422,7 +410,7 @@ class OrderController extends Controller
         $orders = $this->orderService->getKitchenOrders($locationId);
 
         return Inertia::render('order/kitchen-display', [
-            'orders' => $orders,
+            'orders' => $orders->toArray(),
             'locationId' => $locationId,
         ]);
     }
@@ -463,7 +451,7 @@ class OrderController extends Controller
         ];
 
         // Convert to DTOs
-        $orders = $ordersCollection->map(fn($order) => OrderData::from($order));
+        $orders = $ordersCollection->map(fn($order) => OrderData::fromModel($order));
 
         // Get locations
         $locations = [
@@ -481,7 +469,7 @@ class OrderController extends Controller
     /**
      * Display payment page
      */
-    public function payment(int $id): Response
+    public function payment(int $id): Response|RedirectResponse
     {
         $order = Order::with(['items', 'payments'])->find($id);
 
@@ -508,7 +496,7 @@ class OrderController extends Controller
         ];
 
         return Inertia::render('order/payment', [
-            'order' => OrderData::from($order),
+            'order' => OrderData::fromModel($order),
             'payments' => $order->payments,
             'remainingAmount' => $remainingAmount,
             'suggestedTip' => 10, // 10% suggested tip
@@ -527,7 +515,7 @@ class OrderController extends Controller
             abort(404, 'Order not found');
         }
 
-        $validated = $request->validate([
+        $validated = $this->validateWith($request, [
             'payment_method' => ['required', 'string', 'in:cash,card,transfer,other'],
             'amount' => ['required', 'numeric', 'min:0'],
             'tip_amount' => ['nullable', 'numeric', 'min:0'],
@@ -553,8 +541,8 @@ class OrderController extends Controller
 
             // Create payment record
             $order->payments()->create([
-                'payment_method' => $validated['payment_method'],
-                'amount' => $validated['amount'],
+                'payment_method' => $validated['payment_method'] ?? '',
+                'amount' => $validated['amount'] ?? 0,
                 'status' => 'completed',
                 'reference_number' => $validated['reference_number'] ?? null,
                 'processed_at' => now(),

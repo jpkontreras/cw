@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Data;
 
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Spatie\LaravelData\Concerns\WrappableData;
 use Spatie\LaravelData\Concerns\IncludeableData;
@@ -46,7 +47,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
  * // Usage:
  * return new self(
  *     name: $model->name,
- *     items: Lazy::whenLoaded('items', $model, fn() => ItemData::collection($model->items)),
+ *     items: Lazy::whenLoaded('items', $model, fn() => ItemData::collect($model->items, DataCollection::class)),
  * );
  * ```
  */
@@ -69,13 +70,28 @@ abstract class BaseData extends Data implements
     }
 
     /**
-     * Create and validate a data object from request
+     * Create and validate a data object from array or request
      * 
      * @throws \Illuminate\Validation\ValidationException
      */
-    public static function validateAndCreate(Request $request): static
+    public static function validateAndCreate(Arrayable|array $payload): static
     {
-        return static::validate($request->all());
+        if ($payload instanceof Request) {
+            $payload = $payload->all();
+        }
+        
+        return parent::validateAndCreate($payload);
+    }
+    
+    /**
+     * Create and validate a data object from request
+     * Helper method for convenience
+     * 
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public static function fromRequest(Request $request): static
+    {
+        return static::validateAndCreate($request->all());
     }
 
     /**
@@ -97,18 +113,4 @@ abstract class BaseData extends Data implements
     {
         return Lazy::create($value);
     }
-
-    /**
-     * Create a factory instance for testing
-     * Override this method in your data classes to return a proper factory
-     * 
-     * @return mixed
-     */
-    public static function factory(): mixed
-    {
-        throw new \BadMethodCallException(
-            'Factory method not implemented. Override this method in ' . static::class
-        );
-    }
-
 }

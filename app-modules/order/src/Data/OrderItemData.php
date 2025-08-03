@@ -6,10 +6,9 @@ namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
 use Colame\Order\Models\OrderItem;
+use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\DataCollection;
-use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
@@ -39,9 +38,36 @@ class OrderItemData extends BaseData
     ) {}
 
     /**
+     * Create from Eloquent model
+     */
+    public static function fromModel(OrderItem $item): self
+    {
+        return new self(
+            id: $item->id,
+            orderId: $item->order_id,
+            itemId: $item->item_id,
+            itemName: $item->item_name,
+            quantity: $item->quantity,
+            unitPrice: $item->unit_price,
+            totalPrice: $item->total_price,
+            status: $item->status,
+            kitchenStatus: $item->kitchen_status,
+            course: $item->course,
+            notes: $item->notes,
+            modifiers: $item->modifiers,
+            metadata: $item->metadata,
+            preparedAt: $item->prepared_at,
+            servedAt: $item->served_at,
+            createdAt: $item->created_at,
+            updatedAt: $item->updated_at,
+        );
+    }
+
+    /**
      * Calculate line total
      */
-    public function getLineTotal(): float
+    #[Computed]
+    public function lineTotal(): float
     {
         return $this->quantity * $this->unitPrice;
     }
@@ -49,7 +75,8 @@ class OrderItemData extends BaseData
     /**
      * Get modifier names
      */
-    public function getModifierNames(): array
+    #[Computed]
+    public function modifierNames(): array
     {
         if (!$this->modifiers) {
             return [];
@@ -61,7 +88,8 @@ class OrderItemData extends BaseData
     /**
      * Get total modifiers price
      */
-    public function getModifiersTotal(): float
+    #[Computed]
+    public function modifiersTotal(): float
     {
         if (!$this->modifiers) {
             return 0.0;
@@ -73,6 +101,7 @@ class OrderItemData extends BaseData
     /**
      * Check if item is prepared
      */
+    #[Computed]
     public function isPrepared(): bool
     {
         return $this->status === 'prepared' || $this->preparedAt !== null;
@@ -81,7 +110,8 @@ class OrderItemData extends BaseData
     /**
      * Get status label
      */
-    public function getStatusLabel(): string
+    #[Computed]
+    public function statusLabel(): string
     {
         return match ($this->status) {
             'pending' => 'Pending',
@@ -96,7 +126,8 @@ class OrderItemData extends BaseData
     /**
      * Get kitchen status label
      */
-    public function getKitchenStatusLabel(): string
+    #[Computed]
+    public function kitchenStatusLabel(): string
     {
         return match ($this->kitchenStatus) {
             'pending' => 'Pending',
@@ -110,7 +141,8 @@ class OrderItemData extends BaseData
     /**
      * Get course label
      */
-    public function getCourseLabel(): string
+    #[Computed]
+    public function courseLabel(): string
     {
         if (!$this->course) {
             return 'N/A';
@@ -128,6 +160,7 @@ class OrderItemData extends BaseData
     /**
      * Check if item is ready
      */
+    #[Computed]
     public function isReady(): bool
     {
         return $this->kitchenStatus === 'ready';
@@ -136,6 +169,7 @@ class OrderItemData extends BaseData
     /**
      * Check if item is served
      */
+    #[Computed]
     public function isServed(): bool
     {
         return $this->kitchenStatus === 'served' || $this->servedAt !== null;

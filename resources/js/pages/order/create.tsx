@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmptyState } from '@/components/empty-state';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ import type { CreateOrderRequest, OrderType } from '@/types/modules/order';
 import { ORDER_TYPE_CONFIG } from '@/types/modules/order/constants';
 import { calculateTax, calculateTotal, formatCurrency } from '@/types/modules/order/utils';
 import { Head, useForm } from '@inertiajs/react';
-import { Clock, CreditCard, DollarSign, Package, Plus, ShoppingBag, Truck, Utensils } from 'lucide-react';
+import { AlertTriangle, Clock, CreditCard, DollarSign, Package, Plus, ShoppingBag, Truck, Utensils } from 'lucide-react';
 import { FormEventHandler, useEffect, useMemo, useState } from 'react';
 
 interface Props {
@@ -78,13 +79,13 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   // Calculate order totals
   const subtotal = useMemo(() => {
     return data.items.reduce((sum: number, item: any) => {
-      const menuItem = items.find((i) => i.id === item.item_id);
+      const menuItem = items.find((i) => i.id === item.itemId);
       if (!menuItem) return sum;
 
       let itemTotal = menuItem.price * item.quantity;
 
       // Add modifier prices
-      const modifiers = selectedModifiers[item.item_id] || [];
+      const modifiers = selectedModifiers[item.itemId] || [];
       modifiers.forEach((modId) => {
         const modifier = menuItem.modifiers?.find((m) => m.id === modId);
         if (modifier) {
@@ -102,13 +103,20 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
 
-    // Add modifiers to items before submitting
-    const itemsWithModifiers = data.items.map((item: any) => ({
-      ...item,
-      modifiers: selectedModifiers[item.item_id] || [],
-    }));
+    // Add modifiers to items before submitting and clean up frontend-only properties
+    const itemsWithModifiers = data.items.map((item: any) => {
+      const cleanItem = {
+        itemId: item.itemId,
+        quantity: item.quantity,
+        notes: item.notes || null,
+        modifiers: selectedModifiers[item.itemId] || [],
+      };
+      // Remove frontend-only properties like orderItemKey
+      return cleanItem;
+    });
 
-    const postData = { ...data, items: itemsWithModifiers } as CreateOrderRequest;
+    const postData = { ...data, items: itemsWithModifiers };
+    console.log('Submitting order data:', postData); // Debug log
     post('/orders', {
       preserveScroll: true,
     });
@@ -138,7 +146,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
 
     // Always create a new line item - this allows different configurations to be separate
     const newOrderItem = {
-      item_id: itemId,
+      itemId: itemId, // Changed from item_id to itemId for camelCase consistency
       quantity: 1,
       notes: currentNotes,
       orderItemKey, // Add unique key
@@ -160,7 +168,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   const removeItem = (itemId: number) => {
     setData(
       'items',
-      data.items.filter((item: any) => item.item_id !== itemId),
+      data.items.filter((item: any) => item.itemId !== itemId),
     );
     // Clean up modifiers
     const newModifiers = { ...selectedModifiers };
@@ -174,7 +182,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
     } else {
       setData(
         'items',
-        data.items.map((item: any) => (item.item_id === itemId ? { ...item, quantity } : item)),
+        data.items.map((item: any) => (item.itemId === itemId ? { ...item, quantity } : item)),
       );
     }
   };
@@ -182,7 +190,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   const updateItemNotes = (itemId: number, notes: string) => {
     setData(
       'items',
-      data.items.map((item: any) => (item.item_id === itemId ? { ...item, notes } : item)),
+      data.items.map((item: any) => (item.itemId === itemId ? { ...item, notes } : item)),
     );
   };
 
@@ -253,6 +261,25 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
         <div className="flex-1 flex flex-col min-h-0">
           <PageContent noPadding className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit}>
+              {/* Error Display */}
+              {Object.keys(errors).length > 0 && (
+                <div className="px-4 py-4 sm:px-6 lg:px-8">
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-1">
+                        <p className="font-medium">Please fix the following errors:</p>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          {Object.entries(errors).map(([key, message]) => (
+                            <li key={key}>{Array.isArray(message) ? message[0] : message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              
               <div>
               {currentStep === 'menu' ? (
                 /* Step 1: Menu Selection */
@@ -314,7 +341,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                             )}
                           >
                             {categoryItems.map((item: any) => {
-                              const orderItem = data.items.find((i: any) => i.item_id === item.id);
+                              const orderItem = data.items.find((i: any) => i.itemId === item.id);
                               const quantity = orderItem?.quantity || 0;
                               const itemModifiers = selectedModifiers[item.id] || [];
 
@@ -474,10 +501,10 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                         {/* Item list */}
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {data.items.map((orderItem: any, index: number) => {
-                            const menuItem = items.find((i) => i.id === orderItem.item_id);
+                            const menuItem = items.find((i) => i.id === orderItem.itemId);
                             if (!menuItem) return null;
                             return (
-                              <div key={`${orderItem.item_id}-${index}`} className="flex justify-between text-sm">
+                              <div key={`${orderItem.itemId}-${index}`} className="flex justify-between text-sm">
                                 <span className="text-gray-600">
                                   {orderItem.quantity}× {menuItem.name}
                                 </span>

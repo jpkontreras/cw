@@ -9,6 +9,7 @@ use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Data\OrderWithRelationsData;
 use Colame\Order\Data\UpdateOrderData;
+use Spatie\LaravelData\DataCollection;
 
 /**
  * Order service interface for business logic operations
@@ -73,7 +74,7 @@ interface OrderServiceInterface
     /**
      * Get active orders for kitchen
      */
-    public function getKitchenOrders(int $locationId): array;
+    public function getKitchenOrders(int $locationId): DataCollection;
 
     /**
      * Update order item status

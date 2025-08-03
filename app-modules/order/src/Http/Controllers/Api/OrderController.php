@@ -39,9 +39,9 @@ class OrderController extends Controller
             $orders = $this->orderService->getKitchenOrders($locationId);
             
             return response()->json([
-                'data' => $orders,
+                'data' => $orders->toArray(),
                 'meta' => [
-                    'total' => count($orders),
+                    'total' => $orders->count(),
                     'location_id' => $locationId,
                 ],
             ]);
