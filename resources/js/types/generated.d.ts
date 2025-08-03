@@ -1,3 +1,6 @@
+declare namespace App.Core.Data {
+  export type BaseData = {};
+}
 declare namespace Colame.Item.Data {
   export type IngredientData = {
     id: number | null;
@@ -242,15 +245,15 @@ declare namespace Colame.Item.Data {
 }
 declare namespace Colame.Order.Data {
   export type CreateOrderData = {
-    userId: number | null;
     locationId: number;
     type: string;
+    items: any;
+    userId: number | null;
     tableNumber: number | null;
     customerName: string | null;
     customerPhone: string | null;
     customerEmail: string | null;
     deliveryAddress: string | null;
-    items: any;
     notes: string | null;
     specialInstructions: string | null;
     offerCodes: Array<any> | null;
@@ -288,7 +291,7 @@ declare namespace Colame.Order.Data {
     specialInstructions: string | null;
     cancelReason: string | null;
     metadata: Array<any> | null;
-    items: any | null;
+    items: any | any | null;
     placedAt: string | null;
     confirmedAt: string | null;
     preparingAt: string | null;

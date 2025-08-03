@@ -12,6 +12,8 @@ use Colame\Item\Models\ItemModifierGroup;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 class ModifierRepository implements ModifierRepositoryInterface
 {
@@ -355,25 +357,27 @@ class ModifierRepository implements ModifierRepositoryInterface
     /**
      * Find entity by ID
      */
-    public function find(int $id): ?object
+    public function find(int $id): ?Data
     {
-        return ModifierGroup::find($id);
+        $group = ModifierGroup::find($id);
+        return $group ? ModifierGroupData::from($group) : null;
     }
     
     /**
      * Find entity by ID or throw exception
      */
-    public function findOrFail(int $id): object
+    public function findOrFail(int $id): Data
     {
-        return ModifierGroup::findOrFail($id);
+        $group = ModifierGroup::findOrFail($id);
+        return ModifierGroupData::from($group);
     }
     
     /**
      * Get all entities
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return ModifierGroup::all()->map(fn($group) => ModifierGroupData::from($group))->toArray();
+        return ModifierGroupData::collect(ModifierGroup::all(), DataCollection::class);
     }
     
     /**
@@ -392,9 +396,10 @@ class ModifierRepository implements ModifierRepositoryInterface
     /**
      * Create new entity
      */
-    public function create(array $data): object
+    public function create(array $data): Data
     {
-        return ModifierGroup::create($data);
+        $group = ModifierGroup::create($data);
+        return ModifierGroupData::from($group);
     }
     
     /**
@@ -421,5 +426,27 @@ class ModifierRepository implements ModifierRepositoryInterface
     public function exists(int $id): bool
     {
         return ModifierGroup::where('id', $id)->exists();
+    }
+    
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return ['name', 'is_required', 'created_at', 'updated_at'];
+    }
+    
+    /**
+     * Transform a model to DTO
+     * 
+     * Implementation of BaseRepositoryInterface::toData
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof ModifierGroup) {
+            return null;
+        }
+        
+        return ModifierGroupData::from($model);
     }
 }

@@ -75,10 +75,10 @@ interface PageProps {
     recipes: boolean;
   };
   stats?: {
-    total_items: number;
-    active_items: number;
-    low_stock_count: number;
-    total_value: number;
+    totalItems: number;
+    activeItems: number;
+    lowStockCount: number;
+    totalValue: number;
   };
 }
 
@@ -187,18 +187,18 @@ function ItemsIndexContent({
         },
       },
       {
-        accessorKey: 'category_name',
+        accessorKey: 'categoryName',
         header: 'Category',
-        cell: ({ row }) => row.original.category_name || (
+        cell: ({ row }) => row.original.categoryName || (
           <span className="text-muted-foreground">Uncategorized</span>
         ),
       },
       {
-        accessorKey: 'base_price',
+        accessorKey: 'basePrice',
         header: 'Price',
         cell: ({ row }) => (
           <div className="font-medium">
-            {formatCurrency(row.original.base_price)}
+            {row.original.basePrice ? formatCurrency(row.original.basePrice) : '—'}
           </div>
         ),
       },
@@ -207,23 +207,24 @@ function ItemsIndexContent({
     // Add inventory column if feature is enabled
     if (features.inventory) {
       cols.push({
-        accessorKey: 'current_stock',
+        accessorKey: 'stockQuantity',
         header: 'Stock',
         cell: ({ row }) => {
           const item = row.original;
-          if (!item.track_stock) {
+          if (!item.trackInventory) {
             return <span className="text-muted-foreground">—</span>;
           }
           
+          const isLowStock = item.stockQuantity < (item.lowStockThreshold || 10);
           return (
             <div className="flex items-center gap-1">
-              {item.low_stock && (
+              {isLowStock && (
                 <AlertCircle className="h-3 w-3 text-amber-500" />
               )}
               <span className={cn(
-                item.low_stock && 'text-amber-600 dark:text-amber-400 font-medium'
+                isLowStock && 'text-amber-600 dark:text-amber-400 font-medium'
               )}>
-                {item.current_stock ?? 0}
+                {item.stockQuantity ?? 0}
               </span>
             </div>
           );
@@ -256,11 +257,11 @@ function ItemsIndexContent({
 
     // Add status column
     cols.push({
-      accessorKey: 'is_available',
+      accessorKey: 'isAvailable',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.is_available ? 'default' : 'secondary'} className={row.original.is_available ? 'bg-green-500 hover:bg-green-600' : ''}>
-          {row.original.is_available ? 'Available' : 'Unavailable'}
+        <Badge variant={row.original.isAvailable ? 'default' : 'secondary'} className={row.original.isAvailable ? 'bg-green-500 hover:bg-green-600' : ''}>
+          {row.original.isAvailable ? 'Available' : 'Unavailable'}
         </Badge>
       ),
     });
@@ -286,7 +287,7 @@ function ItemsIndexContent({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {features.inventory && item.track_stock && (
+              {features.inventory && item.trackInventory && (
                 <DropdownMenuItem onClick={() => router.visit(`/inventory?item_id=${item.id}`)}>
                   Manage inventory
                 </DropdownMenuItem>
@@ -342,14 +343,14 @@ function ItemsIndexContent({
         router.post('/items/bulk-update', {
           item_ids: selectedItems,
           action: 'update_availability',
-          data: { is_available: true },
+          data: { isAvailable: true },
         });
         break;
       case 'make_unavailable':
         router.post('/items/bulk-update', {
           item_ids: selectedItems,
           action: 'update_availability',
-          data: { is_available: false },
+          data: { isAvailable: false },
         });
         break;
     }
@@ -358,28 +359,28 @@ function ItemsIndexContent({
   const statsCards = stats ? [
     {
       title: 'Total Items',
-      value: stats.total_items,
+      value: stats.totalItems,
       icon: Package,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     },
     {
       title: 'Active Items',
-      value: stats.active_items,
+      value: stats.activeItems,
       icon: TrendingUp,
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
     },
     {
       title: 'Low Stock',
-      value: stats.low_stock_count,
+      value: stats.lowStockCount,
       icon: AlertCircle,
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-100 dark:bg-amber-900/30',
     },
     {
       title: 'Inventory Value',
-      value: formatCurrency(stats.total_value),
+      value: formatCurrency(stats.totalValue),
       icon: DollarSign,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/30',

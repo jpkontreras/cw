@@ -58,6 +58,28 @@ class OrderData extends BaseData
     ) {}
 
     /**
+     * Get items count
+     */
+    #[Computed]
+    public function itemsCount(): int
+    {
+        if ($this->items instanceof DataCollection) {
+            return $this->items->count();
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Get items count for display
+     */
+    #[Computed]
+    public function items(): int
+    {
+        return $this->itemsCount();
+    }
+
+    /**
      * Create from Eloquent model
      */
     public static function fromModel(Order $order): self

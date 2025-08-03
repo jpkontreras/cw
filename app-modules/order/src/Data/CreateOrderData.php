@@ -8,11 +8,7 @@ use App\Core\Data\BaseData;
 use Illuminate\Http\Request;
 use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\Attributes\Validation\ArrayType;
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Numeric;
-use Spatie\LaravelData\Attributes\Validation\StringType;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
@@ -24,44 +20,28 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class CreateOrderData extends BaseData
 {
     public function __construct(
-        #[Required, Numeric]
+        #[MapInputName('locationId')]
         public readonly int $locationId,
-        
-        #[Required, StringType]
         public readonly string $type,
-        
-        #[Required, ArrayType, Min(1)]
         #[DataCollectionOf(CreateOrderItemData::class)]
         public readonly DataCollection $items,
-        
-        #[Numeric]
+        #[MapInputName('userId')]
         public readonly ?int $userId = null,
-        
-        #[Numeric]
+        #[MapInputName('tableNumber')]
         public readonly ?int $tableNumber = null,
-        
-        #[StringType]
+        #[MapInputName('customerName')]
         public readonly ?string $customerName = null,
-        
-        #[StringType]
+        #[MapInputName('customerPhone')]
         public readonly ?string $customerPhone = null,
-        
-        #[StringType]
+        #[MapInputName('customerEmail')]
         public readonly ?string $customerEmail = null,
-        
-        #[StringType]
+        #[MapInputName('deliveryAddress')]
         public readonly ?string $deliveryAddress = null,
-        
-        #[StringType]
         public readonly ?string $notes = null,
-        
-        #[StringType]
+        #[MapInputName('specialInstructions')]
         public readonly ?string $specialInstructions = null,
-        
-        #[ArrayType]
+        #[MapInputName('offerCodes')]
         public readonly ?array $offerCodes = null,
-        
-        #[ArrayType]
         public readonly ?array $metadata = null,
     ) {}
 
@@ -103,7 +83,7 @@ class CreateOrderData extends BaseData
         return [
             'locationId' => ['required', 'integer', 'min:1'],
             'type' => ['required', 'in:dine_in,takeout,delivery,catering'],
-            'tableNumber' => ['nullable', 'integer', 'min:1', 'required_if:type,dine_in'],
+            'tableNumber' => ['nullable', 'integer', 'min:1'],
             'deliveryAddress' => ['nullable', 'string', 'required_if:type,delivery'],
             'items' => ['required', 'array', 'min:1'],
             'customerPhone' => ['nullable', 'string', 'regex:/^[0-9+\-\s()]+$/'],
@@ -127,4 +107,5 @@ class CreateOrderData extends BaseData
             'specialInstructions' => 'special instructions',
         ];
     }
+
 }

@@ -200,10 +200,21 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             return null;
         }
 
-        // In a real implementation, these would come from other services
-        // through their interfaces
-        $user = null; // $this->userService->find($order->userId);
-        $location = null; // $this->locationService->find($order->locationId);
+        // Mock data for now - in a real implementation, these would come from other services
+        $user = $order->userId ? (object) [
+            'id' => $order->userId,
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'role' => 'waiter',
+        ] : null;
+        
+        $location = (object) [
+            'id' => $order->locationId,
+            'name' => $order->locationId === 1 ? 'Main Branch' : 'Downtown Branch',
+            'address' => $order->locationId === 1 ? '123 Main St' : '456 Downtown Ave',
+            'phone' => $order->locationId === 1 ? '555-0123' : '555-0456',
+        ];
+        
         $payments = []; // $this->paymentService->getByOrder($id);
         $offers = []; // $this->offerService->getByOrder($id);
 

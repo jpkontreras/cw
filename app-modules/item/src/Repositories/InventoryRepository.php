@@ -14,6 +14,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 class InventoryRepository implements InventoryRepositoryInterface
 {
@@ -636,25 +638,27 @@ class InventoryRepository implements InventoryRepositoryInterface
     /**
      * Find entity by ID
      */
-    public function find(int $id): ?object
+    public function find(int $id): ?Data
     {
-        return InventoryMovement::find($id);
+        $movement = InventoryMovement::find($id);
+        return $movement ? InventoryMovementData::from($movement) : null;
     }
     
     /**
      * Find entity by ID or throw exception
      */
-    public function findOrFail(int $id): object
+    public function findOrFail(int $id): Data
     {
-        return InventoryMovement::findOrFail($id);
+        $movement = InventoryMovement::findOrFail($id);
+        return InventoryMovementData::from($movement);
     }
     
     /**
      * Get all entities
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return InventoryMovement::all()->map(fn($movement) => InventoryMovementData::from($movement))->toArray();
+        return InventoryMovementData::collect(InventoryMovement::all(), DataCollection::class);
     }
     
     /**
@@ -673,9 +677,10 @@ class InventoryRepository implements InventoryRepositoryInterface
     /**
      * Create new entity
      */
-    public function create(array $data): object
+    public function create(array $data): Data
     {
-        return InventoryMovement::create($data);
+        $movement = InventoryMovement::create($data);
+        return InventoryMovementData::from($movement);
     }
     
     /**
@@ -811,5 +816,19 @@ class InventoryRepository implements InventoryRepositoryInterface
             'field' => 'created_at',
             'direction' => 'desc'
         ];
+    }
+    
+    /**
+     * Transform a model to DTO
+     * 
+     * Implementation of BaseRepositoryInterface::toData
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof InventoryMovement) {
+            return null;
+        }
+        
+        return InventoryMovementData::from($model);
     }
 }

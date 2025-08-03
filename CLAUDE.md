@@ -143,6 +143,11 @@ public function find(int $id): ?OrderData {
 public function all(): DataCollection {
     return OrderData::collection(Order::all());
 }
+
+// For compatibility with services expecting arrays
+public function allAsArray(): array {
+    return $this->all()->toArray();
+}
 ```
 
 #### 4. **Lazy Loading** - Collections and expensive properties MUST be lazy

@@ -9,6 +9,8 @@ use Colame\Item\Models\ItemLocationPrice;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 class PricingRepository implements PricingRepositoryInterface
 {
@@ -360,17 +362,18 @@ class PricingRepository implements PricingRepositoryInterface
     /**
      * Find entity by ID or throw exception
      */
-    public function findOrFail(int $id): object
+    public function findOrFail(int $id): Data
     {
-        return ItemLocationPrice::findOrFail($id);
+        $price = ItemLocationPrice::findOrFail($id);
+        return ItemLocationPriceData::from($price);
     }
     
     /**
      * Get all entities
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return ItemLocationPrice::all()->map(fn($price) => ItemLocationPriceData::from($price))->toArray();
+        return ItemLocationPriceData::collect(ItemLocationPrice::all(), DataCollection::class);
     }
     
     /**
@@ -392,5 +395,27 @@ class PricingRepository implements PricingRepositoryInterface
     public function exists(int $id): bool
     {
         return ItemLocationPrice::where('id', $id)->exists();
+    }
+    
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return ['price', 'effective_from', 'effective_until', 'created_at', 'updated_at'];
+    }
+    
+    /**
+     * Transform a model to DTO
+     * 
+     * Implementation of BaseRepositoryInterface::toData
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof ItemLocationPrice) {
+            return null;
+        }
+        
+        return ItemLocationPriceData::from($model);
     }
 }

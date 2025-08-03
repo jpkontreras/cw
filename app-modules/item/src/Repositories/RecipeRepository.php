@@ -14,6 +14,8 @@ use Colame\Item\Models\Item;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 class RecipeRepository implements RecipeRepositoryInterface
 {
@@ -581,17 +583,38 @@ class RecipeRepository implements RecipeRepositoryInterface
     /**
      * Find entity by ID or throw exception
      */
-    public function findOrFail(int $id): object
+    public function findOrFail(int $id): Data
     {
-        return Recipe::findOrFail($id);
+        $recipe = Recipe::findOrFail($id);
+        return RecipeData::from($recipe);
     }
     
     /**
      * Get all entities
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return Recipe::all()->map(fn($recipe) => RecipeData::from($recipe))->toArray();
+        return RecipeData::collect(Recipe::all(), DataCollection::class);
+    }
+    
+    /**
+     * Get sortable fields
+     */
+    public function getSortableFields(): array
+    {
+        return ['created_at', 'updated_at', 'prep_time', 'cook_time'];
+    }
+    
+    /**
+     * Transform model to data
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof Recipe) {
+            return null;
+        }
+        
+        return RecipeData::from($model);
     }
     
     /**

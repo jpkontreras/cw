@@ -44,7 +44,7 @@ class OrderController extends Controller
         // Get paginated orders with filters and metadata
         $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
         $responseData = $paginatedData->toArray();
-        
+
         // Handle out-of-bounds page numbers
         if ($redirect = $this->handleOutOfBoundsPagination($responseData['pagination'], $request, 'orders.index')) {
             return $redirect;
@@ -102,7 +102,7 @@ class OrderController extends Controller
 
         // Get active items from the repository
         $activeItems = $this->itemRepository->getActiveItems();
-        
+
         // Transform items for the frontend
         $items = $activeItems->map(function ($item) {
             return [
@@ -160,17 +160,21 @@ class OrderController extends Controller
         // The order is already loaded via route model binding
         $orderWithRelations = $this->orderService->getOrderWithRelations($order->id);
 
+        if (!$orderWithRelations) {
+            abort(404, 'Order not found');
+        }
+
         // Extract the order data and other relations
-        $orderData = $orderWithRelations?->order;
+        $orderData = $orderWithRelations->order;
 
         return Inertia::render('order/show', [
-            'order' => $orderData,
-            'user' => $orderWithRelations?->user,
-            'location' => $orderWithRelations?->location,
-            'payments' => $orderWithRelations?->payments ?? [],
-            'offers' => $orderWithRelations?->offers ?? [],
-            'isPaid' => $orderData?->paymentStatus === 'paid',
-            'remainingAmount' => $orderData?->totalAmount - ($orderData?->paidAmount ?? 0),
+            'order' => $orderData->toArray(),
+            'user' => $orderWithRelations->user,
+            'location' => $orderWithRelations->location,
+            'payments' => $orderWithRelations->payments ?? [],
+            'offers' => $orderWithRelations->offers ?? [],
+            'isPaid' => $orderWithRelations->isPaid(),
+            'remainingAmount' => $orderWithRelations->getRemainingAmount(),
             'statusHistory' => [], // TODO: Implement status history
         ]);
     }
@@ -357,7 +361,7 @@ class OrderController extends Controller
 
         // TODO: Implement receipt view
         return Inertia::render('order/receipt', [
-            'order' => OrderData::fromModel($order),
+            'order' => OrderData::fromModel($order)->toArray(),
         ]);
     }
 
@@ -451,7 +455,7 @@ class OrderController extends Controller
         ];
 
         // Convert to DTOs
-        $orders = $ordersCollection->map(fn($order) => OrderData::fromModel($order));
+        $orders = $ordersCollection->map(fn($order) => OrderData::fromModel($order)->toArray());
 
         // Get locations
         $locations = [
@@ -496,7 +500,7 @@ class OrderController extends Controller
         ];
 
         return Inertia::render('order/payment', [
-            'order' => OrderData::fromModel($order),
+            'order' => OrderData::fromModel($order)->toArray(),
             'payments' => $order->payments,
             'remainingAmount' => $remainingAmount,
             'suggestedTip' => 10, // 10% suggested tip

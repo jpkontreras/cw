@@ -29,6 +29,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 
 class ItemRepository implements ItemRepositoryInterface
 {
@@ -190,7 +192,7 @@ class ItemRepository implements ItemRepositoryInterface
             return 0;
         }
         
-        $basePrice = $item->base_price;
+        $basePrice = $item->base_price ?? 0.0;
         
         // Add variant adjustment if specified
         if ($variantId) {
@@ -212,11 +214,11 @@ class ItemRepository implements ItemRepositoryInterface
                 ->first();
             
             if ($locationPrice) {
-                return $locationPrice->price;
+                return (float) $locationPrice->price;
             }
         }
         
-        return $basePrice;
+        return (float) $basePrice;
     }
     
     /**
@@ -647,17 +649,18 @@ class ItemRepository implements ItemRepositoryInterface
     /**
      * Find entity by ID or throw exception
      */
-    public function findOrFail(int $id): object
+    public function findOrFail(int $id): Data
     {
-        return Item::findOrFail($id);
+        $item = Item::findOrFail($id);
+        return ItemData::from($item);
     }
     
     /**
      * Get all entities
      */
-    public function all(): array
+    public function all(): DataCollection
     {
-        return Item::all()->map(fn($item) => ItemData::from($item))->toArray();
+        return ItemData::collect(Item::all(), DataCollection::class);
     }
     
     /**
@@ -724,5 +727,19 @@ class ItemRepository implements ItemRepositoryInterface
         }
         
         return ItemData::collect($query->get());
+    }
+    
+    /**
+     * Transform a model to DTO
+     * 
+     * Implementation of BaseRepositoryInterface::toData
+     */
+    public function toData(mixed $model): ?Data
+    {
+        if (!$model instanceof Item) {
+            return null;
+        }
+        
+        return ItemData::from($model);
     }
 }

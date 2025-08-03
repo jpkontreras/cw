@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
-use Spatie\LaravelData\Attributes\Validation\ArrayType;
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Numeric;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\StringType;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
@@ -19,21 +15,13 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class CreateOrderItemData extends BaseData
 {
     public function __construct(
-        #[Required, Numeric]
+        #[MapInputName('itemId')]
         public readonly int $itemId,
-        
-        #[Required, Numeric, Min(1)]
         public readonly int $quantity,
-        
+        #[MapInputName('unitPrice')]
         public readonly float $unitPrice = 0,
-        
-        #[StringType]
         public readonly ?string $notes = null,
-        
-        #[ArrayType]
         public readonly ?array $modifiers = null,
-        
-        #[ArrayType]
         public readonly ?array $metadata = null,
     ) {}
 

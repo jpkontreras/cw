@@ -28,13 +28,13 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function find(int $id): ?OrderData
     {
-        $order = Order::find($id);
+        $order = Order::with(['items'])->find($id);
         
         if (!$order) {
             return null;
         }
 
-        return $this->modelToData($order);
+        return $this->modelToData($order, true);
     }
 
     /**
@@ -42,8 +42,8 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function findOrFail(int $id): OrderData
     {
-        $order = Order::findOrFail($id);
-        return $this->modelToData($order);
+        $order = Order::with(['items'])->findOrFail($id);
+        return $this->modelToData($order, true);
     }
 
     /**
@@ -51,7 +51,7 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function all(): DataCollection
     {
-        return OrderData::collect(Order::all(), DataCollection::class);
+        return OrderData::collect(Order::with(['items'])->get(), DataCollection::class);
     }
 
     /**
@@ -60,7 +60,8 @@ class OrderRepository implements OrderRepositoryInterface
     public function getByStatus(string $status): DataCollection
     {
         return OrderData::collect(
-            Order::where('status', $status)
+            Order::with(['items'])
+                ->where('status', $status)
                 ->orderBy('created_at', 'desc')
                 ->get(),
             DataCollection::class
@@ -359,10 +360,8 @@ class OrderRepository implements OrderRepositoryInterface
         
         $query = Order::query();
         
-        // Load relationships if needed
-        if ($this->shouldIncludeRelations($filters)) {
-            $query->with(['items']);
-        }
+        // Always load items relation for order listing
+        $query->with(['items']);
 
         $this->applyFilters($query, $filters);
 
