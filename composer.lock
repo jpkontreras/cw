@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d8bf90398877a3883e7bfbdd7dbf421d",
+    "content-hash": "a37fd278aec7e18ad46e8e022904ee55",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1764,6 +1764,76 @@
                 "source": "https://github.com/dflydev/dflydev-dot-access-data/tree/v3.0.3"
             },
             "time": "2024-07-08T12:26:09+00:00"
+        },
+        {
+            "name": "diglactic/laravel-breadcrumbs",
+            "version": "v10.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/diglactic/laravel-breadcrumbs.git",
+                "reference": "1bfe5e29aacf88beeab64ae3e860e0f2d8ace36a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/diglactic/laravel-breadcrumbs/zipball/1bfe5e29aacf88beeab64ae3e860e0f2d8ace36a",
+                "reference": "1bfe5e29aacf88beeab64ae3e860e0f2d8ace36a",
+                "shasum": ""
+            },
+            "require": {
+                "facade/ignition-contracts": "^1.0",
+                "laravel/framework": "^10.0 || ^11.0 || ^12.0",
+                "php": "^8.1"
+            },
+            "conflict": {
+                "davejamesmiller/laravel-breadcrumbs": "*"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0 || ^9.0 || ^10.0",
+                "phpunit/phpunit": "^10.5 || ^11.5",
+                "spatie/phpunit-snapshot-assertions": "^5.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Breadcrumbs": "Diglactic\\Breadcrumbs\\Breadcrumbs"
+                    },
+                    "providers": [
+                        "Diglactic\\Breadcrumbs\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Diglactic\\Breadcrumbs\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sheng Slogar",
+                    "email": "sheng@diglactic.com",
+                    "role": "Maintainer"
+                },
+                {
+                    "name": "Dave James Miller",
+                    "email": "dave@davejamesmiller.com",
+                    "role": "Original Creator"
+                }
+            ],
+            "description": "A simple Laravel-style way to create breadcrumbs.",
+            "homepage": "https://github.com/diglactic/laravel-breadcrumbs",
+            "keywords": [
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/diglactic/laravel-breadcrumbs/issues",
+                "source": "https://github.com/diglactic/laravel-breadcrumbs/tree/v10.0.0"
+            },
+            "time": "2025-02-25T05:44:07+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -6351,6 +6421,91 @@
                 "source": "https://github.com/revoltphp/event-loop/tree/v1.0.7"
             },
             "time": "2025-01-25T19:27:39+00:00"
+        },
+        {
+            "name": "robertboes/inertia-breadcrumbs",
+            "version": "0.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RobertBoes/inertia-breadcrumbs.git",
+                "reference": "a14dccf0be9dee3185f17f440a4f63fd108f0392"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RobertBoes/inertia-breadcrumbs/zipball/a14dccf0be9dee3185f17f440a4f63fd108f0392",
+                "reference": "a14dccf0be9dee3185f17f440a4f63fd108f0392",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^10.0|^11.0|^12.0",
+                "inertiajs/inertia-laravel": "^1.0|^2.0",
+                "php": "^8.1",
+                "spatie/laravel-package-tools": "^1.11.0"
+            },
+            "require-dev": {
+                "composer/composer": "^2.1",
+                "diglactic/laravel-breadcrumbs": "^8.0|^9.0|^10.0",
+                "glhd/gretel": "^1.9",
+                "larastan/larastan": "^2.0|^3.0",
+                "laravel/pint": "^1.14",
+                "orchestra/testbench": "^8.0|^9.1.0|^10",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan-deprecation-rules": "^1.0|^2.0",
+                "phpstan/phpstan-phpunit": "^1.0|^2.0",
+                "phpunit/phpunit": "^10.0|^11",
+                "spatie/laravel-ray": "^1.28",
+                "spatie/ray": "^1.33",
+                "tabuna/breadcrumbs": "^4.0"
+            },
+            "suggest": {
+                "diglactic/laravel-breadcrumbs": "Manage and configure breadcrumbs with diglactic/laravel-breadcrumbs",
+                "glhd/gretel": "Manage and configure breadcrumbs with glhd/gretel",
+                "tabuna/breadcrumbs": "Manage and configure breadcrumbs with tabuna/breadcrumbs"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "RobertBoes\\InertiaBreadcrumbs\\InertiaBreadcrumbsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "RobertBoes\\InertiaBreadcrumbs\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Robert Boes",
+                    "email": "github@robertboes.nl",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Laravel package to automatically share breadcrumbs to Inertia",
+            "homepage": "https://github.com/robertboes/inertia-breadcrumbs",
+            "keywords": [
+                "breadcrumbs",
+                "inertia-breadcrumbs",
+                "inertiajs",
+                "laravel",
+                "robertboes"
+            ],
+            "support": {
+                "issues": "https://github.com/RobertBoes/inertia-breadcrumbs/issues",
+                "source": "https://github.com/RobertBoes/inertia-breadcrumbs/tree/0.8.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/RobertBoes",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-04-08T12:28:49+00:00"
         },
         {
             "name": "seld/jsonlint",
