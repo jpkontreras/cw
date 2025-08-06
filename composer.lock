@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a37fd278aec7e18ad46e8e022904ee55",
+    "content-hash": "764d74d8e3155f40af048a5107ea48f9",
     "packages": [
         {
             "name": "amphp/amp",
@@ -971,6 +971,38 @@
                 "proprietary"
             ],
             "description": "Item module for restaurant menu management",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "colame/location",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/location",
+                "reference": "ad42a569e8c08439a0f6a09c29034aa160cad10e"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Colame\\Location\\Providers\\LocationServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Colame\\Location\\": "src/",
+                    "Colame\\Location\\Tests\\": "tests/",
+                    "Colame\\Location\\Database\\Factories\\": "database/factories/",
+                    "Colame\\Location\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
             "transport-options": {
                 "symlink": true,
                 "relative": true

@@ -6,10 +6,12 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import {
   BookOpen,
+  Building2,
   ChefHat,
   DollarSign,
   FileText,
   Folder,
+  GitBranch,
   LayoutGrid,
   List,
   MapPin,
@@ -19,6 +21,7 @@ import {
   Plus,
   Settings,
   ShoppingCart,
+  SlidersHorizontal,
   Tag,
   Users,
   Utensils,
@@ -109,6 +112,33 @@ const mainNavItems: NavItem[] = [
     title: 'Locations',
     href: '/locations',
     icon: MapPin,
+    items: [
+      {
+        title: 'All Locations',
+        href: '/locations',
+        icon: List,
+      },
+      {
+        title: 'Create Location',
+        href: '/locations/create',
+        icon: Plus,
+      },
+      {
+        title: 'Location Types',
+        href: '/locations/types',
+        icon: Building2,
+      },
+      {
+        title: 'Location Hierarchy',
+        href: '/locations/hierarchy',
+        icon: GitBranch,
+      },
+      {
+        title: 'Location Settings',
+        href: '/locations/settings',
+        icon: SlidersHorizontal,
+      },
+    ],
   },
   {
     title: 'Offers',

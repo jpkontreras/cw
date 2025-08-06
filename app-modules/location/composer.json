@@ -1,0 +1,24 @@
+{
+	"name": "colame/location",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Location\\": "src/",
+			"Colame\\Location\\Tests\\": "tests/",
+			"Colame\\Location\\Database\\Factories\\": "database/factories/",
+			"Colame\\Location\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Location\\Providers\\LocationServiceProvider"
+			]
+		}
+	}
+}

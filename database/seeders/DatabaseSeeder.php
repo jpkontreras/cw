@@ -15,9 +15,20 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
+        $user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Assign user to default location if location module is available
+        if (class_exists('\Colame\Location\Models\Location')) {
+            $defaultLocation = \Colame\Location\Models\Location::where('is_default', true)->first();
+            if ($defaultLocation) {
+                $user->locations()->attach($defaultLocation->id, ['role' => 'manager', 'is_primary' => true]);
+                $user->current_location_id = $defaultLocation->id;
+                $user->default_location_id = $defaultLocation->id;
+                $user->save();
+            }
+        }
     }
 }

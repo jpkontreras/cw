@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "colame/item": "*",
+        "colame/location": "*",
         "colame/order": "*",
         "diglactic/laravel-breadcrumbs": "^10.0",
         "inertiajs/inertia-laravel": "^2.0",

@@ -255,6 +255,45 @@ Breadcrumbs::for('orders.cancel.form', function (BreadcrumbTrail $trail, $orderI
 });
 
 // ====================
+// Location Module
+// ====================
+
+// Locations
+Breadcrumbs::for('locations.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Locations', route('locations.index'));
+});
+
+// Locations > Create
+Breadcrumbs::for('locations.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('locations.index');
+    $trail->push('Create Location', route('locations.create'));
+});
+
+// Locations > Location Details
+Breadcrumbs::for('locations.show', function (BreadcrumbTrail $trail, $locationId) {
+    $trail->parent('locations.index');
+    $trail->push('Location Details', route('locations.show', $locationId));
+});
+
+// Locations > Location Details > Edit
+Breadcrumbs::for('locations.edit', function (BreadcrumbTrail $trail, $locationId) {
+    $trail->parent('locations.show', $locationId);
+    $trail->push('Edit', route('locations.edit', $locationId));
+});
+
+// Locations > Location Details > Users
+Breadcrumbs::for('locations.users', function (BreadcrumbTrail $trail, $locationId) {
+    $trail->parent('locations.show', $locationId);
+    $trail->push('Users', route('locations.users', $locationId));
+});
+
+// Locations > Location Details > Settings
+Breadcrumbs::for('locations.settings', function (BreadcrumbTrail $trail, $locationId) {
+    $trail->parent('locations.show', $locationId);
+    $trail->push('Settings', route('locations.settings', $locationId));
+});
+
+// ====================
 // Settings Module
 // ====================
 

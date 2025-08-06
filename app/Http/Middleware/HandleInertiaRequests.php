@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use Illuminate\Foundation\Inspiring;
+use Colame\Location\Contracts\LocationServiceInterface;
+use Colame\Location\Data\LocationData;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
-use Diglactic\Breadcrumbs\Breadcrumbs;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -38,17 +38,76 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $locationData = $this->getLocationData($user);
+        
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
             'ziggy' => fn(): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true'
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'location' => $locationData,
         ];
+    }
+
+    /**
+     * Get location data for the authenticated user.
+     */
+    private function getLocationData($user): array
+    {
+        
+        if (!$user) {
+            return [
+                'current' => null,
+                'locations' => [],
+            ];
+        }
+
+        try {
+            $locationService = app(LocationServiceInterface::class);
+            
+            // Get user's current location
+            $currentLocation = null;
+            $effectiveLocation = $user->getEffectiveLocation();
+            if ($effectiveLocation) {
+                $currentLocation = LocationData::fromModel($effectiveLocation)->toArray();
+            }
+            
+            // Get all locations accessible by the user
+            $locations = $locationService->getUserAccessibleLocations($user->id);
+            
+            // If user has no locations but there's a default location, assign them to it
+            if ($locations->count() === 0) {
+                // Try to find a default location
+                $defaultLocation = \Colame\Location\Models\Location::where('is_default', true)->first();
+                if ($defaultLocation) {
+                    // Assign user to default location
+                    $locationService->assignUserToLocation($user->id, $defaultLocation->id, 'staff', true);
+                    // Re-fetch locations
+                    $locations = $locationService->getUserAccessibleLocations($user->id);
+                    if (!$currentLocation) {
+                        $currentLocation = LocationData::fromModel($defaultLocation)->toArray();
+                    }
+                }
+            }
+            
+            return [
+                'current' => $currentLocation,
+                'locations' => $locations->toArray(),
+            ];
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            // If location module is not available or there's an error, return empty data
+            return [
+                'current' => null,
+                'locations' => [],
+            ];
+        }
     }
 }
