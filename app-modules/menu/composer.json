@@ -1,0 +1,24 @@
+{
+	"name": "colame/menu",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Menu\\": "src/",
+			"Colame\\Menu\\Tests\\": "tests/",
+			"Colame\\Menu\\Database\\Factories\\": "database/factories/",
+			"Colame\\Menu\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Menu\\Providers\\MenuServiceProvider"
+			]
+		}
+	}
+}
