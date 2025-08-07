@@ -84,6 +84,11 @@ class ItemServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../../database/migrations' => database_path('migrations'),
             ], 'item-migrations');
+            
+            // Register commands
+            $this->commands([
+                \Colame\Item\Console\Commands\GenerateItemsCommand::class,
+            ]);
         }
     }
     

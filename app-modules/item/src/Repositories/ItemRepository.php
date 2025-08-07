@@ -81,8 +81,11 @@ class ItemRepository implements ItemRepositoryInterface
                     ->map(fn($m) => ItemModifierData::from($m))
                     ->all();
                 
+                // Find the actual ModifierGroup model to properly handle dates
+                $modifierGroupModel = ModifierGroup::find($group->id);
+                
                 return new ModifierGroupWithModifiersData(
-                    modifierGroup: ModifierGroupData::from($group),
+                    modifierGroup: ModifierGroupData::from($modifierGroupModel),
                     modifiers: $modifiers,
                     sortOrder: $group->pivot_sort_order
                 );

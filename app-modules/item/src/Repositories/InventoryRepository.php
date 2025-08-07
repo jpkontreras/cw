@@ -26,6 +26,12 @@ class InventoryRepository implements InventoryRepositoryInterface
      */
     public function getStockLevel(int $itemId, ?int $variantId = null, ?int $locationId = null): float
     {
+        // First check if item tracks inventory
+        $item = Item::find($itemId);
+        if (!$item || !$item->track_inventory) {
+            return 0; // Services and combos don't track inventory
+        }
+        
         if ($locationId) {
             $stock = ItemLocationStock::where('item_id', $itemId)
                 ->where('item_variant_id', $variantId)
@@ -37,11 +43,10 @@ class InventoryRepository implements InventoryRepositoryInterface
         
         if ($variantId) {
             $variant = ItemVariant::find($variantId);
-            return $variant && $variant->item_id === $itemId ? $variant->stock_quantity : 0;
+            return $variant && $variant->item_id === $itemId ? ($variant->stock_quantity ?? 0) : 0;
         }
         
-        $item = Item::find($itemId);
-        return $item ? $item->stock_quantity : 0;
+        return $item->stock_quantity ?? 0;
     }
     
     /**
@@ -49,13 +54,19 @@ class InventoryRepository implements InventoryRepositoryInterface
      */
     public function getAvailableStock(int $itemId, ?int $variantId = null, ?int $locationId = null): float
     {
+        // First check if item tracks inventory
+        $item = Item::find($itemId);
+        if (!$item || !$item->track_inventory) {
+            return 0; // Services and combos don't track inventory
+        }
+        
         if ($locationId) {
             $stock = ItemLocationStock::where('item_id', $itemId)
                 ->where('item_variant_id', $variantId)
                 ->where('location_id', $locationId)
                 ->first();
             
-            return $stock ? $stock->available_quantity : 0;
+            return $stock ? ($stock->available_quantity ?? 0) : 0;
         }
         
         // For non-location stock, we don't track reservations in the base implementation
@@ -114,7 +125,13 @@ class InventoryRepository implements InventoryRepositoryInterface
     public function adjustStock(int $itemId, float $quantity, string $reason, array $metadata = []): InventoryMovementData
     {
         $item = Item::findOrFail($itemId);
-        $beforeQuantity = $item->stock_quantity;
+        
+        // Don't adjust stock for items that don't track inventory
+        if (!$item->track_inventory) {
+            throw new \InvalidArgumentException("Item {$itemId} does not track inventory");
+        }
+        
+        $beforeQuantity = $item->stock_quantity ?? 0;
         $afterQuantity = $beforeQuantity + $quantity;
         
         DB::transaction(function () use ($item, $afterQuantity) {
