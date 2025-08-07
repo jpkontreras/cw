@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { 
   MapPin,
@@ -47,27 +48,22 @@ export default function LocationSettings({ settings, timezones, currencies }: Pr
   return (
     <AppLayout>
       <Head title="Location Settings" />
-      
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Location Settings</h1>
-            <p className="text-muted-foreground mt-1">
-              Configure global settings for all locations
-            </p>
-          </div>
-          <div className="flex gap-2">
+      <Page>
+        <Page.Header
+          title="Location Settings"
+          subtitle="Configure global settings for all locations"
+          actions={
             <Button variant="outline" asChild>
               <Link href="/locations">
                 <MapPin className="h-4 w-4 mr-2" />
                 View Locations
               </Link>
             </Button>
-          </div>
-        </div>
+          }
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <Page.Content>
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Regional Settings */}
           <Card>
             <CardHeader>
@@ -224,8 +220,8 @@ export default function LocationSettings({ settings, timezones, currencies }: Pr
           </div>
         </form>
 
-        {/* Information Card */}
-        <Card>
+          {/* Information Card */}
+          <Card>
           <CardHeader>
             <CardTitle className="text-base">About Location Settings</CardTitle>
           </CardHeader>
@@ -242,8 +238,9 @@ export default function LocationSettings({ settings, timezones, currencies }: Pr
               </ul>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { PageContent, PageHeader, PageLayout } from '@/components/page';
+import Page from '@/layouts/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -177,8 +177,8 @@ export default function OrderDashboard({
     <AppLayout>
       <Head title="Order Dashboard" />
 
-      <PageLayout>
-        <PageHeader title="Order Dashboard" description="Real-time analytics and insights for your restaurant">
+      <Page>
+        <Page.Header title="Order Dashboard" subtitle="Real-time analytics and insights for your restaurant">
           <div className="flex items-center gap-2">
             {/* Period Filter */}
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -215,9 +215,9 @@ export default function OrderDashboard({
               Export
             </Button>
           </div>
-        </PageHeader>
+        </Page.Header>
 
-        <PageContent>
+        <Page.Content>
           {/* Key Metrics */}
           <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard
@@ -636,8 +636,8 @@ export default function OrderDashboard({
               </div>
             </TabsContent>
           </Tabs>
-        </PageContent>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

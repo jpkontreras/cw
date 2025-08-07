@@ -1,8 +1,8 @@
-import { PageHeader } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { cn } from '@/lib/utils';
 import { Head, router } from '@inertiajs/react';
 import { AlertCircle, CheckCircle, ChefHat, Clock, Home, Maximize2, Package, RefreshCw, ShoppingBag, Truck, User } from 'lucide-react';
@@ -371,24 +371,30 @@ export default function KitchenDisplay({ orders: initialOrders, locationId }: Pr
     <AppLayout>
       <Head title="Kitchen Display" />
 
-      {!isFullscreen && (
-        <PageHeader title="Kitchen Display" description={`Live order tracking for Location ${locationId}`}>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={refreshOrders} disabled={isRefreshing}>
-              <RefreshCw className={cn('mr-2 h-4 w-4', isRefreshing && 'animate-spin')} />
-              Refresh
-            </Button>
+      <Page>
+        {!isFullscreen && (
+          <Page.Header 
+            title="Kitchen Display" 
+            subtitle={`Live order tracking for Location ${locationId}`}
+            actions={
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={refreshOrders} disabled={isRefreshing}>
+                  <RefreshCw className={cn('mr-2 h-4 w-4', isRefreshing && 'animate-spin')} />
+                  Refresh
+                </Button>
 
-            <Button variant="outline" size="sm" onClick={toggleFullscreen}>
-              <Maximize2 className="mr-2 h-4 w-4" />
-              Fullscreen
-            </Button>
-          </div>
-        </PageHeader>
-      )}
+                <Button variant="outline" size="sm" onClick={toggleFullscreen}>
+                  <Maximize2 className="mr-2 h-4 w-4" />
+                  Fullscreen
+                </Button>
+              </div>
+            }
+          />
+        )}
 
-      {/* Main content */}
-      <div id="kitchen-display-content" className={cn('flex flex-1 flex-col', isFullscreen && 'fixed inset-0 z-50 bg-white')}>
+        {/* Main content */}
+        <Page.Content noPadding>
+          <div id="kitchen-display-content" className={cn('flex flex-1 flex-col', isFullscreen && 'fixed inset-0 z-50 bg-white')}>
         {/* Fullscreen header */}
         {isFullscreen && (
           <div className="border-b border-gray-200 bg-white px-6 py-3">
@@ -493,19 +499,21 @@ export default function KitchenDisplay({ orders: initialOrders, locationId }: Pr
         </div>
       </div>
 
-      {/* Keyboard shortcuts help */}
-      {!isFullscreen && (
-        <div className="fixed right-4 bottom-4 rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-lg">
-          <div className="space-y-1">
-            <div>
-              Press <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">F</kbd> for fullscreen
+          {/* Keyboard shortcuts help */}
+          {!isFullscreen && (
+            <div className="fixed right-4 bottom-4 rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-lg">
+              <div className="space-y-1">
+                <div>
+                  Press <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">F</kbd> for fullscreen
+                </div>
+                <div>
+                  Press <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">R</kbd> to refresh
+                </div>
+              </div>
             </div>
-            <div>
-              Press <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">R</kbd> to refresh
-            </div>
-          </div>
-        </div>
-      )}
+          )}
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

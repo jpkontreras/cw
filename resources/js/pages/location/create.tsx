@@ -1,6 +1,6 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import LocationLayout from './layout';
+import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,8 +71,8 @@ export default function LocationCreate({
   };
 
   return (
-    <LocationLayout title="Create Location">
-      
+    <AppLayout>
+      <Head title="Create Location" />
       <Page>
         <Page.Header
           title="Create Location"
@@ -462,6 +462,6 @@ export default function LocationCreate({
         </form>
         </Page.Content>
       </Page>
-    </LocationLayout>
+    </AppLayout>
   );
 }

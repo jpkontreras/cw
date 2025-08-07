@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -187,12 +187,12 @@ export default function ItemCreate({ categories, item_types, features, available
     <AppLayout>
       <Head title="Create Item" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Create Item"
           subtitle="Add a new product, service, or combo to your inventory"
           actions={
-            <PageLayout.Actions>
+            <Page.Actions>
               <Button
                 variant="outline"
                 size="sm"
@@ -209,11 +209,11 @@ export default function ItemCreate({ categories, item_types, features, available
                 <Save className="mr-2 h-4 w-4" />
                 Save Item
               </Button>
-            </PageLayout.Actions>
+            </Page.Actions>
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
             {Object.keys(errors).length > 0 && (
               <Alert variant="destructive" className="mb-6">
@@ -985,8 +985,8 @@ export default function ItemCreate({ categories, item_types, features, available
               </Button>
             </div>
           </form>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

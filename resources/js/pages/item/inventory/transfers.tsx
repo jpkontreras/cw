@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -112,7 +112,7 @@ export default function StockTransfers({ locations, pending_transfers, recent_tr
     <AppLayout>
       <Head title="Stock Transfers" />
 
-      <PageLayout
+      <Page
         title="Stock Transfers"
         description="Transfer inventory between locations"
       >
@@ -364,7 +364,7 @@ export default function StockTransfers({ locations, pending_transfers, recent_tr
             </CardContent>
           </Card>
         </div>
-      </PageLayout>
+      </Page>
     </AppLayout>
   );
 }

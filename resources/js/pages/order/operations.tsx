@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import type { Order } from '@/types/modules/order';
 import {
   formatCurrency,
@@ -372,18 +373,16 @@ export default function OperationsCenter({ orders: initialOrders, locations, sta
   return (
     <AppLayout>
       <Head title="Operations Center" />
-
-      <div className={`${fullscreen ? 'fixed inset-0 z-50 bg-white' : 'container mx-auto'} p-6`}>
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Operations Center</h1>
-            <Badge variant="outline" className="text-lg">
-              <Activity className="mr-1 h-4 w-4 animate-pulse text-green-500" />
-              Live
-            </Badge>
-          </div>
-          <div className="flex items-center gap-3">
+      <Page>
+        <div className={`${fullscreen ? 'fixed inset-0 z-50 bg-white' : 'flex h-full flex-col'}`}>
+          <Page.Header
+            title="Operations Center"
+            actions={
+              <>
+                <Badge variant="outline" className="text-lg">
+                  <Activity className="mr-1 h-4 w-4 animate-pulse text-green-500" />
+                  Live
+                </Badge>
             {/* Location Filter */}
             <Select value={selectedLocation} onValueChange={setSelectedLocation}>
               <SelectTrigger className="w-48">
@@ -429,14 +428,16 @@ export default function OperationsCenter({ orders: initialOrders, locations, sta
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => setFullscreen(!fullscreen)}>
-              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-          </div>
-        </div>
+                <Button variant="outline" size="icon" onClick={() => setFullscreen(!fullscreen)}>
+                  {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+              </>
+            }
+          />
+          <Page.Content noPadding={fullscreen}>
 
-        {/* Stats Bar */}
-        <div className="mb-6 grid grid-cols-4 gap-4 px-4">
+            {/* Stats Bar */}
+            <div className={`${fullscreen ? 'p-6' : 'px-4'} mb-6 grid grid-cols-4 gap-4`}>
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -483,8 +484,8 @@ export default function OperationsCenter({ orders: initialOrders, locations, sta
           </Card>
         </div>
 
-        {/* Main Content */}
-        <Tabs value={selectedView} onValueChange={setSelectedView} className="px-4">
+            {/* Main Content */}
+            <Tabs value={selectedView} onValueChange={setSelectedView} className={fullscreen ? 'px-6' : 'px-4'}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="kitchen">Kitchen Display</TabsTrigger>
@@ -623,8 +624,10 @@ export default function OperationsCenter({ orders: initialOrders, locations, sta
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      </div>
+            </Tabs>
+          </Page.Content>
+        </div>
+      </Page>
     </AppLayout>
   );
 }

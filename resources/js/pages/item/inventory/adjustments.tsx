@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,13 +92,13 @@ export default function InventoryAdjustments({ adjustment_types, recent_adjustme
     <AppLayout>
       <Head title="Inventory Adjustments" />
 
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Inventory Adjustments"
           subtitle="Manually adjust inventory levels for items"
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -273,8 +273,8 @@ export default function InventoryAdjustments({ adjustment_types, recent_adjustme
             </CardContent>
           </Card>
           </div>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

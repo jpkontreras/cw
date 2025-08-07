@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle, Clock } from 'lucide-react';
 
@@ -118,30 +119,34 @@ export default function KitchenDisplay({ orders, locationId }: Props) {
     <AppLayout>
       <Head title="Kitchen Display" />
 
-      <div className="container-fluid mx-auto p-4">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Kitchen Display - Location {locationId}</h1>
-          <div className="flex gap-4">
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                Confirmed: {confirmedOrders.length}
-              </div>
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                Preparing: {preparingOrders.length}
-              </div>
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                Ready: {readyOrders.length}
-              </div>
-            </Badge>
-          </div>
-        </div>
+      <Page>
+        <Page.Header 
+          title={`Kitchen Display - Location ${locationId}`}
+          actions={
+            <div className="flex gap-4">
+              <Badge variant="secondary" className="px-4 py-2 text-lg">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                  Confirmed: {confirmedOrders.length}
+                </div>
+              </Badge>
+              <Badge variant="secondary" className="px-4 py-2 text-lg">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-orange-500"></div>
+                  Preparing: {preparingOrders.length}
+                </div>
+              </Badge>
+              <Badge variant="secondary" className="px-4 py-2 text-lg">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                  Ready: {readyOrders.length}
+                </div>
+              </Badge>
+            </div>
+          }
+        />
+
+        <Page.Content>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Confirmed Orders */}
@@ -186,7 +191,8 @@ export default function KitchenDisplay({ orders, locationId }: Props) {
             </div>
           </div>
         </div>
-      </div>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

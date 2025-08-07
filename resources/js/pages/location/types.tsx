@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { Head, Link } from '@inertiajs/react';
 import { 
   Building, 
@@ -61,33 +62,30 @@ export default function LocationTypes({ locationTypes, typeStatistics, totalLoca
   return (
     <AppLayout>
       <Head title="Location Types" />
-      
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Location Types</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage different types of business locations
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/locations">
-                <MapPin className="h-4 w-4 mr-2" />
-                View All Locations
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/locations/create">
-                Create Location
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <Page>
+        <Page.Header
+          title="Location Types"
+          subtitle="Manage different types of business locations"
+          actions={
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/locations">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  View All Locations
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/locations/create">
+                  Create Location
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
-        {/* Summary Card */}
-        <Card>
+        <Page.Content>
+          {/* Summary Card */}
+          <Card>
           <CardHeader>
             <CardTitle>Overview</CardTitle>
             <CardDescription>
@@ -96,8 +94,8 @@ export default function LocationTypes({ locationTypes, typeStatistics, totalLoca
           </CardHeader>
         </Card>
 
-        {/* Location Type Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Location Type Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.values(typeStatistics).map((stat) => {
             const Icon = getIcon(stat.icon);
             
@@ -169,9 +167,9 @@ export default function LocationTypes({ locationTypes, typeStatistics, totalLoca
           })}
         </div>
 
-        {/* Empty State for types with no locations */}
-        {Object.values(typeStatistics).every(stat => stat.count === 0) && (
-          <Card className="border-dashed">
+          {/* Empty State for types with no locations */}
+          {Object.values(typeStatistics).every(stat => stat.count === 0) && (
+            <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Locations Yet</h3>
@@ -184,11 +182,11 @@ export default function LocationTypes({ locationTypes, typeStatistics, totalLoca
                 </Link>
               </Button>
             </CardContent>
-          </Card>
-        )}
+            </Card>
+          )}
 
-        {/* Information Card */}
-        <Card>
+          {/* Information Card */}
+          <Card>
           <CardHeader>
             <CardTitle className="text-base">Location Type Information</CardTitle>
           </CardHeader>
@@ -214,8 +212,9 @@ export default function LocationTypes({ locationTypes, typeStatistics, totalLoca
               </div>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

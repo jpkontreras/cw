@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -350,13 +350,13 @@ export default function InventoryIndex({
     <AppLayout>
       <Head title="Inventory Management" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Inventory Management"
           subtitle="Track and manage stock levels across all items"
           actions={
             !isEmpty && (
-              <PageLayout.Actions>
+              <Page.Actions>
                 <Button
                   variant="outline"
                   size="sm"
@@ -390,12 +390,12 @@ export default function InventoryIndex({
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   New Adjustment
                 </Button>
-              </PageLayout.Actions>
+              </Page.Actions>
             )
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           {isEmpty ? (
             <EmptyState
               icon={Package}
@@ -591,8 +591,8 @@ export default function InventoryIndex({
           )}
             </>
           )}
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
 
       {/* Adjustment Dialog */}
       <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>

@@ -1,5 +1,5 @@
-import { Link, router } from '@inertiajs/react';
-import LocationLayout from './layout';
+import { Head, Link, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,8 +110,8 @@ export default function LocationShow({ location, statistics, canEdit, canDelete 
   };
 
   return (
-    <LocationLayout title={location.name}>
-      
+    <AppLayout>
+      <Head title={location.name} />
       <Page>
         <Page.Header
           title={location.name}
@@ -381,6 +381,6 @@ export default function LocationShow({ location, statistics, canEdit, canDelete 
         </div>
         </Page.Content>
       </Page>
-    </LocationLayout>
+    </AppLayout>
   );
 }

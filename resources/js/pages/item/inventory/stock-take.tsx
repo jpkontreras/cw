@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -115,12 +115,12 @@ export default function StockTake({ items, last_stock_take }: PageProps) {
     <AppLayout>
       <Head title="Stock Take" />
 
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Stock Take"
           subtitle="Perform physical inventory count and reconciliation"
           actions={
-            <PageLayout.Actions>
+            <Page.Actions>
               <Button variant="outline" onClick={() => window.history.back()}>
                 Cancel
               </Button>
@@ -128,11 +128,11 @@ export default function StockTake({ items, last_stock_take }: PageProps) {
                 <Save className="mr-2 h-4 w-4" />
                 Complete Stock Take
               </Button>
-            </PageLayout.Actions>
+            </Page.Actions>
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           <div className="space-y-6">
           {last_stock_take && (
             <Alert>
@@ -269,8 +269,8 @@ export default function StockTake({ items, last_stock_take }: PageProps) {
             </CardContent>
           </Card>
           </div>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

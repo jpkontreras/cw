@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -499,13 +499,13 @@ export default function PricingIndex({
     <AppLayout>
       <Head title="Pricing Rules" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Pricing Rules"
           subtitle="Manage dynamic pricing, discounts, and special offers"
           actions={
             !isEmpty && (
-              <PageLayout.Actions>
+              <Page.Actions>
                 <Button
                   variant="outline"
                   size="sm"
@@ -525,12 +525,12 @@ export default function PricingIndex({
                   <Plus className="mr-2 h-4 w-4" />
                   New Rule
                 </Button>
-              </PageLayout.Actions>
+              </Page.Actions>
             )
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           {isEmpty ? (
             <EmptyState
               icon={DollarSign}
@@ -687,8 +687,8 @@ export default function PricingIndex({
           </Tabs>
             </>
           )}
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
 
       {/* Create/Edit Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

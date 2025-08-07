@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import type { Order, OrderItem, PaymentTransaction } from '@/types/modules/order';
 import { formatCurrency, formatOrderNumber, getPaymentStatusColor, getPaymentStatusLabel } from '@/types/modules/order/utils';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -314,48 +315,54 @@ export default function PaymentPage({
   return (
     <AppLayout>
       <Head title={`Payment - ${formatOrderNumber(order.orderNumber)}`} />
-
-      <div className="container mx-auto max-w-6xl p-6">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href={`/orders/${order.id}`} className="text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Process Payment</h1>
-              <p className="text-gray-600">Order {formatOrderNumber(order.orderNumber)}</p>
+      <Page>
+        <Page.Header
+          title={
+            <div className="flex items-center gap-4">
+              <Link href={`/orders/${order.id}`} className="text-gray-600 hover:text-gray-900">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div>
+                <span>Process Payment</span>
+              </div>
             </div>
-          </div>
-          <Badge className={getPaymentStatusColor(order.paymentStatus)}>{getPaymentStatusLabel(order.paymentStatus)}</Badge>
-        </div>
+          }
+          subtitle={`Order ${formatOrderNumber(order.orderNumber)}`}
+          actions={
+            <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+              {getPaymentStatusLabel(order.paymentStatus)}
+            </Badge>
+          }
+        />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Main Payment Section */}
-          <div className="space-y-6 lg:col-span-2">
-            {/* Payment Mode Tabs */}
-            <Tabs value={paymentMode} onValueChange={(v) => setPaymentMode(v as 'full' | 'split')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="full">
-                  <User className="mr-2 h-4 w-4" />
-                  Full Payment
-                </TabsTrigger>
-                <TabsTrigger value="split">
-                  <Users className="mr-2 h-4 w-4" />
-                  Split Bill
-                </TabsTrigger>
-              </TabsList>
+        <Page.Content>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Main Payment Section */}
+              <div className="space-y-6 lg:col-span-2">
+                {/* Payment Mode Tabs */}
+                <Tabs value={paymentMode} onValueChange={(v) => setPaymentMode(v as 'full' | 'split')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="full">
+                      <User className="mr-2 h-4 w-4" />
+                      Full Payment
+                    </TabsTrigger>
+                    <TabsTrigger value="split">
+                      <Users className="mr-2 h-4 w-4" />
+                      Split Bill
+                    </TabsTrigger>
+                  </TabsList>
 
-              {/* Full Payment Tab */}
-              <TabsContent value="full" className="space-y-6">
-                {/* Payment Methods */}
-                <Card>
-                  <CardHeader className="px-6 pt-6">
-                    <CardTitle>Payment Method</CardTitle>
-                    <CardDescription>Select how the customer wants to pay</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  {/* Full Payment Tab */}
+                  <TabsContent value="full" className="space-y-6">
+                    {/* Payment Methods */}
+                    <Card>
+                      <CardHeader className="px-6 pt-6">
+                        <CardTitle>Payment Method</CardTitle>
+                        <CardDescription>Select how the customer wants to pay</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       {paymentMethods.map((method) => (
                         <PaymentMethodCard
                           key={method.id}
@@ -547,134 +554,136 @@ export default function PaymentPage({
                     </CardContent>
                   </Card>
                 )}
-              </TabsContent>
-            </Tabs>
+                  </TabsContent>
+                </Tabs>
 
-            {/* Notes */}
-            <Card>
-              <CardHeader className="px-6 pt-6">
-                <CardTitle>Payment Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <Input placeholder="Add any notes about this payment..." value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
-              </CardContent>
-            </Card>
-          </div>
+                {/* Notes */}
+                <Card>
+                  <CardHeader className="px-6 pt-6">
+                    <CardTitle>Payment Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <Input placeholder="Add any notes about this payment..." value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
+                  </CardContent>
+                </Card>
+              </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="space-y-6">
-            {/* Order Summary */}
-            <Card>
-              <CardHeader className="px-6 pt-6">
-                <CardTitle>Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 p-6">
-                {/* Items */}
-                <div className="space-y-2">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>
-                        {item.quantity}x {item.item_name}
-                      </span>
-                      <span>{formatCurrency(item.total_price)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator />
-
-                {/* Totals */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(order.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Tax (19%)</span>
-                    <span>{formatCurrency(order.taxAmount)}</span>
-                  </div>
-                  {order.discountAmount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(order.discountAmount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span>Tip</span>
-                    <span>{formatCurrency(tipAmount)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span>{formatCurrency(totalWithTip)}</span>
-                  </div>
-                </div>
-
-                {/* Previous Payments */}
-                {payments.length > 0 && (
-                  <>
-                    <Separator />
+              {/* Order Summary Sidebar */}
+              <div className="space-y-6">
+                {/* Order Summary */}
+                <Card>
+                  <CardHeader className="px-6 pt-6">
+                    <CardTitle>Order Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 p-6">
+                    {/* Items */}
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Previous Payments</h4>
-                      {payments.map((payment) => (
-                        <div key={payment.id} className="flex justify-between text-sm">
-                          <span>{payment.method}</span>
-                          <span className="text-green-600">-{formatCurrency(payment.amount)}</span>
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.item_name}
+                          </span>
+                          <span>{formatCurrency(item.total_price)}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between font-semibold">
-                      <span>Remaining</span>
-                      <span>{formatCurrency(remainingAmount + tipAmount)}</span>
+
+                    <Separator />
+
+                    {/* Totals */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(order.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tax (19%)</span>
+                        <span>{formatCurrency(order.taxAmount)}</span>
+                      </div>
+                      {order.discountAmount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Discount</span>
+                          <span>-{formatCurrency(order.discountAmount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span>Tip</span>
+                        <span>{formatCurrency(tipAmount)}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between text-lg font-semibold">
+                        <span>Total</span>
+                        <span>{formatCurrency(totalWithTip)}</span>
+                      </div>
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Action Buttons */}
-            <Card>
-              <CardContent className="space-y-3 p-6">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleSubmitPayment}
-                  disabled={processing || (paymentMode === 'split' && !allItemsAssigned)}
-                >
-                  {processing ? (
-                    <>Processing...</>
-                  ) : (
-                    <>
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Process Payment
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => router.visit(`/orders/${order.id}`)}>
-                  Cancel
-                </Button>
-              </CardContent>
-            </Card>
+                    {/* Previous Payments */}
+                    {payments.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Previous Payments</h4>
+                          {payments.map((payment) => (
+                            <div key={payment.id} className="flex justify-between text-sm">
+                              <span>{payment.method}</span>
+                              <span className="text-green-600">-{formatCurrency(payment.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>Remaining</span>
+                          <span>{formatCurrency(remainingAmount + tipAmount)}</span>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader className="px-6 pt-6">
-                <CardTitle className="text-sm">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-6">
-                <Button variant="outline" size="sm" className="w-full">
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Open Calculator
-                </Button>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Print Receipt
-                </Button>
-              </CardContent>
-            </Card>
+                {/* Action Buttons */}
+                <Card>
+                  <CardContent className="space-y-3 p-6">
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleSubmitPayment}
+                      disabled={processing || (paymentMode === 'split' && !allItemsAssigned)}
+                    >
+                      {processing ? (
+                        <>Processing...</>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-5 w-5" />
+                          Process Payment
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={() => router.visit(`/orders/${order.id}`)}>
+                      Cancel
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Actions */}
+                <Card>
+                  <CardHeader className="px-6 pt-6">
+                    <CardTitle className="text-sm">Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 p-6">
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Calculator className="mr-2 h-4 w-4" />
+                      Open Calculator
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Receipt className="mr-2 h-4 w-4" />
+                      Print Receipt
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

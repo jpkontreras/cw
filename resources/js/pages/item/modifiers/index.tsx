@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -386,13 +386,13 @@ export default function ModifiersIndex({
     <AppLayout>
       <Head title="Modifiers" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Modifiers"
           subtitle="Manage product customization options and modifier groups"
           actions={
             !isEmpty && (
-              <PageLayout.Actions>
+              <Page.Actions>
                 <Button
                   variant="outline"
                   size="sm"
@@ -408,12 +408,12 @@ export default function ModifiersIndex({
                   <Plus className="mr-2 h-4 w-4" />
                   New Group
                 </Button>
-              </PageLayout.Actions>
+              </Page.Actions>
             )
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           {isEmpty ? (
             <EmptyState
               icon={Settings}
@@ -563,8 +563,8 @@ export default function ModifiersIndex({
           </Tabs>
             </>
           )}
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
 
       {/* Create/Edit Group Dialog removed - using separate pages */}
 

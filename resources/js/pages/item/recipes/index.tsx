@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { InertiaDataTable } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -424,13 +424,13 @@ export default function RecipesIndex({
     <AppLayout>
       <Head title="Recipes" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Recipes"
           subtitle="Manage recipes, ingredients, and cost calculations"
           actions={
             !isEmpty && (
-              <PageLayout.Actions>
+              <Page.Actions>
                 <Button
                   variant="outline"
                   size="sm"
@@ -446,12 +446,12 @@ export default function RecipesIndex({
                   <Plus className="mr-2 h-4 w-4" />
                   New Recipe
                 </Button>
-              </PageLayout.Actions>
+              </Page.Actions>
             )
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           {isEmpty ? (
             <EmptyState
               icon={ChefHat}
@@ -645,8 +645,8 @@ export default function RecipesIndex({
           </Tabs>
             </>
           )}
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
 
 
       {/* View Recipe Dialog */}

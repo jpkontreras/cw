@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,7 +104,7 @@ export default function ReorderSettings({ items_to_reorder, reorder_rules }: Pag
     <AppLayout>
       <Head title="Reorder Settings" />
 
-      <PageLayout
+      <Page
         title="Reorder Settings"
         description="Configure automatic reorder points and quantities"
         actions={
@@ -317,7 +317,7 @@ export default function ReorderSettings({ items_to_reorder, reorder_rules }: Pag
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </PageLayout>
+      </Page>
     </AppLayout>
   );
 }

@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -264,12 +264,12 @@ export default function ItemEdit({ item, categories, item_types, features, avail
     <AppLayout>
       <Head title={`Edit ${item.name}`} />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Edit Item"
           subtitle={`Editing: ${item.name}`}
           actions={
-            <PageLayout.Actions>
+            <Page.Actions>
               <Button
                 variant="outline"
                 size="sm"
@@ -286,11 +286,11 @@ export default function ItemEdit({ item, categories, item_types, features, avail
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>
-            </PageLayout.Actions>
+            </Page.Actions>
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
             {Object.keys(errors).length > 0 && (
               <Alert variant="destructive" className="mb-6">
@@ -1107,8 +1107,8 @@ export default function ItemEdit({ item, categories, item_types, features, avail
               </Button>
             </div>
           </form>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

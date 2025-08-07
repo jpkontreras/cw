@@ -1,5 +1,5 @@
 import { BottomActionBar, MenuItemCard, ViewModeToggle, type ViewMode } from '@/components/modules/order';
-import { PageContent, PageHeader, PageLayout } from '@/components/page';
+import Page from '@/layouts/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -63,7 +63,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
   const { data, setData, post, processing, errors } = useForm<CreateOrderRequest>({
     userId: null,
     locationId: locations[0]?.id || 1,
-    type: 'dine_in' as OrderType,
+    type: 'dineIn' as OrderType,
     tableNumber: null,
     customerName: '',
     customerPhone: '',
@@ -236,12 +236,14 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
 
   const getTypeIcon = (type: OrderType) => {
     switch (type) {
-      case 'dine_in':
+      case 'dineIn':
         return Utensils;
       case 'takeout':
         return Package;
       case 'delivery':
         return Truck;
+      case 'catering':
+        return Utensils;
       default:
         return ShoppingBag;
     }
@@ -253,13 +255,15 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
     <AppLayout>
       <Head title="Create Order" />
 
-      <PageLayout className="flex flex-col h-full overflow-hidden">
-        <PageHeader title="New Order" description="Select items from the menu" showBackButton backHref="/orders">
-          {currentStep === 'menu' && <ViewModeToggle value={viewMode} onChange={setViewMode} />}
-        </PageHeader>
+      <Page className="flex flex-col h-full overflow-hidden">
+        <Page.Header 
+          title="New Order" 
+          subtitle="Select items from the menu"
+          actions={currentStep === 'menu' && <ViewModeToggle value={viewMode} onChange={setViewMode} />}
+        />
 
         <div className="flex-1 flex flex-col min-h-0">
-          <PageContent noPadding className="flex-1 overflow-y-auto">
+          <Page.Content noPadding className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit}>
               {/* Error Display */}
               {Object.keys(errors).length > 0 && (
@@ -385,7 +389,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
                       <div className="space-y-3">
                         <h3 className="text-base font-medium">Order Type</h3>
                         <div className="grid grid-cols-3 gap-3">
-                          {(['dine_in', 'takeout', 'delivery'] as OrderType[]).map((type) => {
+                          {(['dineIn', 'takeout', 'delivery'] as OrderType[]).map((type) => {
                             const Icon = getTypeIcon(type);
                             const config = ORDER_TYPE_CONFIG[type];
                             return (
@@ -541,7 +545,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
               )}
               </div>
             </form>
-          </PageContent>
+          </Page.Content>
           
           {/* Bottom Action Bar - Sticky at bottom */}
           <BottomActionBar
@@ -562,7 +566,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
             selectedModifiers={selectedModifiers}
           />
         </div>
-      </PageLayout>
+      </Page>
     </AppLayout>
   );
 }

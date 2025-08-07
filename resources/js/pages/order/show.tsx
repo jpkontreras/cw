@@ -1,4 +1,4 @@
-import { PageContent, PageHeader, PageLayout } from '@/components/page';
+import Page from '@/layouts/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -535,70 +535,76 @@ export default function ShowOrder({ order: orderData, user, location, payments =
     <AppLayout>
       <Head title={`Order ${formatOrderNumber(order.orderNumber)}`} />
 
-      <PageLayout>
-        <PageHeader title={orderNumber} description={headerDescription}>
-          {/* Primary Action - Status Management */}
-          <StatusDropdown order={order} />
+      <Page>
+        <Page.Header 
+          title={orderNumber} 
+          subtitle={headerDescription}
+          actions={
+            <>
+              {/* Primary Action - Status Management */}
+              <StatusDropdown order={order} />
 
-          {/* Secondary Actions */}
-          {canEdit && (
-            <Link href={`/orders/${order.id}/edit`}>
-              <Button variant="outline">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </Link>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleCopyOrderNumber}>
-                <Copy className="mr-2 h-3.5 w-3.5" />
-                Copy Order Number
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={cn('mr-2 h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-                Refresh
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Share2 className="mr-2 h-3.5 w-3.5" />
-                Share
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <Link href={`/orders/${order.id}/receipt`}>
-                <DropdownMenuItem>
-                  <Printer className="mr-2 h-3.5 w-3.5" />
-                  Print Receipt
-                </DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem>
-                <FileText className="mr-2 h-3.5 w-3.5" />
-                View Invoice
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Download className="mr-2 h-3.5 w-3.5" />
-                Export PDF
-              </DropdownMenuItem>
-              {canCancel && (
-                <>
+              {/* Secondary Actions */}
+              {canEdit && (
+                <Link href={`/orders/${order.id}/edit`}>
+                  <Button variant="outline">
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                </Link>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleCopyOrderNumber}>
+                    <Copy className="mr-2 h-3.5 w-3.5" />
+                    Copy Order Number
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
+                    <RefreshCw className={cn('mr-2 h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
+                    Refresh
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Share2 className="mr-2 h-3.5 w-3.5" />
+                    Share
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <Link href={`/orders/${order.id}/cancel`}>
-                    <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
-                      <XCircle className="mr-2 h-3.5 w-3.5" />
-                      Cancel Order
+                  <Link href={`/orders/${order.id}/receipt`}>
+                    <DropdownMenuItem>
+                      <Printer className="mr-2 h-3.5 w-3.5" />
+                      Print Receipt
                     </DropdownMenuItem>
                   </Link>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </PageHeader>
+                  <DropdownMenuItem>
+                    <FileText className="mr-2 h-3.5 w-3.5" />
+                    View Invoice
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="mr-2 h-3.5 w-3.5" />
+                    Export PDF
+                  </DropdownMenuItem>
+                  {canCancel && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <Link href={`/orders/${order.id}/cancel`}>
+                        <DropdownMenuItem className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                          <XCircle className="mr-2 h-3.5 w-3.5" />
+                          Cancel Order
+                        </DropdownMenuItem>
+                      </Link>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
 
-        <PageContent noPadding>
+        <Page.Content noPadding>
           <div className="px-4 py-4 lg:px-6">
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
@@ -948,8 +954,8 @@ export default function ShowOrder({ order: orderData, user, location, payments =
               </TabsContent>
             </Tabs>
           </div>
-        </PageContent>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

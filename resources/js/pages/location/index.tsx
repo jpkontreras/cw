@@ -1,6 +1,6 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import LocationLayout from './layout';
+import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -287,7 +287,8 @@ export default function LocationIndex({ locations, canCreate }: Props) {
   );
 
   return (
-    <LocationLayout title="Locations">
+    <AppLayout>
+      <Head title="Locations" />
       <Page>
         <Page.Header
           title="Locations"
@@ -389,6 +390,6 @@ export default function LocationIndex({ locations, canCreate }: Props) {
           )}
         </Page.Content>
       </Page>
-    </LocationLayout>
+    </AppLayout>
   );
 }

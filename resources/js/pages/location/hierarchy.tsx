@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import Page from '@/layouts/page-layout';
 import { Head, Link } from '@inertiajs/react';
 import { 
   MapPin,
@@ -151,36 +152,33 @@ export default function LocationHierarchy({ hierarchy, canEdit }: Props) {
   return (
     <AppLayout>
       <Head title="Location Hierarchy" />
-      
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Location Hierarchy</h1>
-            <p className="text-muted-foreground mt-1">
-              View and manage the organizational structure of your locations
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/locations">
-                <MapPin className="h-4 w-4 mr-2" />
-                All Locations
-              </Link>
-            </Button>
-            {canEdit && (
-              <Button asChild>
-                <Link href="/locations/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Location
+      <Page>
+        <Page.Header
+          title="Location Hierarchy"
+          subtitle="View and manage the organizational structure of your locations"
+          actions={
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/locations">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  All Locations
                 </Link>
               </Button>
-            )}
-          </div>
-        </div>
+              {canEdit && (
+                <Button asChild>
+                  <Link href="/locations/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Location
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
 
-        {/* Hierarchy Tree */}
-        <Card>
+        <Page.Content>
+          {/* Hierarchy Tree */}
+          <Card>
           <CardHeader>
             <CardTitle>Organization Structure</CardTitle>
             <CardDescription>
@@ -214,8 +212,8 @@ export default function LocationHierarchy({ hierarchy, canEdit }: Props) {
           </CardContent>
         </Card>
 
-        {/* Legend */}
-        <Card>
+          {/* Legend */}
+          <Card>
           <CardHeader>
             <CardTitle className="text-base">Hierarchy Information</CardTitle>
           </CardHeader>
@@ -239,8 +237,9 @@ export default function LocationHierarchy({ hierarchy, canEdit }: Props) {
               </div>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

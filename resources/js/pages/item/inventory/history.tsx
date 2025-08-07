@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -149,7 +149,7 @@ export default function InventoryHistory({ history, item, filters }: PageProps) 
     <AppLayout>
       <Head title="Inventory History" />
 
-      <PageLayout
+      <Page
         title="Inventory Movement History"
         description="Track all inventory movements and adjustments"
         actions={
@@ -295,7 +295,7 @@ export default function InventoryHistory({ history, item, filters }: PageProps) 
             </CardContent>
           </Card>
         </div>
-      </PageLayout>
+      </Page>
     </AppLayout>
   );
 }

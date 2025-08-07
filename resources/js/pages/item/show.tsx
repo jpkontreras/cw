@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -227,8 +227,8 @@ export default function ItemShow({
     <AppLayout>
       <Head title={item.name} />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title={
             <div className="flex items-center gap-3">
               <span>{item.name}</span>
@@ -242,7 +242,7 @@ export default function ItemShow({
           }
           subtitle={item.description || 'No description available'}
           actions={
-            <PageLayout.Actions>
+            <Page.Actions>
               <Button
                 variant="outline"
                 size="sm"
@@ -258,11 +258,11 @@ export default function ItemShow({
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>
-            </PageLayout.Actions>
+            </Page.Actions>
           }
         />
         
-        <PageLayout.Content>
+        <Page.Content>
           {/* Hero Section with Image */}
           <div className="mb-6">
             <Card className="overflow-hidden">
@@ -948,8 +948,8 @@ export default function ItemShow({
               </Card>
             </div>
           </div>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

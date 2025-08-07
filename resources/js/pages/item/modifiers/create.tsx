@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,8 +82,8 @@ export default function CreateModifierGroup({ parent_groups = [], items = [] }: 
   return (
     <AppLayout>
       <Head title="Create Modifier Group" />
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Create Modifier Group"
           subtitle="Configure options that customers can select to customize items"
           actions={
@@ -95,7 +95,7 @@ export default function CreateModifierGroup({ parent_groups = [], items = [] }: 
             </Link>
           }
         />
-        <PageLayout.Content>
+        <Page.Content>
           <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
@@ -314,8 +314,8 @@ export default function CreateModifierGroup({ parent_groups = [], items = [] }: 
             </CardContent>
           </Card>
         </form>
-        </PageLayout.Content>
-      </PageLayout>
+        </Page.Content>
+      </Page>
     </AppLayout>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import PageLayout from '@/layouts/page-layout';
+import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,12 +132,12 @@ export default function CreateRecipe({
     <AppLayout>
       <Head title="Create Recipe" />
       
-      <PageLayout>
-        <PageLayout.Header
+      <Page>
+        <Page.Header
           title="Create Recipe"
           subtitle="Define ingredients and instructions for your recipe"
           actions={
-            <PageLayout.Actions>
+            <Page.Actions>
               <Button
                 variant="outline"
                 size="sm"
@@ -146,7 +146,7 @@ export default function CreateRecipe({
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Recipes
               </Button>
-            </PageLayout.Actions>
+            </Page.Actions>
           }
         />
 
@@ -487,7 +487,7 @@ export default function CreateRecipe({
           </div>
         </form>
         </div>
-      </PageLayout>
+      </Page>
     </AppLayout>
   );
 }
