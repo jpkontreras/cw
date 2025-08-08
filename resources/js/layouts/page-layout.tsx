@@ -7,6 +7,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
+import type { ImperativePanelHandle } from 'react-resizable-panels';
 
 interface PageProps {
   children: React.ReactNode;
@@ -43,11 +44,11 @@ interface PageSplitContentProps {
     defaultSize?: number; // Default size percentage (e.g., 30 for 30%)
     minSize?: number; // Minimum size percentage
     maxSize?: number; // Maximum size percentage
-    collapsed: boolean;
-    onToggle: (collapsed: boolean) => void;
+    collapsedSize?: number; // Size when collapsed (e.g., 5 for 5%)
+    defaultCollapsed?: boolean; // Initial collapsed state
+    onCollapsedChange?: (collapsed: boolean) => void; // Callback for collapse state changes
     title?: string;
-    renderExpanded: () => React.ReactNode;
-    renderCollapsed: () => React.ReactNode;
+    renderContent: (collapsed: boolean, toggleCollapse: () => void) => React.ReactNode; // Render function with toggle
     showToggle?: boolean;
     resizable?: boolean; // Enable/disable resizing
   };
@@ -132,61 +133,80 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
     defaultSize = 30,
     minSize = 15,
     maxSize = 50,
-    collapsed,
-    onToggle,
+    collapsedSize = 5,
+    defaultCollapsed = false,
+    onCollapsedChange,
     title,
-    renderExpanded,
-    renderCollapsed,
+    renderContent,
     showToggle = true,
     resizable = true,
   } = sidebar;
 
+  // Panel ref for imperative control
+  const panelRef = React.useRef<ImperativePanelHandle>(null);
+  
+  // Track resizing state for smooth animations
+  const [isResizing, setIsResizing] = React.useState(false);
+  
+  // Track collapsed state
+  const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
+
+  // Toggle handler using imperative API
+  const handleToggle = React.useCallback(() => {
+    if (panelRef.current) {
+      if (isCollapsed) {
+        panelRef.current.expand();
+      } else {
+        panelRef.current.collapse();
+      }
+    }
+  }, [isCollapsed]);
+
+  // Handle collapse state changes
+  const handleCollapse = React.useCallback(() => {
+    setIsCollapsed(true);
+    onCollapsedChange?.(true);
+  }, [onCollapsedChange]);
+
+  const handleExpand = React.useCallback(() => {
+    setIsCollapsed(false);
+    onCollapsedChange?.(false);
+  }, [onCollapsedChange]);
+
   const toggleIcon = React.useMemo(() => {
     if (position === 'left') {
-      return collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />;
+      return isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />;
     }
-    return collapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />;
-  }, [position, collapsed]);
+    return isCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />;
+  }, [position, isCollapsed]);
 
   const sidebarContent = (
     <div className="h-full flex flex-col">
-      {/* Expanded state header */}
-      {!collapsed && title && showToggle && (
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">{title}</h3>
+      {/* Header with toggle button */}
+      {showToggle && (
+        <div className={cn(
+          "flex items-center border-b transition-all duration-300",
+          isCollapsed ? "justify-center p-2" : "justify-between p-4"
+        )}>
+          {!isCollapsed && title && (
+            <h3 className="text-lg font-semibold">
+              {title}
+            </h3>
+          )}
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => onToggle(!collapsed)}
+            onClick={handleToggle}
           >
             {toggleIcon}
           </Button>
         </div>
       )}
       
-      {/* Collapsed state header */}
-      {collapsed && showToggle && (
-        <div className="flex flex-col items-center pt-4 pb-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 mb-2"
-            onClick={() => onToggle(!collapsed)}
-          >
-            {toggleIcon}
-          </Button>
-          {/* Optional collapsed indicator */}
-          <div className="w-8 h-px bg-gray-300"></div>
-        </div>
-      )}
-      
-      {/* Content area */}
-      <div className={cn(
-        "flex-1",
-        collapsed ? "overflow-y-auto px-1" : "overflow-hidden"
-      )}>
-        {collapsed ? renderCollapsed() : renderExpanded()}
+      {/* Content area - let the panel handle the collapse animation */}
+      <div className="flex-1 overflow-hidden">
+        {renderContent(isCollapsed, handleToggle)}
       </div>
     </div>
   );
@@ -202,13 +222,13 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
     mainClassName
   );
 
-  if (!resizable || collapsed) {
-    // Non-resizable or collapsed state - use flex layout
+  // Non-resizable mode - use flex layout with transitions
+  if (!resizable) {
     return (
       <main className={cn('flex-1 overflow-x-hidden overflow-y-auto', className)}>
         <div className={cn('flex h-full')}>
           {position === 'left' && (
-            <aside className={cn(sidebarClasses, collapsed ? 'w-16' : 'w-80', 'flex-shrink-0 transition-all duration-300')}>
+            <aside className={cn(sidebarClasses, isCollapsed ? 'w-16' : 'w-80', 'flex-shrink-0 transition-all duration-300')}>
               {sidebarContent}
             </aside>
           )}
@@ -218,7 +238,7 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
           </div>
           
           {position === 'right' && (
-            <aside className={cn(sidebarClasses, collapsed ? 'w-16' : 'w-80', 'flex-shrink-0 transition-all duration-300')}>
+            <aside className={cn(sidebarClasses, isCollapsed ? 'w-16' : 'w-80', 'flex-shrink-0 transition-all duration-300')}>
               {sidebarContent}
             </aside>
           )}
@@ -227,7 +247,7 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
     );
   }
 
-  // Resizable layout
+  // Resizable layout with native collapse support
   return (
     <main className={cn('flex-1 overflow-x-hidden overflow-y-auto', className)}>
       <ResizablePanelGroup
@@ -237,14 +257,26 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
         {position === 'left' && (
           <>
             <ResizablePanel
-              defaultSize={defaultSize}
+              ref={panelRef}
+              defaultSize={defaultCollapsed ? collapsedSize : defaultSize}
               minSize={minSize}
               maxSize={maxSize}
-              className={sidebarClasses}
+              collapsible={true}
+              collapsedSize={collapsedSize}
+              onCollapse={handleCollapse}
+              onExpand={handleExpand}
+              className={cn(
+                sidebarClasses,
+                !isResizing && "transition-all duration-300 ease-in-out"
+              )}
             >
               {sidebarContent}
             </ResizablePanel>
-            <ResizableHandle withHandle className="w-2" />
+            <ResizableHandle 
+              withHandle 
+              className="w-2" 
+              onDragging={setIsResizing}
+            />
             <ResizablePanel className={mainContentClasses}>
               {children}
             </ResizablePanel>
@@ -256,12 +288,24 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
             <ResizablePanel className={mainContentClasses}>
               {children}
             </ResizablePanel>
-            <ResizableHandle withHandle className="w-2" />
+            <ResizableHandle 
+              withHandle 
+              className="w-2" 
+              onDragging={setIsResizing}
+            />
             <ResizablePanel
-              defaultSize={defaultSize}
+              ref={panelRef}
+              defaultSize={defaultCollapsed ? collapsedSize : defaultSize}
               minSize={minSize}
               maxSize={maxSize}
-              className={sidebarClasses}
+              collapsible={true}
+              collapsedSize={collapsedSize}
+              onCollapse={handleCollapse}
+              onExpand={handleExpand}
+              className={cn(
+                sidebarClasses,
+                !isResizing && "transition-all duration-300 ease-in-out"
+              )}
             >
               {sidebarContent}
             </ResizablePanel>

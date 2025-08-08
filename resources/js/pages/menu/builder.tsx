@@ -331,11 +331,12 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
             defaultSize: 35,
             minSize: 20,
             maxSize: 50,
-            collapsed: isLibraryCollapsed,
-            onToggle: setIsLibraryCollapsed,
+            collapsedSize: 8,
+            defaultCollapsed: false,
+            onCollapsedChange: setIsLibraryCollapsed,
             resizable: true,
             showToggle: false,
-            renderExpanded: () => (
+            renderContent: (collapsed, toggleCollapse) => (
               <ItemLibrarySidebar
                 availableItems={availableItems}
                 sections={sections}
@@ -343,20 +344,8 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
                 onSelectItem={handleSelectAvailableItem}
                 onBulkAssign={handleBulkAssign}
                 onQuickAdd={handleQuickAdd}
-                isCollapsed={false}
-                onToggleCollapsed={setIsLibraryCollapsed}
-              />
-            ),
-            renderCollapsed: () => (
-              <ItemLibrarySidebar
-                availableItems={availableItems}
-                sections={sections}
-                selectedAvailableItems={selectedAvailableItems}
-                onSelectItem={handleSelectAvailableItem}
-                onBulkAssign={handleBulkAssign}
-                onQuickAdd={handleQuickAdd}
-                isCollapsed={true}
-                onToggleCollapsed={setIsLibraryCollapsed}
+                isCollapsed={collapsed}
+                onToggleCollapsed={() => toggleCollapse()}
               />
             ),
           }}

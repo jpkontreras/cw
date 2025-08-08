@@ -21,16 +21,16 @@ import { AvailableItemCard } from './available-item-card';
 import { type AvailableItem, type MenuSection } from './types';
 
 // Component for item thumbnail display
-function ItemThumbnail({ item, size = 'default' }: { item: AvailableItem; size?: 'default' | 'small' }) {
-  const dimensions = size === 'small' ? 'h-10 w-10' : 'h-12 w-12';
-  const iconSize = size === 'small' ? 'h-6 w-6' : 'h-7 w-7';
+function ItemThumbnail({ item, size = 'default', className }: { item: AvailableItem; size?: 'default' | 'small' | 'auto'; className?: string }) {
+  const dimensions = size === 'small' ? 'h-10 w-10' : size === 'auto' ? 'w-full aspect-square' : 'h-12 w-12';
+  const iconSize = size === 'small' ? 'h-6 w-6' : size === 'auto' ? 'h-8 w-8' : 'h-7 w-7';
 
   if (item.imageUrl) {
-    return <img src={item.imageUrl} alt={item.name} className={cn('rounded object-cover', dimensions)} />;
+    return <img src={item.imageUrl} alt={item.name} className={cn('rounded object-cover', dimensions, className)} />;
   }
 
   return (
-    <div className={cn('flex items-center justify-center rounded bg-gray-200', dimensions)}>
+    <div className={cn('flex items-center justify-center rounded bg-gray-200', dimensions, className)}>
       <Package className={cn('text-gray-500', iconSize)} />
     </div>
   );
@@ -58,37 +58,15 @@ function ItemDetails({ item, onQuickAdd }: { item: AvailableItem; onQuickAdd: ()
   );
 }
 
-// Component for draggable item
-function DraggableItem({
-  item,
-  isSelected,
-  onSelect,
-  children,
-}: {
-  item: AvailableItem;
-  isSelected: boolean;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn('group relative cursor-move rounded-lg p-1 transition-colors hover:bg-gray-100', isSelected && 'bg-blue-100')}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('item', JSON.stringify(item));
-      }}
-      onClick={onSelect}
-    >
-      {children}
-      {isSelected && <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500" />}
-    </div>
-  );
-}
-
 // Component for item list
-function ItemList({ items, selectedItems, onSelectItem, onQuickAdd }: { 
-  items: AvailableItem[]; 
-  selectedItems: Set<number>; 
+function ItemList({
+  items,
+  selectedItems,
+  onSelectItem,
+  onQuickAdd,
+}: {
+  items: AvailableItem[];
+  selectedItems: Set<number>;
   onSelectItem: (id: number) => void;
   onQuickAdd: (item: AvailableItem) => void;
 }) {
@@ -175,32 +153,42 @@ export function ItemLibrarySidebar({
 
   if (isCollapsed) {
     return (
-      <div className="flex h-full flex-col overflow-hidden py-2">
-        <div className="mb-2 flex-shrink-0 px-2 text-center">
-          <Button variant="ghost" size="icon" className="mb-1 h-8 w-8" onClick={() => onToggleCollapsed(false)}>
+      <div className="flex h-full flex-col bg-white">
+        <div className="flex-shrink-0 border-b bg-gray-50/50">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex h-10 w-full items-center justify-center hover:bg-gray-100"
+            onClick={() => onToggleCollapsed(false)}
+            aria-label="Expand sidebar"
+          >
             <PanelRightClose className="h-4 w-4 rotate-180" />
+            <span className="ml-1.5 text-xs font-medium">{filteredItems.length}</span>
           </Button>
-          <Badge variant="secondary" className="text-xs">
-            {filteredItems.length}
-          </Badge>
         </div>
 
-        <div className="relative h-full px-0.5">
-          <div className="absolute inset-0 overflow-y-scroll">
+        <div className="relative h-full">
+          <div className="absolute inset-0 overflow-y-scroll p-2">
             <ScrollArea>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2">
                 {filteredItems.map((item) => (
                   <Popover key={item.id}>
                     <PopoverTrigger asChild>
-                      <DraggableItem
-                        item={item}
-                        isSelected={selectedAvailableItems.has(item.id)}
-                        onSelect={() => onSelectItem(item.id)}
+                      <div
+                        className={cn(
+                          'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
+                          selectedAvailableItems.has(item.id) && 'bg-blue-100',
+                        )}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('item', JSON.stringify(item));
+                        }}
                       >
-                        <div className="mx-auto">
-                          <ItemThumbnail item={item} size="small" />
-                        </div>
-                      </DraggableItem>
+                        <ItemThumbnail item={item} size="auto" />
+                        {selectedAvailableItems.has(item.id) && (
+                          <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+                        )}
+                      </div>
                     </PopoverTrigger>
                     <PopoverContent side="left" className="w-64">
                       <ItemDetails item={item} onQuickAdd={() => handleQuickAdd(item)} />
@@ -210,10 +198,6 @@ export function ItemLibrarySidebar({
               </div>
             </ScrollArea>
           </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-1">
-          <div className="space-y-1"></div>
         </div>
       </div>
     );
@@ -310,12 +294,7 @@ export function ItemLibrarySidebar({
       <div className="relative h-full">
         <div className="absolute inset-0 overflow-y-scroll p-2">
           <ScrollArea>
-            <ItemList 
-              items={filteredItems} 
-              selectedItems={selectedAvailableItems} 
-              onSelectItem={onSelectItem} 
-              onQuickAdd={handleQuickAdd} 
-            />
+            <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} onQuickAdd={handleQuickAdd} />
           </ScrollArea>
         </div>
       </div>
