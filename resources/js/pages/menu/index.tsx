@@ -49,7 +49,6 @@ import {
   FileUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type BreadcrumbItem } from '@/types';
 
 interface Menu {
   id: number;
@@ -89,34 +88,26 @@ const menuTypeLabels = {
   seasonal: 'Seasonal',
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Menus',
-    href: '/menus',
-  },
-];
-
-
 function MenuCard({ menu }: { menu: Menu }) {
   const Icon = menuTypeIcons[menu.type] || ChefHat;
   
   const handleAction = (action: string) => {
     switch (action) {
       case 'view':
-        router.visit(`/menus/${menu.id}`);
+        router.visit(`/menu/${menu.id}`);
         break;
       case 'edit':
-        router.visit(`/menus/${menu.id}/edit`);
+        router.visit(`/menu/${menu.id}/edit`);
         break;
       case 'builder':
-        router.visit(`/menus/${menu.id}/builder`);
+        router.visit(`/menu/${menu.id}/builder`);
         break;
       case 'duplicate':
-        router.post(`/menus/${menu.id}/duplicate`);
+        router.post(`/menu/${menu.id}/duplicate`);
         break;
       case 'delete':
         if (confirm('Are you sure you want to delete this menu?')) {
-          router.delete(`/menus/${menu.id}`);
+          router.delete(`/menu/${menu.id}`);
         }
         break;
     }
@@ -272,17 +263,16 @@ function MenuIndexContent({ menus = [], canCreate = true }: PageProps) {
     <>
       <Page.Header 
         title="Menu Management" 
-        breadcrumbs={breadcrumbs}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href="/menus/import">
+              <Link href="/menu/import">
                 <FileUp className="mr-2 h-4 w-4" />
                 Import
               </Link>
             </Button>
             <Button asChild>
-              <Link href="/menus/create">
+              <Link href="/menu/create">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Menu
               </Link>
@@ -342,7 +332,7 @@ function MenuIndexContent({ menus = [], canCreate = true }: PageProps) {
             actions={
               canCreate && !searchQuery && typeFilter === 'all' && statusFilter === 'all' && (
                 <Button asChild>
-                  <Link href="/menus/create">
+                  <Link href="/menu/create">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Menu
                   </Link>

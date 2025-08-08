@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
-import { type BreadcrumbItem } from '@/types';
 
 interface MenuItem {
   id: number;
@@ -247,12 +246,6 @@ function MenuPreviewContent({ menu }: PageProps) {
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   
-  const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Menus', href: '/menus' },
-    { title: menu.name, href: `/menus/${menu.id}` },
-    { title: 'Preview', current: true },
-  ];
-  
   const fontSizeClasses = {
     small: 'text-sm',
     medium: 'text-base',
@@ -264,18 +257,17 @@ function MenuPreviewContent({ menu }: PageProps) {
   };
   
   const handleExport = (format: string) => {
-    window.location.href = `/menus/${menu.id}/export/${format}`;
+    window.location.href = `/menu/${menu.id}/export/${format}`;
   };
   
   return (
     <>
       <Page.Header
         title={`Menu Preview: ${menu.name}`}
-        breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}`}>
+              <Link href={`/menu/${menu.id}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Menu
               </Link>
@@ -285,7 +277,7 @@ function MenuPreviewContent({ menu }: PageProps) {
               Print
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}/builder`}>
+              <Link href={`/menu/${menu.id}/builder`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Menu
               </Link>

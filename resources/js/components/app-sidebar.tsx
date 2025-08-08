@@ -62,18 +62,18 @@ const mainNavItems: NavItem[] = [
     ],
   },
   {
-    title: 'Menus',
-    href: '/menus',
+    title: 'Menu',
+    href: '/menu',
     icon: FileText,
     items: [
       {
         title: 'All Menus',
-        href: '/menus',
+        href: '/menu',
         icon: List,
       },
       {
         title: 'Create Menu',
-        href: '/menus/create',
+        href: '/menu/create',
         icon: Plus,
       },
     ],

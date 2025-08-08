@@ -6,7 +6,7 @@ use Colame\Menu\Http\Controllers\Api\MenuSectionController;
 use Colame\Menu\Http\Controllers\Api\MenuItemController;
 use Colame\Menu\Http\Controllers\Api\MenuAvailabilityController;
 
-Route::middleware(['api', 'auth:sanctum'])->prefix('api/menus')->name('api.menus.')->group(function () {
+Route::middleware(['api', 'auth:sanctum'])->prefix('api/menu')->name('api.menu.')->group(function () {
     // Menu endpoints
     Route::get('/', [MenuController::class, 'index'])->name('index');
     Route::get('/active', [MenuController::class, 'active'])->name('active');
@@ -60,7 +60,7 @@ Route::middleware(['api', 'auth:sanctum'])->prefix('api/menus')->name('api.menus
 });
 
 // Public API endpoints (no auth required)
-Route::prefix('api/public/menus')->name('api.public.menus.')->group(function () {
+Route::prefix('api/public/menu')->name('api.public.menu.')->group(function () {
     Route::get('/default', [MenuController::class, 'getDefault'])->name('default');
     Route::get('/location/{locationId}', [MenuController::class, 'publicByLocation'])->name('by-location');
     Route::get('/{slug}', [MenuController::class, 'publicShow'])->name('show');

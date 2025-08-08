@@ -6,7 +6,7 @@ use Colame\Menu\Http\Controllers\Web\MenuSectionController;
 use Colame\Menu\Http\Controllers\Web\MenuItemController;
 use Colame\Menu\Http\Controllers\Web\MenuBuilderController;
 
-Route::middleware(['auth', 'web'])->prefix('menus')->name('menus.')->group(function () {
+Route::middleware(['auth', 'web'])->prefix('menu')->name('menu.')->group(function () {
     // Menu Management
     Route::get('/', [MenuController::class, 'index'])->name('index');
     Route::get('/create', [MenuController::class, 'create'])->name('create');

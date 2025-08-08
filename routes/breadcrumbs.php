@@ -294,6 +294,45 @@ Breadcrumbs::for('locations.settings', function (BreadcrumbTrail $trail, $locati
 });
 
 // ====================
+// Menu Module
+// ====================
+
+// Menu
+Breadcrumbs::for('menu.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Menu', route('menu.index'));
+});
+
+// Menu > Create
+Breadcrumbs::for('menu.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('menu.index');
+    $trail->push('Create', route('menu.create'));
+});
+
+// Menu > Menu Details
+Breadcrumbs::for('menu.show', function (BreadcrumbTrail $trail, $menuId) {
+    $trail->parent('menu.index');
+    $trail->push('Menu Details', route('menu.show', $menuId));
+});
+
+// Menu > Menu Details > Edit
+Breadcrumbs::for('menu.edit', function (BreadcrumbTrail $trail, $menuId) {
+    $trail->parent('menu.show', $menuId);
+    $trail->push('Edit', route('menu.edit', $menuId));
+});
+
+// Menu > Menu Details > Builder
+Breadcrumbs::for('menu.builder', function (BreadcrumbTrail $trail, $menuId) {
+    $trail->parent('menu.show', $menuId);
+    $trail->push('Builder', route('menu.builder', $menuId));
+});
+
+// Menu > Menu Details > Preview
+Breadcrumbs::for('menu.preview', function (BreadcrumbTrail $trail, $menuId) {
+    $trail->parent('menu.show', $menuId);
+    $trail->push('Preview', route('menu.preview', $menuId));
+});
+
+// ====================
 // Settings Module
 // ====================
 

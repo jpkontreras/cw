@@ -36,7 +36,6 @@ import {
   Settings,
   FileText,
 } from 'lucide-react';
-import { type BreadcrumbItem } from '@/types';
 import { toast } from 'sonner';
 
 interface Menu {
@@ -75,17 +74,11 @@ function EditMenuContent({ menu, menuTypes = {} }: PageProps) {
     availableUntil: menu.availableUntil ? new Date(menu.availableUntil) : null,
   });
 
-  const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Menus', href: '/menus' },
-    { title: menu.name, href: `/menus/${menu.id}` },
-    { title: 'Edit', current: true },
-  ];
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    router.put(`/menus/${menu.id}`, formData, {
+    router.put(`/menu/${menu.id}`, formData, {
       onSuccess: () => {
         toast.success('Menu updated successfully');
       },
@@ -110,17 +103,16 @@ function EditMenuContent({ menu, menuTypes = {} }: PageProps) {
     <>
       <Page.Header
         title={`Edit ${menu.name}`}
-        breadcrumbs={breadcrumbs}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}`}>
+              <Link href={`/menu/${menu.id}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}/builder`}>
+              <Link href={`/menu/${menu.id}/builder`}>
                 <FileText className="mr-2 h-4 w-4" />
                 Menu Builder
               </Link>
@@ -413,7 +405,7 @@ function EditMenuContent({ menu, menuTypes = {} }: PageProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.visit(`/menus/${menu.id}`)}
+              onClick={() => router.visit(`/menu/${menu.id}`)}
               disabled={isSubmitting}
             >
               Cancel

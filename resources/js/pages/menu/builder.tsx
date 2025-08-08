@@ -14,7 +14,6 @@ import {
 } from '@/components/modules/menu';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { type BreadcrumbItem } from '@/types';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Head, Link, router } from '@inertiajs/react';
@@ -33,12 +32,6 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
   const [showSectionDialog, setShowSectionDialog] = useState(false);
   const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
 
-  const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Menus', href: '/menus' },
-    { title: menu.name, href: `/menus/${menu.id}` },
-    { title: 'Manage', current: true },
-  ];
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -55,7 +48,7 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
 
     try {
       await router.post(
-        `/menus/${menu.id}/builder/save`,
+        `/menu/${menu.id}/builder/save`,
         {
           sections: sections,
         },
@@ -304,11 +297,10 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
       <Page>
         <Page.Header
           title="Manage Menu"
-          breadcrumbs={breadcrumbs}
           actions={
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/menus/${menu.id}`}>
+                <Link href={`/menu/${menu.id}`}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>

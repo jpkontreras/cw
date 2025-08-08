@@ -59,7 +59,7 @@ class MenuController extends Controller
         
         $menu = $this->menuService->createMenu($data);
         
-        return redirect()->route('menus.show', $menu->id)
+        return redirect()->route('menu.show', $menu->id)
             ->with('success', 'Menu created successfully');
     }
     
@@ -108,7 +108,7 @@ class MenuController extends Controller
         
         $this->menuService->updateMenu($id, $data);
         
-        return redirect()->route('menus.show', $id)
+        return redirect()->route('menu.show', $id)
             ->with('success', 'Menu updated successfully');
     }
     
@@ -116,7 +116,7 @@ class MenuController extends Controller
     {
         $this->menuService->deleteMenu($id);
         
-        return redirect()->route('menus.index')
+        return redirect()->route('menu.index')
             ->with('success', 'Menu deleted successfully');
     }
     
@@ -142,7 +142,7 @@ class MenuController extends Controller
         
         $menu = $this->menuService->duplicateMenu($id, $request->name);
         
-        return redirect()->route('menus.edit', $menu->id)
+        return redirect()->route('menu.edit', $menu->id)
             ->with('success', 'Menu duplicated successfully');
     }
     

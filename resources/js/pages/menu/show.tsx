@@ -52,7 +52,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { type BreadcrumbItem } from '@/types';
 import { toast } from 'sonner';
 
 interface MenuItem {
@@ -150,11 +149,6 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const Icon = menuTypeIcons[menu.type] || ChefHat;
-  
-  const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Menus', href: '/menus' },
-    { title: menu.name, current: true },
-  ];
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this menu? This action cannot be undone.')) {
@@ -162,7 +156,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
     }
     
     setIsDeleting(true);
-    router.delete(`/menus/${menu.id}`, {
+    router.delete(`/menu/${menu.id}`, {
       onSuccess: () => {
         toast.success('Menu deleted successfully');
       },
@@ -176,7 +170,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
   const handleDuplicate = () => {
     const name = prompt('Enter a name for the duplicated menu:', `${menu.name} (Copy)`);
     if (name) {
-      router.post(`/menus/${menu.id}/duplicate`, { name }, {
+      router.post(`/menu/${menu.id}/duplicate`, { name }, {
         onSuccess: () => {
           toast.success('Menu duplicated successfully');
         },
@@ -188,7 +182,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
   };
 
   const handleSetDefault = () => {
-    router.post(`/menus/${menu.id}/set-default`, {}, {
+    router.post(`/menu/${menu.id}/set-default`, {}, {
       onSuccess: () => {
         toast.success('Menu set as default');
       },
@@ -200,7 +194,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
 
   const handleToggleActive = () => {
     const endpoint = menu.isActive ? 'deactivate' : 'activate';
-    router.post(`/menus/${menu.id}/${endpoint}`, {}, {
+    router.post(`/menu/${menu.id}/${endpoint}`, {}, {
       onSuccess: () => {
         toast.success(`Menu ${menu.isActive ? 'deactivated' : 'activated'} successfully`);
       },
@@ -225,11 +219,10 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
             </Badge>
           </div>
         }
-        breadcrumbs={breadcrumbs}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href="/menus">
+              <Link href="/menu">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Link>
@@ -279,21 +272,21 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
             </DropdownMenu>
             
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}/preview`}>
+              <Link href={`/menu/${menu.id}/preview`}>
                 <Eye className="mr-2 h-4 w-4" />
                 Preview
               </Link>
             </Button>
             
             <Button variant="outline" asChild>
-              <Link href={`/menus/${menu.id}/builder`}>
+              <Link href={`/menu/${menu.id}/builder`}>
                 <FileText className="mr-2 h-4 w-4" />
                 Menu Builder
               </Link>
             </Button>
             
             <Button asChild>
-              <Link href={`/menus/${menu.id}/edit`}>
+              <Link href={`/menu/${menu.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Link>
@@ -492,7 +485,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
                         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                         <p className="text-muted-foreground">No sections in this menu yet</p>
                         <Button className="mt-4" asChild>
-                          <Link href={`/menus/${menu.id}/builder`}>
+                          <Link href={`/menu/${menu.id}/builder`}>
                             <FileText className="mr-2 h-4 w-4" />
                             Open Menu Builder
                           </Link>
@@ -622,7 +615,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
                   className="w-full justify-start"
                   asChild
                 >
-                  <Link href={`/menus/${menu.id}/builder`}>
+                  <Link href={`/menu/${menu.id}/builder`}>
                     <FileText className="mr-2 h-4 w-4" />
                     Menu Builder
                   </Link>
@@ -633,7 +626,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
                   className="w-full justify-start"
                   asChild
                 >
-                  <Link href={`/menus/${menu.id}/preview`}>
+                  <Link href={`/menu/${menu.id}/preview`}>
                     <Eye className="mr-2 h-4 w-4" />
                     Preview Menu
                   </Link>
@@ -644,7 +637,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
                   className="w-full justify-start"
                   asChild
                 >
-                  <Link href={`/menus/${menu.id}/edit`}>
+                  <Link href={`/menu/${menu.id}/edit`}>
                     <Settings className="mr-2 h-4 w-4" />
                     Edit Settings
                   </Link>

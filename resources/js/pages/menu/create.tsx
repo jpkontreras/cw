@@ -22,17 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Save } from 'lucide-react';
-import { type BreadcrumbItem } from '@/types';
 import { toast } from 'sonner';
 
 interface PageProps {
   menuTypes?: Record<string, string>;
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Menus', href: '/menus' },
-  { title: 'Create', current: true },
-];
 
 function CreateMenuContent({ menuTypes = {} }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +43,7 @@ function CreateMenuContent({ menuTypes = {} }: PageProps) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    router.post('/menus', formData, {
+    router.post('/menu', formData, {
       onSuccess: () => {
         toast.success('Menu created successfully');
       },
@@ -74,10 +68,9 @@ function CreateMenuContent({ menuTypes = {} }: PageProps) {
     <>
       <Page.Header
         title="Create Menu"
-        breadcrumbs={breadcrumbs}
         actions={
           <Button variant="outline" asChild>
-            <Link href="/menus">
+            <Link href="/menu">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Cancel
             </Link>
@@ -215,7 +208,7 @@ function CreateMenuContent({ menuTypes = {} }: PageProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.visit('/menus')}
+                onClick={() => router.visit('/menu')}
                 disabled={isSubmitting}
               >
                 Cancel
