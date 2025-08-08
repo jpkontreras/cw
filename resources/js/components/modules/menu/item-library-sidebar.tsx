@@ -20,6 +20,93 @@ import { toast } from 'sonner';
 import { AvailableItemCard } from './available-item-card';
 import { type AvailableItem, type MenuSection } from './types';
 
+// Component for item thumbnail display
+function ItemThumbnail({ item, size = 'default' }: { item: AvailableItem; size?: 'default' | 'small' }) {
+  const dimensions = size === 'small' ? 'h-10 w-10' : 'h-12 w-12';
+  const iconSize = size === 'small' ? 'h-6 w-6' : 'h-7 w-7';
+
+  if (item.imageUrl) {
+    return <img src={item.imageUrl} alt={item.name} className={cn('rounded object-cover', dimensions)} />;
+  }
+
+  return (
+    <div className={cn('flex items-center justify-center rounded bg-gray-200', dimensions)}>
+      <Package className={cn('text-gray-500', iconSize)} />
+    </div>
+  );
+}
+
+// Component for item details in popover
+function ItemDetails({ item, onQuickAdd }: { item: AvailableItem; onQuickAdd: () => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium">{item.name}</div>
+      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">{formatCurrency(item.price)}</span>
+        {item.category && (
+          <Badge variant="outline" className="text-xs">
+            {item.category}
+          </Badge>
+        )}
+      </div>
+      <Button size="sm" className="w-full" onClick={onQuickAdd}>
+        <Plus className="mr-2 h-3 w-3" />
+        Add to Menu
+      </Button>
+    </div>
+  );
+}
+
+// Component for draggable item
+function DraggableItem({
+  item,
+  isSelected,
+  onSelect,
+  children,
+}: {
+  item: AvailableItem;
+  isSelected: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn('group relative cursor-move rounded-lg p-1 transition-colors hover:bg-gray-100', isSelected && 'bg-blue-100')}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('item', JSON.stringify(item));
+      }}
+      onClick={onSelect}
+    >
+      {children}
+      {isSelected && <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500" />}
+    </div>
+  );
+}
+
+// Component for item list
+function ItemList({ items, selectedItems, onSelectItem, onQuickAdd }: { 
+  items: AvailableItem[]; 
+  selectedItems: Set<number>; 
+  onSelectItem: (id: number) => void;
+  onQuickAdd: (item: AvailableItem) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <AvailableItemCard
+          key={item.id}
+          item={item}
+          isSelected={selectedItems.has(item.id)}
+          onSelect={() => onSelectItem(item.id)}
+          onQuickAdd={() => onQuickAdd(item)}
+        />
+      ))}
+    </div>
+  );
+}
+
 interface ItemLibrarySidebarProps {
   availableItems: AvailableItem[];
   sections: MenuSection[];
@@ -105,44 +192,18 @@ export function ItemLibrarySidebar({
                 {filteredItems.map((item) => (
                   <Popover key={item.id}>
                     <PopoverTrigger asChild>
-                      <div
-                        className={cn(
-                          'group relative cursor-move rounded-lg p-1 transition-colors hover:bg-gray-100',
-                          selectedAvailableItems.has(item.id) && 'bg-blue-100',
-                        )}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('item', JSON.stringify(item));
-                        }}
-                        onClick={() => onSelectItem(item.id)}
+                      <DraggableItem
+                        item={item}
+                        isSelected={selectedAvailableItems.has(item.id)}
+                        onSelect={() => onSelectItem(item.id)}
                       >
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} className="mx-auto h-10 w-10 rounded object-cover" />
-                        ) : (
-                          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded bg-gray-200">
-                            <Package className="h-6 w-6 text-gray-500" />
-                          </div>
-                        )}
-                        {selectedAvailableItems.has(item.id) && <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500" />}
-                      </div>
+                        <div className="mx-auto">
+                          <ItemThumbnail item={item} size="small" />
+                        </div>
+                      </DraggableItem>
                     </PopoverTrigger>
                     <PopoverContent side="left" className="w-64">
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">{item.name}</div>
-                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{formatCurrency(item.price)}</span>
-                          {item.category && (
-                            <Badge variant="outline" className="text-xs">
-                              {item.category}
-                            </Badge>
-                          )}
-                        </div>
-                        <Button size="sm" className="w-full" onClick={() => handleQuickAdd(item)}>
-                          <Plus className="mr-2 h-3 w-3" />
-                          Add to Menu
-                        </Button>
-                      </div>
+                      <ItemDetails item={item} onQuickAdd={() => handleQuickAdd(item)} />
                     </PopoverContent>
                   </Popover>
                 ))}
@@ -249,17 +310,12 @@ export function ItemLibrarySidebar({
       <div className="relative h-full">
         <div className="absolute inset-0 overflow-y-scroll p-2">
           <ScrollArea>
-            <div className="space-y-2">
-              {filteredItems.map((item) => (
-                <AvailableItemCard
-                  key={item.id}
-                  item={item}
-                  isSelected={selectedAvailableItems.has(item.id)}
-                  onSelect={() => onSelectItem(item.id)}
-                  onQuickAdd={() => handleQuickAdd(item)}
-                />
-              ))}
-            </div>
+            <ItemList 
+              items={filteredItems} 
+              selectedItems={selectedAvailableItems} 
+              onSelectItem={onSelectItem} 
+              onQuickAdd={handleQuickAdd} 
+            />
           </ScrollArea>
         </div>
       </div>
