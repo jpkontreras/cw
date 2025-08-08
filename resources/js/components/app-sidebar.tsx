@@ -76,6 +76,11 @@ const mainNavItems: NavItem[] = [
         href: '/menu/create',
         icon: Plus,
       },
+      {
+        title: 'Menu Builder',
+        href: '/menu/builder',
+        icon: SlidersHorizontal,
+      },
     ],
   },
   {

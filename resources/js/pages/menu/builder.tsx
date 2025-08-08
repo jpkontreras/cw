@@ -1,5 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/empty-state';
 import {
   AddSectionDialog,
   EditItemDialog,
@@ -12,16 +11,19 @@ import {
   type MenuItem,
   type MenuSection,
 } from '@/components/modules/menu';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Eye, Package, Plus, Save } from 'lucide-react';
+import { ArrowLeft, ChefHat, Eye, FileText, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-export default function MenuBuilder({ menu, structure, availableItems }: MenuBuilderPageProps) {
+export default function MenuBuilder({ menu, allMenus, structure, availableItems }: MenuBuilderPageProps) {
   const [sections, setSections] = useState<MenuSection[]>(structure.sections);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [selectedAvailableItems, setSelectedAvailableItems] = useState<Set<number>>(new Set());
@@ -44,6 +46,11 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
   );
 
   const handleSave = async () => {
+    if (!menu) {
+      toast.error('Please select a menu first');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -70,6 +77,20 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
     } catch {
       setIsSaving(false);
     }
+  };
+
+  const handleMenuChange = (menuId: string) => {
+    if (hasChanges) {
+      if (!confirm('You have unsaved changes. Do you want to continue?')) {
+        return;
+      }
+    }
+
+    // Navigate to the selected menu's builder
+    router.visit(`/menu/${menuId}/builder`, {
+      preserveState: false,
+      preserveScroll: false,
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -163,7 +184,7 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
 
   const handleBulkAssign = (sectionId: number, itemIds: number[]) => {
     const itemsToAdd = availableItems.filter((item) => itemIds.includes(item.id));
-    
+
     itemsToAdd.forEach((item) => {
       handleAddItemToSection(sectionId, item);
     });
@@ -293,132 +314,210 @@ export default function MenuBuilder({ menu, structure, availableItems }: MenuBui
 
   return (
     <AppLayout>
-      <Head title={`Menu Builder - ${menu.name}`} />
+      <Head title={menu ? `Menu Builder - ${menu.name}` : 'Menu Builder'} />
       <Page>
         <Page.Header
-          title="Manage Menu"
+          title="Menu Builder"
           actions={
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/menu/${menu.id}`}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm">
-                <Eye className="mr-2 h-4 w-4" />
-                Preview
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
+              {menu && (
+                <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/menu/${menu.id}`}>
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back to Details
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </>
+              )}
             </div>
           }
         />
 
         <Page.SplitContent
-          sidebar={{
-            position: 'right',
-            defaultSize: 35,
-            minSize: 20,
-            maxSize: 50,
-            collapsedSize: 8,
-            defaultCollapsed: false,
-            onCollapsedChange: setIsLibraryCollapsed,
-            resizable: true,
-            showToggle: false,
-            renderContent: (collapsed, toggleCollapse) => (
-              <ItemLibrarySidebar
-                availableItems={availableItems}
-                sections={sections}
-                selectedAvailableItems={selectedAvailableItems}
-                onSelectItem={handleSelectAvailableItem}
-                onBulkAssign={handleBulkAssign}
-                onQuickAdd={handleQuickAdd}
-                isCollapsed={collapsed}
-                onToggleCollapsed={() => toggleCollapse()}
-              />
-            ),
-          }}
+          sidebar={
+            menu
+              ? {
+                  position: 'right',
+                  defaultSize: 35,
+                  minSize: 20,
+                  maxSize: 50,
+                  collapsedSize: 8,
+                  defaultCollapsed: false,
+                  onCollapsedChange: setIsLibraryCollapsed,
+                  resizable: true,
+                  showToggle: false,
+                  renderContent: (collapsed, toggleCollapse) => (
+                    <ItemLibrarySidebar
+                      availableItems={availableItems}
+                      sections={sections}
+                      selectedAvailableItems={selectedAvailableItems}
+                      onSelectItem={handleSelectAvailableItem}
+                      onBulkAssign={handleBulkAssign}
+                      onQuickAdd={handleQuickAdd}
+                      isCollapsed={collapsed}
+                      onToggleCollapsed={() => toggleCollapse()}
+                    />
+                  ),
+                }
+              : undefined
+          }
         >
           {/* Main content - Menu Sections */}
-          <div className="flex h-full flex-col bg-gray-50/50">
-            <div className="flex-shrink-0 p-6 border-b bg-white/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">Menu Sections</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Organize your menu items into sections</p>
+          <div className="flex h-full flex-col bg-gradient-to-br from-gray-50 to-gray-100/50">
+            {/* Menu Selector Header */}
+            <div className="flex-shrink-0 bg-white shadow-sm">
+              <div className="px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start">
+                    {allMenus.length > 0 ? (
+                      <Select value={menu?.id.toString() || ''} onValueChange={handleMenuChange}>
+                        <SelectTrigger className="h-8 w-[240px] border-gray-200 bg-gray-50 font-medium transition-colors hover:bg-white">
+                          <div className="flex items-center gap-2">
+                            <ChefHat className="h-4 w-4 text-gray-500" />
+                            <SelectValue placeholder="Select a menu to edit" />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="w-[240px]">
+                          {allMenus.map((m) => (
+                            <SelectItem key={m.id} value={m.id.toString()}>
+                              <div className="flex items-center gap-2 w-full">
+                                <span className="truncate flex-1">{m.name}</span>
+                                {menu?.id === m.id && (
+                                  <div className="flex items-center">
+                                    <SquarePen className="h-3.5 w-3.5 text-green-600" />
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                          <div className="border-t mt-1 pt-2 px-2 pb-1">
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <SquarePen className="h-3 w-3 text-green-600" />
+                              <span>Currently editing</span>
+                            </p>
+                          </div>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No menus available</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {menu && hasChanges && (
+                      <Badge variant="outline" className="border-orange-200 bg-orange-50 text-xs text-orange-700">
+                        Unsaved changes
+                      </Badge>
+                    )}
+                    {menu && (
+                      <Button onClick={() => setShowSectionDialog(true)} className="h-8">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Section
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <Button size="sm" onClick={() => setShowSectionDialog(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Section
-                </Button>
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-6">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={sections.map((s) => `section-${s.id}`)} strategy={verticalListSortingStrategy}>
-                  {sections.length === 0 ? (
-                    <Card className="border-2 border-dashed bg-white/50 p-12">
-                      <div className="text-center">
-                        <Package className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                        <h3 className="mb-2 text-lg font-medium">No sections yet</h3>
-                        <p className="mb-4 text-muted-foreground">Start by adding a section to your menu</p>
-                        <Button onClick={() => setShowSectionDialog(true)}>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {allMenus.length === 0 ? (
+                <div className="flex h-full items-center justify-center p-8">
+                  <EmptyState
+                    icon={FileText}
+                    title="No menus available"
+                    description="Create your first menu to start building its structure and adding items."
+                    actions={
+                      <Button asChild>
+                        <Link href="/menu/create">
                           <Plus className="mr-2 h-4 w-4" />
-                          Add First Section
-                        </Button>
-                      </div>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {sections.map((section) => (
-                        <MenuSectionCard
-                          key={section.id}
-                          section={section}
-                          onEdit={() => setEditingSection(section)}
-                          onDelete={() => handleDeleteSection(section.id)}
-                          onDuplicate={() => handleDuplicateSection(section)}
-                          onToggleCollapse={() => handleToggleSectionCollapse(section.id)}
-                          onAddItem={(item) => handleAddItemToSection(section.id, item)}
-                          onEditItem={(item) => handleEditItemClick(item, section.id)}
-                          onDeleteItem={(itemId) => handleDeleteItem(section.id, itemId)}
-                          onDuplicateItem={(item) => handleDuplicateItem(section.id, item)}
-                          selectedItems={selectedItems}
-                          onSelectItem={handleSelectItem}
-                        />
-                      ))}
+                          Create First Menu
+                        </Link>
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : !menu ? (
+                <div className="flex h-full items-center justify-center p-8">
+                  <EmptyState
+                    icon={FileText}
+                    title="Select a menu"
+                    description="Choose a menu from the dropdown above to start organizing its sections and items."
+                  />
+                </div>
+              ) : (
+                <div className="p-8">
+                  {/* Sections Header */}
+                  {sections.length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <Layers className="h-4 w-4 text-gray-500" />
+                        Menu Sections
+                      </h2>
                     </div>
                   )}
-                  </SortableContext>
-                </DndContext>
-              </div>
+
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={sections.map((s) => `section-${s.id}`)} strategy={verticalListSortingStrategy}>
+                      {sections.length === 0 ? (
+                        <div className="flex min-h-[400px] items-center justify-center">
+                          <div className="max-w-sm text-center">
+                            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 shadow-sm">
+                              <Package className="h-10 w-10 text-gray-500" />
+                            </div>
+                            <h3 className="mb-2 text-lg font-semibold text-gray-900">Build your menu structure</h3>
+                            <p className="mb-6 text-sm text-gray-600">
+                              Organize your items into sections like "Appetizers", "Main Courses", or "Beverages"
+                            </p>
+                            <Button onClick={() => setShowSectionDialog(true)} className="shadow-sm">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create First Section
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {sections.map((section) => (
+                            <MenuSectionCard
+                              key={section.id}
+                              section={section}
+                              onEdit={() => setEditingSection(section)}
+                              onDelete={() => handleDeleteSection(section.id)}
+                              onDuplicate={() => handleDuplicateSection(section)}
+                              onToggleCollapse={() => handleToggleSectionCollapse(section.id)}
+                              onAddItem={(item) => handleAddItemToSection(section.id, item)}
+                              onEditItem={(item) => handleEditItemClick(item, section.id)}
+                              onDeleteItem={(itemId) => handleDeleteItem(section.id, itemId)}
+                              onDuplicateItem={(item) => handleDuplicateItem(section.id, item)}
+                              selectedItems={selectedItems}
+                              onSelectItem={handleSelectItem}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              )}
             </div>
           </div>
         </Page.SplitContent>
       </Page>
 
       {/* Dialogs */}
-      <AddSectionDialog
-        open={showSectionDialog}
-        onOpenChange={setShowSectionDialog}
-        onAddSection={handleAddSection}
-      />
+      <AddSectionDialog open={showSectionDialog} onOpenChange={setShowSectionDialog} onAddSection={handleAddSection} />
 
-      <EditSectionDialog
-        section={editingSection}
-        onClose={handleCloseEditSection}
-        onSave={handleEditSection}
-      />
+      <EditSectionDialog section={editingSection} onClose={handleCloseEditSection} onSave={handleEditSection} />
 
-      <EditItemDialog
-        item={editingItem}
-        onClose={handleCloseEditItem}
-        onSave={handleEditItem}
-      />
+      <EditItemDialog item={editingItem} onClose={handleCloseEditItem} onSave={handleEditItem} />
     </AppLayout>
   );
 }

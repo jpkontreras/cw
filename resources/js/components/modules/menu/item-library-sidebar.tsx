@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { Link } from '@inertiajs/react';
 import { Layers, Package, PanelRightClose, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -169,34 +170,44 @@ export function ItemLibrarySidebar({
 
         <div className="relative h-full">
           <div className="absolute inset-0 overflow-y-scroll p-2">
-            <ScrollArea>
-              <div className="grid grid-cols-1 gap-2">
-                {filteredItems.map((item) => (
-                  <Popover key={item.id}>
-                    <PopoverTrigger asChild>
-                      <div
-                        className={cn(
-                          'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
-                          selectedAvailableItems.has(item.id) && 'bg-blue-100',
-                        )}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('item', JSON.stringify(item));
-                        }}
-                      >
-                        <ItemThumbnail item={item} size="auto" />
-                        {selectedAvailableItems.has(item.id) && (
-                          <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-                        )}
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent side="left" className="w-64">
-                      <ItemDetails item={item} onQuickAdd={() => handleQuickAdd(item)} />
-                    </PopoverContent>
-                  </Popover>
-                ))}
+            {availableItems.length === 0 ? (
+              <div className="flex h-full items-center justify-center">
+                <Package className="h-6 w-6 text-gray-400" />
               </div>
-            </ScrollArea>
+            ) : filteredItems.length === 0 ? (
+              <div className="flex h-full items-center justify-center">
+                <Search className="h-6 w-6 text-gray-400" />
+              </div>
+            ) : (
+              <ScrollArea>
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredItems.map((item) => (
+                    <Popover key={item.id}>
+                      <PopoverTrigger asChild>
+                        <div
+                          className={cn(
+                            'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
+                            selectedAvailableItems.has(item.id) && 'bg-blue-100',
+                          )}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('item', JSON.stringify(item));
+                          }}
+                        >
+                          <ItemThumbnail item={item} size="auto" />
+                          {selectedAvailableItems.has(item.id) && (
+                            <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+                          )}
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent side="left" className="w-64">
+                        <ItemDetails item={item} onQuickAdd={() => handleQuickAdd(item)} />
+                      </PopoverContent>
+                    </Popover>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
         </div>
       </div>
@@ -293,9 +304,33 @@ export function ItemLibrarySidebar({
       </div>
       <div className="relative h-full">
         <div className="absolute inset-0 overflow-y-scroll p-2">
-          <ScrollArea>
-            <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} onQuickAdd={handleQuickAdd} />
-          </ScrollArea>
+          {availableItems.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <Package className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                <h3 className="mb-2 text-sm font-medium">No items available</h3>
+                <p className="text-xs text-muted-foreground mb-4">Create items to add them to your menu</p>
+                <Button size="sm" asChild>
+                  <Link href="/items/create">
+                    <Plus className="mr-2 h-3 w-3" />
+                    Create Item
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <Search className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                <h3 className="mb-2 text-sm font-medium">No items found</h3>
+                <p className="text-xs text-muted-foreground">Try adjusting your search or category filter</p>
+              </div>
+            </div>
+          ) : (
+            <ScrollArea>
+              <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} onQuickAdd={handleQuickAdd} />
+            </ScrollArea>
+          )}
         </div>
       </div>
     </div>

@@ -320,6 +320,12 @@ Breadcrumbs::for('menu.edit', function (BreadcrumbTrail $trail, $menuId) {
     $trail->push('Edit', route('menu.edit', $menuId));
 });
 
+// Menu > Menu Builder (global)
+Breadcrumbs::for('menu.builder.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('menu.index');
+    $trail->push('Menu Builder', route('menu.builder.index'));
+});
+
 // Menu > Menu Details > Builder
 Breadcrumbs::for('menu.builder', function (BreadcrumbTrail $trail, $menuId) {
     $trail->parent('menu.show', $menuId);

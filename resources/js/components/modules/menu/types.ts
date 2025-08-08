@@ -62,7 +62,8 @@ export interface MenuFeatures {
 }
 
 export interface MenuBuilderPageProps {
-  menu: Menu;
+  menu: Menu | null;
+  allMenus: Menu[];
   structure: {
     sections: MenuSection[];
   };

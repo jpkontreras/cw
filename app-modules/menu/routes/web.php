@@ -11,6 +11,11 @@ Route::middleware(['auth', 'web'])->prefix('menu')->name('menu.')->group(functio
     Route::get('/', [MenuController::class, 'index'])->name('index');
     Route::get('/create', [MenuController::class, 'create'])->name('create');
     Route::post('/', [MenuController::class, 'store'])->name('store');
+    
+    // Menu Builder - MUST come before /{menu} routes to avoid conflict
+    Route::get('/builder', [MenuBuilderController::class, 'globalIndex'])->name('builder.index');
+    
+    // Menu show/edit/update/destroy - these come after specific routes
     Route::get('/{menu}', [MenuController::class, 'show'])->name('show');
     Route::get('/{menu}/edit', [MenuController::class, 'edit'])->name('edit');
     Route::put('/{menu}', [MenuController::class, 'update'])->name('update');
@@ -22,7 +27,7 @@ Route::middleware(['auth', 'web'])->prefix('menu')->name('menu.')->group(functio
     Route::post('/{menu}/duplicate', [MenuController::class, 'duplicate'])->name('duplicate');
     Route::post('/{menu}/set-default', [MenuController::class, 'setDefault'])->name('set-default');
     
-    // Menu Builder
+    // Menu Builder for specific menu
     Route::get('/{menu}/builder', [MenuBuilderController::class, 'index'])->name('builder');
     Route::post('/{menu}/builder/save', [MenuBuilderController::class, 'save'])->name('builder.save');
     

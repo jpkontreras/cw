@@ -39,8 +39,64 @@ class MenuBuilderController extends Controller
         // Get available items from item module
         $availableItems = $this->items->getActiveItems();
         
+        // Get all menus for dropdown
+        $allMenus = $this->menuRepository->all();
+        
         return Inertia::render('menu/builder', [
             'menu' => $menu,
+            'allMenus' => $allMenus,
+            'structure' => $structure,
+            'availableItems' => $availableItems,
+            'features' => [
+                'nutritionalInfo' => config('features.menu.nutritional_info'),
+                'dietaryLabels' => config('features.menu.dietary_labels'),
+                'allergenInfo' => config('features.menu.allergen_info'),
+                'seasonalItems' => config('features.menu.seasonal_items'),
+                'featuredItems' => config('features.menu.featured_items'),
+                'recommendedItems' => config('features.menu.recommended_items'),
+                'itemBadges' => config('features.menu.item_badges'),
+                'customImages' => config('features.menu.custom_images'),
+            ],
+        ]);
+    }
+    
+    public function globalIndex(): Response
+    {
+        // Get all menus
+        $allMenus = $this->menuRepository->all();
+        
+        // Get the default menu or the first available menu
+        $defaultMenu = null;
+        $structure = ['sections' => []];
+        $availableItems = [];
+        
+        if ($allMenus->count() > 0) {
+            // Convert to array to work with the data
+            $menusArray = $allMenus->toArray();
+            
+            // Try to find default menu, otherwise use first
+            $defaultMenu = null;
+            foreach ($menusArray as $menu) {
+                if ($menu['isDefault'] ?? false) {
+                    $defaultMenu = $menu;
+                    break;
+                }
+            }
+            
+            // If no default found, use the first menu
+            if (!$defaultMenu && count($menusArray) > 0) {
+                $defaultMenu = $menusArray[0];
+            }
+            
+            if ($defaultMenu) {
+                $structure = $this->menuService->getMenuStructure($defaultMenu['id']);
+                $availableItems = $this->items->getActiveItems();
+            }
+        }
+        
+        return Inertia::render('menu/builder', [
+            'menu' => $defaultMenu,
+            'allMenus' => $allMenus,
             'structure' => $structure,
             'availableItems' => $availableItems,
             'features' => [
