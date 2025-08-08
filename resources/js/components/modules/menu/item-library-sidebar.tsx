@@ -97,53 +97,62 @@ export function ItemLibrarySidebar({
             {filteredItems.length}
           </Badge>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-1">
-          <div className="space-y-1">
-            {filteredItems.map((item) => (
-              <Popover key={item.id}>
-                <PopoverTrigger asChild>
-                  <div
-                    className={cn(
-                      'group relative cursor-move rounded-lg p-1 transition-colors hover:bg-gray-100',
-                      selectedAvailableItems.has(item.id) && 'bg-blue-100',
-                    )}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('item', JSON.stringify(item));
-                    }}
-                    onClick={() => onSelectItem(item.id)}
-                  >
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="mx-auto h-10 w-10 rounded object-cover" />
-                    ) : (
-                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded bg-gray-200">
-                        <Package className="h-6 w-6 text-gray-500" />
+
+        <div className="relative h-full px-0.5">
+          <div className="absolute inset-0 overflow-y-scroll">
+            <ScrollArea>
+              <div className="space-y-2">
+                {filteredItems.map((item) => (
+                  <Popover key={item.id}>
+                    <PopoverTrigger asChild>
+                      <div
+                        className={cn(
+                          'group relative cursor-move rounded-lg p-1 transition-colors hover:bg-gray-100',
+                          selectedAvailableItems.has(item.id) && 'bg-blue-100',
+                        )}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('item', JSON.stringify(item));
+                        }}
+                        onClick={() => onSelectItem(item.id)}
+                      >
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} className="mx-auto h-10 w-10 rounded object-cover" />
+                        ) : (
+                          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded bg-gray-200">
+                            <Package className="h-6 w-6 text-gray-500" />
+                          </div>
+                        )}
+                        {selectedAvailableItems.has(item.id) && <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500" />}
                       </div>
-                    )}
-                    {selectedAvailableItems.has(item.id) && <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500" />}
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent side="left" className="w-64">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">{item.name}</div>
-                    {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{formatCurrency(item.price)}</span>
-                      {item.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {item.category}
-                        </Badge>
-                      )}
-                    </div>
-                    <Button size="sm" className="w-full" onClick={() => handleQuickAdd(item)}>
-                      <Plus className="mr-2 h-3 w-3" />
-                      Add to Menu
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            ))}
+                    </PopoverTrigger>
+                    <PopoverContent side="left" className="w-64">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">{item.name}</div>
+                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{formatCurrency(item.price)}</span>
+                          {item.category && (
+                            <Badge variant="outline" className="text-xs">
+                              {item.category}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button size="sm" className="w-full" onClick={() => handleQuickAdd(item)}>
+                          <Plus className="mr-2 h-3 w-3" />
+                          Add to Menu
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-1">
+          <div className="space-y-1"></div>
         </div>
       </div>
     );
