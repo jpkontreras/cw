@@ -31,6 +31,9 @@ function ItemList({
   selectedItems: Set<number>;
   onSelectItem: (id: number) => void;
 }) {
+  // Get the actual selected items, not just their IDs
+  const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+  
   return (
     <div className="space-y-2">
       {items.map((item) => (
@@ -39,6 +42,7 @@ function ItemList({
           item={item}
           isSelected={selectedItems.has(item.id)}
           onSelect={() => onSelectItem(item.id)}
+          selectedItems={selectedItemsList}
         />
       ))}
     </div>
@@ -50,6 +54,7 @@ interface ItemLibrarySidebarProps {
   sections: MenuSection[];
   selectedAvailableItems: Set<number>;
   onSelectItem: (itemId: number) => void;
+  onBulkSelect: (itemIds: number[], selected: boolean) => void;
   onBulkAssign: (sectionId: number, itemIds: number[]) => void;
   isCollapsed: boolean;
   onToggleCollapsed: (collapsed: boolean) => void;
@@ -60,6 +65,7 @@ export function ItemLibrarySidebar({
   sections,
   selectedAvailableItems,
   onSelectItem,
+  onBulkSelect,
   onBulkAssign,
   isCollapsed,
   onToggleCollapsed,
@@ -83,17 +89,12 @@ export function ItemLibrarySidebar({
   }, [availableItems, searchQuery, selectedCategory]);
 
   const handleSelectAll = () => {
-    if (selectedAvailableItems.size === filteredItems.length) {
-      // Deselect all
-      filteredItems.forEach((item) => onSelectItem(item.id));
-    } else {
-      // Select all
-      filteredItems.forEach((item) => {
-        if (!selectedAvailableItems.has(item.id)) {
-          onSelectItem(item.id);
-        }
-      });
-    }
+    // Check if all currently filtered items are selected
+    const allFilteredSelected = filteredItems.every(item => selectedAvailableItems.has(item.id));
+    const filteredItemIds = filteredItems.map(item => item.id);
+    
+    // Use bulk select for instant selection/deselection
+    onBulkSelect(filteredItemIds, !allFilteredSelected);
   };
 
   const handleBulkAssignToSection = (sectionId: number) => {
@@ -134,6 +135,7 @@ export function ItemLibrarySidebar({
                     item={item} 
                     isSelected={selectedAvailableItems.has(item.id)}
                     onSelect={() => onSelectItem(item.id)}
+                    selectedItems={filteredItems.filter(i => selectedAvailableItems.has(i.id))}
                   />
                 ))}
               </div>
@@ -286,7 +288,7 @@ export function ItemLibrarySidebar({
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{filteredItems.length} items</span>
           <Button variant="ghost" size="sm" onClick={handleSelectAll} className="h-6 px-2 text-xs">
-            {selectedAvailableItems.size === filteredItems.length ? 'Deselect All' : 'Select All'}
+            {filteredItems.every(item => selectedAvailableItems.has(item.id)) ? 'Deselect All' : 'Select All'}
           </Button>
         </div>
       </div>
@@ -328,16 +330,23 @@ function CollapsedItemCard({
   item, 
   isSelected,
   onSelect,
+  selectedItems,
 }: { 
   item: AvailableItem; 
   isSelected: boolean;
   onSelect: () => void;
+  selectedItems: AvailableItem[];
 }) {
+  // If this item is selected and we're dragging, include all selected items
+  const itemsToMove = isSelected ? selectedItems : [item];
+  
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `available-collapsed-${item.id}`,
     data: {
-      type: 'available-item',
+      type: isSelected ? 'available-items-multi' : 'available-item',
       item: item,
+      items: itemsToMove,
+      count: itemsToMove.length,
     },
   });
 

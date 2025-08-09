@@ -10,18 +10,25 @@ interface AvailableItemCardProps {
   item: AvailableItem;
   isSelected: boolean;
   onSelect: () => void;
+  selectedItems: AvailableItem[];
 }
 
 export function AvailableItemCard({
   item,
   isSelected,
   onSelect,
+  selectedItems,
 }: AvailableItemCardProps) {
+  // If this item is selected and we're dragging, include all selected items
+  const itemsToMove = isSelected ? selectedItems : [item];
+  
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `available-${item.id}`,
     data: {
-      type: 'available-item',
+      type: isSelected ? 'available-items-multi' : 'available-item',
       item: item,
+      items: itemsToMove,
+      count: itemsToMove.length,
     },
   });
 

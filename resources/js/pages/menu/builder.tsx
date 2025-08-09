@@ -49,6 +49,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const [, setIsLibraryCollapsed] = useState(false);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [activeDraggedItem, setActiveDraggedItem] = useState<AvailableItem | null>(null);
+  const [activeDraggedItems, setActiveDraggedItems] = useState<AvailableItem[]>([]);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [droppedSuccessfully, setDroppedSuccessfully] = useState(false);
 
@@ -118,9 +119,10 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     setActiveId(active.id);
     setDroppedSuccessfully(false); // Reset on new drag
     
-    // Check if dragging an available item from library
-    if (active.data.current && active.data.current.type === 'available-item') {
+    // Check if dragging available items from library
+    if (active.data.current && (active.data.current.type === 'available-item' || active.data.current.type === 'available-items-multi')) {
       setActiveDraggedItem(active.data.current.item);
+      setActiveDraggedItems(active.data.current.items || [active.data.current.item]);
     }
   };
   
@@ -128,7 +130,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     const { active, over } = event;
     
     // Only set overId for sections when dragging available items
-    if (active.data.current && active.data.current.type === 'available-item' && over?.id.toString().startsWith('section-')) {
+    if (active.data.current && (active.data.current.type === 'available-item' || active.data.current.type === 'available-items-multi') && over?.id.toString().startsWith('section-')) {
       setOverId(over.id);
     } else if (!active.data.current || !active.data.current.type) {
       // For regular sorting
@@ -141,18 +143,30 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    // Check if this was a successful drop of an available item
-    const isSuccessfulDrop = over && active.data.current && active.data.current.type === 'available-item' && over.id.toString().startsWith('section-');
+    // Check if this was a successful drop of available items (single or multi)
+    const isSingleItemDrop = over && active.data.current && active.data.current.type === 'available-item' && over.id.toString().startsWith('section-');
+    const isMultiItemDrop = over && active.data.current && active.data.current.type === 'available-items-multi' && over.id.toString().startsWith('section-');
     
-    if (isSuccessfulDrop) {
+    if (isSingleItemDrop || isMultiItemDrop) {
       setDroppedSuccessfully(true);
       const sectionId = parseInt(over.id.toString().replace('section-', ''));
-      const item = active.data.current!.item as AvailableItem;
-      handleAddItemToSection(sectionId, item);
+      
+      if (isMultiItemDrop) {
+        // Handle multiple items
+        const items = active.data.current!.items as AvailableItem[];
+        handleAddMultipleItemsToSection(sectionId, items);
+        // Clear selection after successful multi-drop
+        setSelectedAvailableItems(new Set());
+      } else {
+        // Handle single item
+        const item = active.data.current!.item as AvailableItem;
+        handleAddItemToSection(sectionId, item);
+      }
       
       // Immediately clean up for successful drops
       setActiveId(null);
       setActiveDraggedItem(null);
+      setActiveDraggedItems([]);
       setOverId(null);
       setTimeout(() => setDroppedSuccessfully(false), 50);
       return;
@@ -161,6 +175,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     // For cancelled drags or sorting, clean up normally
     setActiveId(null);
     setActiveDraggedItem(null);
+    setActiveDraggedItems([]);
     setOverId(null);
     
     if (!over) return;
@@ -244,9 +259,41 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
         return section;
       }),
     );
+    setHasChanges(true);
+  };
+
+  const handleAddMultipleItemsToSection = (sectionId: number, items: AvailableItem[]) => {
+    const newItems: MenuItem[] = items.map((item, index) => ({
+      id: Date.now() + index, // Ensure unique IDs
+      itemId: item.id,
+      isFeatured: false,
+      isRecommended: false,
+      isNew: false,
+      isSeasonal: false,
+      sortOrder: 0,
+      baseItem: {
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.category,
+        imageUrl: item.imageUrl,
+      },
+    }));
+
+    setSections(
+      sections.map((section) => {
+        if (section.id === sectionId) {
+          return {
+            ...section,
+            items: [...section.items, ...newItems],
+          };
+        }
+        return section;
+      }),
+    );
 
     setHasChanges(true);
-    toast.success(`Added ${item.name} to section`);
+    toast.success(`Added ${items.length} item${items.length > 1 ? 's' : ''} to section`);
   };
 
   const handleBulkAssign = (sectionId: number, itemIds: number[]) => {
@@ -296,6 +343,18 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
       newSelected.add(itemId);
     }
     setSelectedAvailableItems(newSelected);
+  };
+
+  const handleBulkSelectItems = (itemIds: number[], selected: boolean) => {
+    if (selected) {
+      // Add all items to selection at once
+      setSelectedAvailableItems(new Set([...selectedAvailableItems, ...itemIds]));
+    } else {
+      // Remove all items from selection at once
+      const newSelected = new Set(selectedAvailableItems);
+      itemIds.forEach(id => newSelected.delete(id));
+      setSelectedAvailableItems(newSelected);
+    }
   };
 
 
@@ -428,7 +487,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
           sensors={sensors} 
           collisionDetection={(args) => {
             // Use composed collision detection for available items being dragged to sections
-            if (args.active.data.current && args.active.data.current.type === 'available-item') {
+            if (args.active.data.current && (args.active.data.current.type === 'available-item' || args.active.data.current.type === 'available-items-multi')) {
               // First try pointerWithin for precision
               const pointerCollisions = pointerWithin(args);
               const pointerSectionCollisions = pointerCollisions.filter(collision => 
@@ -473,6 +532,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         sections={sections}
                         selectedAvailableItems={selectedAvailableItems}
                         onSelectItem={handleSelectAvailableItem}
+                        onBulkSelect={handleBulkSelectItems}
                         onBulkAssign={handleBulkAssign}
                         isCollapsed={collapsed}
                         onToggleCollapsed={() => toggleCollapse()}
@@ -643,12 +703,25 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                   </div>
                 )}
                 {activeDraggedItem && (
-                  // Professional drag card with subtle animation and offset for collapsed view
+                  // Multi-item drag with stacked cards effect
                   <div className={cn(
-                    "transform scale-105 transition-transform",
+                    "relative transform scale-105 transition-transform",
                     activeId?.toString().includes('collapsed') && "-translate-x-32"
                   )}>
-                    <div className="rounded-xl bg-white border shadow-2xl p-3 w-[260px]">
+                    {/* Stacked cards behind main card for multi-select */}
+                    {activeDraggedItems.length > 1 && (
+                      <>
+                        {/* Third card (furthest back) */}
+                        {activeDraggedItems.length > 2 && (
+                          <div className="absolute top-4 left-4 rounded-xl bg-gray-100 border border-gray-200 shadow-lg p-3 w-[260px] h-[82px]" />
+                        )}
+                        {/* Second card */}
+                        <div className="absolute top-2 left-2 rounded-xl bg-white border border-gray-300 shadow-xl p-3 w-[260px] h-[82px]" />
+                      </>
+                    )}
+                    
+                    {/* Main card (front) */}
+                    <div className="relative rounded-xl bg-white border-2 border-gray-900 shadow-2xl p-3 w-[260px]">
                       <div className="flex items-center gap-3">
                         {activeDraggedItem.imageUrl ? (
                           <img 
@@ -663,20 +736,43 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm text-gray-900 truncate">
-                            {activeDraggedItem.name}
+                            {activeDraggedItems.length > 1 ? (
+                              <span className="flex items-center gap-2">
+                                <span className="bg-gray-900 text-white text-xs font-bold rounded px-1.5 py-0.5">
+                                  {activeDraggedItems.length}
+                                </span>
+                                <span>items selected</span>
+                              </span>
+                            ) : (
+                              activeDraggedItem.name
+                            )}
                           </div>
                           <div className="text-xs text-gray-600 mt-1">
-                            {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
+                            {activeDraggedItems.length > 1 ? (
+                              <div className="space-y-0.5">
+                                {activeDraggedItems.slice(0, 2).map((item, idx) => (
+                                  <div key={idx} className="truncate">
+                                    • {item.name}
+                                  </div>
+                                ))}
+                                {activeDraggedItems.length > 2 && (
+                                  <div className="text-gray-500">
+                                    and {activeDraggedItems.length - 2} more...
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
+                                {activeDraggedItem.category && (
+                                  <div className="text-gray-600 font-medium mt-1">
+                                    {activeDraggedItem.category}
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
-                          {activeDraggedItem.category && (
-                            <div className="text-xs text-gray-600 font-medium mt-1">
-                              {activeDraggedItem.category}
-                            </div>
-                          )}
                         </div>
-                      </div>
-                      <div className="absolute -top-1 -right-1">
-                        <div className="h-3 w-3 bg-gray-900 rounded-full animate-pulse" />
                       </div>
                     </div>
                   </div>
