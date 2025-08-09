@@ -20,6 +20,7 @@ import Page from '@/layouts/page-layout';
 import { 
   closestCenter,
   pointerWithin,
+  rectIntersection,
   DndContext, 
   DragEndEvent, 
   DragOverlay, 
@@ -33,7 +34,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, ChefHat, Eye, FileText, GripVertical, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
+import { ArrowLeft, ChefHat, Eye, FileText, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -118,7 +119,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     setDroppedSuccessfully(false); // Reset on new drag
     
     // Check if dragging an available item from library
-    if (active.data.current?.type === 'available-item') {
+    if (active.data.current && active.data.current.type === 'available-item') {
       setActiveDraggedItem(active.data.current.item);
     }
   };
@@ -127,9 +128,9 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     const { active, over } = event;
     
     // Only set overId for sections when dragging available items
-    if (active.data.current?.type === 'available-item' && over?.id.toString().startsWith('section-')) {
+    if (active.data.current && active.data.current.type === 'available-item' && over?.id.toString().startsWith('section-')) {
       setOverId(over.id);
-    } else if (!active.data.current?.type) {
+    } else if (!active.data.current || !active.data.current.type) {
       // For regular sorting
       setOverId(over?.id || null);
     } else {
@@ -141,12 +142,12 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     const { active, over } = event;
     
     // Check if this was a successful drop of an available item
-    const isSuccessfulDrop = over && active.data.current?.type === 'available-item' && over.id.toString().startsWith('section-');
+    const isSuccessfulDrop = over && active.data.current && active.data.current.type === 'available-item' && over.id.toString().startsWith('section-');
     
     if (isSuccessfulDrop) {
       setDroppedSuccessfully(true);
       const sectionId = parseInt(over.id.toString().replace('section-', ''));
-      const item = active.data.current.item as AvailableItem;
+      const item = active.data.current!.item as AvailableItem;
       handleAddItemToSection(sectionId, item);
       
       // Immediately clean up for successful drops
@@ -426,13 +427,25 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
         <DndContext 
           sensors={sensors} 
           collisionDetection={(args) => {
-            // Use pointerWithin for available items being dragged to sections
-            if (args.active.data.current?.type === 'available-item') {
+            // Use composed collision detection for available items being dragged to sections
+            if (args.active.data.current && args.active.data.current.type === 'available-item') {
+              // First try pointerWithin for precision
               const pointerCollisions = pointerWithin(args);
-              const sectionCollisions = pointerCollisions.filter(collision => 
+              const pointerSectionCollisions = pointerCollisions.filter(collision => 
                 collision.id?.toString().startsWith('section-')
               );
-              return sectionCollisions.length > 0 ? sectionCollisions : [];
+              
+              if (pointerSectionCollisions.length > 0) {
+                return pointerSectionCollisions;
+              }
+              
+              // Fall back to rectIntersection for small drag handles
+              const rectCollisions = rectIntersection(args);
+              const rectSectionCollisions = rectCollisions.filter(collision => 
+                collision.id?.toString().startsWith('section-')
+              );
+              
+              return rectSectionCollisions;
             }
             // Use closestCenter for sorting
             return closestCenter(args);
@@ -526,33 +539,34 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {allMenus.length === 0 ? (
-                <div className="flex h-full items-center justify-center p-8">
-                  <EmptyState
-                    icon={FileText}
-                    title="No menus available"
-                    description="Create your first menu to start building its structure and adding items."
-                    actions={
-                      <Button asChild>
-                        <Link href="/menu/create">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create First Menu
-                        </Link>
-                      </Button>
-                    }
-                  />
-                </div>
-              ) : !menu ? (
-                <div className="flex h-full items-center justify-center p-8">
-                  <EmptyState
-                    icon={FileText}
-                    title="Select a menu"
-                    description="Choose a menu from the dropdown above to start organizing its sections and items."
-                  />
-                </div>
-              ) : (
-                <div className="p-8">
+            <div className="min-h-0 flex-1 relative">
+              <div className="absolute inset-0 overflow-y-auto">
+                {allMenus.length === 0 ? (
+                  <div className="flex h-full items-center justify-center p-8">
+                    <EmptyState
+                      icon={FileText}
+                      title="No menus available"
+                      description="Create your first menu to start building its structure and adding items."
+                      actions={
+                        <Button asChild>
+                          <Link href="/menu/create">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create First Menu
+                          </Link>
+                        </Button>
+                      }
+                    />
+                  </div>
+                ) : !menu ? (
+                  <div className="flex h-full items-center justify-center p-8">
+                    <EmptyState
+                      icon={FileText}
+                      title="Select a menu"
+                      description="Choose a menu from the dropdown above to start organizing its sections and items."
+                    />
+                  </div>
+                ) : (
+                  <div className="p-8">
                   {/* Sections Header */}
                   {sections.length > 0 && (
                     <div className="mb-6">
@@ -599,8 +613,9 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         </div>
                       )}
                     </SortableContext>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           </Page.SplitContent>

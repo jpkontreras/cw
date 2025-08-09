@@ -22,7 +22,7 @@ interface EditItemDialogProps {
 export function EditItemDialog({ item, onClose, onSave }: EditItemDialogProps) {
   if (!item) return null;
 
-  const handleChange = (field: keyof MenuItem, value: any) => {
+  const handleChange = (field: keyof MenuItem, value: string | number | boolean) => {
     onSave({
       ...item.item,
       [field]: value,

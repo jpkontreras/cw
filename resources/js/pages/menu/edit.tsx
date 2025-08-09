@@ -33,7 +33,6 @@ import {
   CalendarIcon,
   Clock,
   MapPin,
-  Settings,
   FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -49,10 +48,10 @@ interface Menu {
   sortOrder: number;
   availableFrom?: string;
   availableUntil?: string;
-  metadata?: any;
-  sections?: any[];
-  availabilityRules?: any[];
-  locations?: any[];
+  metadata?: Record<string, unknown>;
+  sections?: Array<Record<string, unknown>>;
+  availabilityRules?: Array<Record<string, unknown>>;
+  locations?: Array<Record<string, unknown>>;
 }
 
 interface PageProps {
@@ -60,7 +59,7 @@ interface PageProps {
   menuTypes?: Record<string, string>;
 }
 
-function EditMenuContent({ menu, menuTypes = {} }: PageProps) {
+function EditMenuContent({ menu }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: menu.name,

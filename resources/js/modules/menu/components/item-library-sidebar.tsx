@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/format';
@@ -23,39 +20,6 @@ import { useMemo, useState } from 'react';
 import { AvailableItemCard } from './available-item-card';
 import { type AvailableItem, type MenuSection } from '../types';
 
-// Component for item thumbnail display
-function ItemThumbnail({ item, size = 'default', className }: { item: AvailableItem; size?: 'default' | 'small' | 'auto'; className?: string }) {
-  const dimensions = size === 'small' ? 'h-10 w-10' : size === 'auto' ? 'w-full aspect-square' : 'h-12 w-12';
-  const iconSize = size === 'small' ? 'h-6 w-6' : size === 'auto' ? 'h-8 w-8' : 'h-7 w-7';
-
-  if (item.imageUrl) {
-    return <img src={item.imageUrl} alt={item.name} className={cn('rounded object-cover', dimensions, className)} />;
-  }
-
-  return (
-    <div className={cn('flex items-center justify-center rounded bg-gray-200', dimensions, className)}>
-      <Package className={cn('text-gray-500', iconSize)} />
-    </div>
-  );
-}
-
-// Component for item details in popover
-function ItemDetails({ item }: { item: AvailableItem }) {
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">{item.name}</div>
-      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{formatCurrency(item.price)}</span>
-        {item.category && (
-          <Badge variant="outline" className="text-xs">
-            {item.category}
-          </Badge>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // Component for item list
 function ItemList({
@@ -369,7 +333,7 @@ function CollapsedItemCard({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `available-collapsed-${item.id}`,
     data: {
       type: 'available-item',
@@ -377,11 +341,8 @@ function CollapsedItemCard({
     },
   });
 
-  // Apply transform for dragging feedback
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: isDragging ? 1000 : undefined,
-  } : {};
+  // Don't apply transform - let DragOverlay handle the visual feedback
+  const style = {};
 
   return (
     <TooltipProvider delayDuration={300}>

@@ -24,11 +24,7 @@ import {
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface PageProps {
-  menuTypes?: Record<string, string>;
-}
-
-function CreateMenuContent({ menuTypes = {} }: PageProps) {
+function CreateMenuContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',

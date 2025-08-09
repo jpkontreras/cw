@@ -48,9 +48,7 @@ import {
   Star,
   TrendingUp,
   Leaf,
-  DollarSign,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { toast } from 'sonner';
 
@@ -91,7 +89,7 @@ interface Menu {
   sortOrder: number;
   availableFrom?: string;
   availableUntil?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   sections?: MenuSection[];
   createdAt: string;
   updatedAt: string;

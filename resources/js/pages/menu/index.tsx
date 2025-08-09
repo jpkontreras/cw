@@ -37,7 +37,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  MapPin,
   ChefHat,
   Coffee,
   Sun,

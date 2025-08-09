@@ -4,9 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -71,7 +69,7 @@ interface MenuStructure {
   isActive: boolean;
   isAvailable: boolean;
   sections: MenuSection[];
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface PageProps {
@@ -318,7 +316,7 @@ function MenuPreviewContent({ menu }: PageProps) {
               </Button>
             </div>
             
-            <Select value={fontSize} onValueChange={(value: any) => setFontSize(value)}>
+            <Select value={fontSize} onValueChange={(value) => setFontSize(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
