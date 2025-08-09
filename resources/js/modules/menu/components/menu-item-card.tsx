@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +16,6 @@ import { type MenuItem } from '../types';
 
 interface MenuItemCardProps {
   item: MenuItem;
-  isSelected: boolean;
-  onSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -26,8 +23,6 @@ interface MenuItemCardProps {
 
 export function MenuItemCard({
   item,
-  isSelected,
-  onSelect,
   onEdit,
   onDelete,
   onDuplicate,
@@ -48,11 +43,8 @@ export function MenuItemCard({
       className={cn(
         'group flex items-center gap-3 rounded-lg border bg-white p-3 transition-all hover:shadow-md',
         isDragging && 'opacity-50 scale-[1.02]',
-        isSelected && 'border-blue-500 bg-blue-50/50 shadow-sm',
       )}
     >
-      <Checkbox checked={isSelected} onCheckedChange={onSelect} />
-
       <button
         type="button"
         {...attributes} 

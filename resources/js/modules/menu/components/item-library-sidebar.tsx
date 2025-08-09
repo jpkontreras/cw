@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
@@ -138,7 +139,7 @@ export function ItemLibrarySidebar({
 
   if (isCollapsed) {
     return (
-      <div className="flex h-full flex-col bg-gray-50">
+      <div className="flex h-full flex-col bg-gray-50 relative">
         <div className="flex-shrink-0 border-b bg-white">
           <Button
             variant="ghost"
@@ -175,6 +176,64 @@ export function ItemLibrarySidebar({
             )}
           </div>
         </div>
+
+        {/* Floating action area for bulk assign */}
+        {selectedAvailableItems.size > 0 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  size="sm" 
+                  className="h-8 px-3 bg-gray-900 hover:bg-gray-800 text-white shadow-lg animate-in slide-in-from-bottom-2"
+                >
+                  <Layers className="h-3.5 w-3.5 mr-1" />
+                  <span className="text-xs font-medium">{selectedAvailableItems.size}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="center" className="w-64 max-h-96 overflow-y-auto">
+                {/* Show selected items */}
+                <div className="px-2 py-2 border-b">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Selected items:</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {filteredItems
+                      .filter(item => selectedAvailableItems.has(item.id))
+                      .map(item => (
+                        <div key={item.id} className="flex items-center gap-2 text-xs">
+                          <div className="h-1.5 w-1.5 bg-gray-400 rounded-full" />
+                          <span className="truncate flex-1">{item.name}</span>
+                          {item.price && (
+                            <span className="text-muted-foreground">
+                              {formatCurrency(item.price)}
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+                
+                <DropdownMenuLabel className="text-xs">Assign to Section</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {sections.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections available</div>
+                ) : (
+                  sections.map((section) => (
+                    <DropdownMenuItem 
+                      key={section.id} 
+                      onClick={() => handleBulkAssignToSection(section.id)}
+                      className="text-sm"
+                    >
+                      <span className="truncate">{section.name}</span>
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {section.items.length}
+                      </Badge>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
     );
   }
@@ -268,7 +327,7 @@ export function ItemLibrarySidebar({
         </div>
       </div>
       <div className="relative h-full">
-        <div className="absolute inset-0 overflow-y-scroll p-2">
+        <div className="absolute inset-0 overflow-y-auto px-4 py-2">
           {availableItems.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <div className="text-center">
@@ -292,9 +351,7 @@ export function ItemLibrarySidebar({
               </div>
             </div>
           ) : (
-            <ScrollArea>
-              <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} />
-            </ScrollArea>
+            <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} />
           )}
         </div>
       </div>
@@ -312,7 +369,7 @@ function CollapsedItemCard({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `available-collapsed-${item.id}`,
     data: {
       type: 'available-item',
@@ -320,69 +377,98 @@ function CollapsedItemCard({
     },
   });
 
-  // Don't apply transform to library items - they should stay in place
-  const style = {};
+  // Apply transform for dragging feedback
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: isDragging ? 1000 : undefined,
+  } : {};
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <div
-          ref={setNodeRef}
-          style={style}
-          {...attributes} 
-          {...listeners}
-          className={cn(
-            'group relative h-12 w-12 cursor-move rounded-lg transition-all',
-            'hover:ring-2 hover:ring-blue-400 hover:ring-offset-1',
-            isSelected && 'ring-2 ring-blue-500 ring-offset-1',
-            isDragging && 'opacity-50',
-          )}
-          title={item.name}
-        >
-          {/* Item image/icon */}
-          {item.imageUrl ? (
-            <img 
-              src={item.imageUrl} 
-              alt={item.name} 
-              className="h-full w-full rounded-lg object-cover" 
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100">
-              <Package className="h-6 w-6 text-gray-400" />
-            </div>
-          )}
-          
-          {/* Selection indicator */}
-          {isSelected && (
-            <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            </div>
-          )}
-
-          {/* Drag indicator on hover */}
-          <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
-            <GripVertical className="h-4 w-4 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-      </PopoverTrigger>
-      <PopoverContent side="left" className="w-64">
-        <ItemDetails item={item} />
-        <div className="mt-3 pt-3 border-t">
-          <Button
-            size="sm"
-            variant={isSelected ? "outline" : "default"}
-            className="w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            ref={setNodeRef}
+            style={style}
+            className={cn(
+              'group relative h-12 w-12 cursor-move rounded-lg transition-all touch-none',
+              'hover:ring-2 hover:ring-gray-400 hover:ring-offset-1',
+              isSelected && 'ring-2 ring-gray-900 ring-offset-1',
+              isDragging && 'opacity-30 scale-105',
+            )}
           >
-            {isSelected ? 'Deselect' : 'Select for bulk assign'}
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+            {/* Main draggable area */}
+            <div
+              {...attributes}
+              {...listeners}
+              className="relative h-full w-full"
+            >
+              {/* Item image/icon */}
+              {item.imageUrl ? (
+                <img 
+                  src={item.imageUrl} 
+                  alt={item.name} 
+                  className="h-full w-full rounded-lg object-cover pointer-events-none" 
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 pointer-events-none">
+                  <Package className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+              
+              {/* Drag indicator overlay */}
+              <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
+                <GripVertical className="h-4 w-4 text-white drop-shadow-md opacity-0 group-hover:opacity-80 transition-opacity" />
+              </div>
+            </div>
+
+            {/* Selection checkbox - outside drag area */}
+            <div 
+              className="absolute -top-1.5 -right-1.5 z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onSelect();
+              }}
+            >
+              <div className={cn(
+                "h-5 w-5 rounded-full border-2 bg-white cursor-pointer transition-all",
+                "hover:scale-110 hover:shadow-md",
+                isSelected 
+                  ? "bg-gray-900 border-gray-900" 
+                  : "border-gray-300 hover:border-gray-600"
+              )}>
+                {isSelected && (
+                  <svg className="h-full w-full text-white p-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-xs">
+          <div className="space-y-1">
+            <div className="font-medium text-sm">{item.name}</div>
+            {item.description && (
+              <div className="text-xs text-muted-foreground line-clamp-2">{item.description}</div>
+            )}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-sm font-semibold text-blue-600">
+                {item.price ? formatCurrency(item.price) : '—'}
+              </span>
+              {item.category && (
+                <Badge variant="outline" className="text-xs">
+                  {item.category}
+                </Badge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground pt-1 border-t">
+              Drag to section or click circle to select
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

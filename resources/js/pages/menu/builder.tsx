@@ -39,7 +39,6 @@ import { toast } from 'sonner';
 
 export default function MenuBuilder({ menu, allMenus, structure, availableItems }: MenuBuilderPageProps) {
   const [sections, setSections] = useState<MenuSection[]>(structure.sections);
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [selectedAvailableItems, setSelectedAvailableItems] = useState<Set<number>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -383,15 +382,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     setHasChanges(true);
   };
 
-  const handleSelectItem = (itemId: number) => {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(itemId)) {
-      newSelected.delete(itemId);
-    } else {
-      newSelected.add(itemId);
-    }
-    setSelectedItems(newSelected);
-  };
 
   const handleCloseEditSection = () => {
     setEditingSection(null);
@@ -604,8 +594,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                               onEditItem={(item) => handleEditItemClick(item, section.id)}
                               onDeleteItem={(itemId) => handleDeleteItem(section.id, itemId)}
                               onDuplicateItem={(item) => handleDuplicateItem(section.id, item)}
-                              selectedItems={selectedItems}
-                              onSelectItem={handleSelectItem}
                             />
                           ))}
                         </div>
@@ -623,6 +611,9 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
               duration: 200,
               easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
             }}
+            style={{
+              zIndex: 9999,
+            }}
           >
             {activeId ? (
               <div className={cn("pointer-events-none", droppedSuccessfully && "opacity-0 transition-opacity duration-100")}>
@@ -637,52 +628,43 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                   </div>
                 )}
                 {activeDraggedItem && (
-                  // Check if dragging from collapsed view - show simple expanded card
-                  activeId?.toString().includes('collapsed') ? (
-                    <div className="-translate-x-32">
-                      <div className="rounded-lg bg-white border-2 border-blue-400 shadow-xl p-3 max-w-xs">
-                        <div className="flex items-center gap-3">
-                          {activeDraggedItem.imageUrl ? (
-                            <img 
-                              src={activeDraggedItem.imageUrl} 
-                              alt={activeDraggedItem.name} 
-                              className="h-12 w-12 rounded-lg object-cover flex-shrink-0" 
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 flex-shrink-0">
-                              <Package className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-gray-900">
-                              {activeDraggedItem.name}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
-                              {activeDraggedItem.category && ` • ${activeDraggedItem.category}`}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Regular compact card for expanded view drag
-                    <div className="rounded-lg border-2 border-blue-400 bg-white p-2 shadow-2xl max-w-xs">
-                      <div className="flex items-center gap-2">
+                  // Professional drag card with subtle animation and offset for collapsed view
+                  <div className={cn(
+                    "transform scale-105 transition-transform",
+                    activeId?.toString().includes('collapsed') && "-translate-x-32"
+                  )}>
+                    <div className="rounded-xl bg-white border shadow-2xl p-3 w-[260px]">
+                      <div className="flex items-center gap-3">
                         {activeDraggedItem.imageUrl ? (
-                          <img src={activeDraggedItem.imageUrl} alt={activeDraggedItem.name} className="h-10 w-10 rounded object-cover" />
+                          <img 
+                            src={activeDraggedItem.imageUrl} 
+                            alt={activeDraggedItem.name} 
+                            className="h-14 w-14 rounded-lg object-cover flex-shrink-0" 
+                          />
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
-                            <Package className="h-5 w-5 text-gray-400" />
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 flex-shrink-0">
+                            <Package className="h-7 w-7 text-gray-500" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{activeDraggedItem.name}</div>
-                          <div className="text-xs text-gray-500">Drag to section</div>
+                          <div className="font-semibold text-sm text-gray-900 truncate">
+                            {activeDraggedItem.name}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
+                          </div>
+                          {activeDraggedItem.category && (
+                            <div className="text-xs text-gray-600 font-medium mt-1">
+                              {activeDraggedItem.category}
+                            </div>
+                          )}
                         </div>
                       </div>
+                      <div className="absolute -top-1 -right-1">
+                        <div className="h-3 w-3 bg-gray-900 rounded-full animate-pulse" />
+                      </div>
                     </div>
-                  )
+                  </div>
                 )}
               </div>
             ) : null}

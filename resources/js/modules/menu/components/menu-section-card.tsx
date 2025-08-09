@@ -27,8 +27,6 @@ interface MenuSectionCardProps {
   onEditItem: (item: MenuItem) => void;
   onDeleteItem: (itemId: number) => void;
   onDuplicateItem: (item: MenuItem) => void;
-  selectedItems: Set<number>;
-  onSelectItem: (itemId: number) => void;
 }
 
 export function MenuSectionCard({
@@ -41,8 +39,6 @@ export function MenuSectionCard({
   onEditItem,
   onDeleteItem,
   onDuplicateItem,
-  selectedItems,
-  onSelectItem,
 }: MenuSectionCardProps) {
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({ 
     id: `section-${section.id}` 
@@ -68,7 +64,7 @@ export function MenuSectionCard({
     <div ref={setNodeRef} style={style} className={cn('mb-4 transition-all', isDragging && 'opacity-50 scale-[1.02]')}>
       <Card className={cn(
         "shadow-sm transition-all hover:shadow-md group/card",
-        isDraggedOver && "ring-2 ring-blue-400 bg-blue-50/20"
+        isDraggedOver && "ring-2 ring-gray-400 bg-gray-50/50"
       )}>
         <CardHeader className="bg-white pb-3">
           <div className="flex items-center justify-between">
@@ -130,7 +126,7 @@ export function MenuSectionCard({
             {section.items.length === 0 ? (
               <div className={cn(
                 "rounded-lg border-2 border-dashed py-8 text-center transition-colors",
-                isDraggedOver && "bg-blue-50 border-blue-400"
+                isDraggedOver && "bg-gray-50 border-gray-400"
               )}>
                 <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                 <p className="text-sm text-muted-foreground">Drag items here to add them</p>
@@ -142,8 +138,6 @@ export function MenuSectionCard({
                     <MenuItemCard
                       key={item.id}
                       item={item}
-                      isSelected={selectedItems.has(item.id)}
-                      onSelect={() => onSelectItem(item.id)}
                       onEdit={() => onEditItem(item)}
                       onDelete={() => onDeleteItem(item.id)}
                       onDuplicate={() => onDuplicateItem(item)}

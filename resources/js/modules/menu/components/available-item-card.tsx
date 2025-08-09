@@ -32,7 +32,7 @@ export function AvailableItemCard({
     <div
       className={cn(
         'group relative rounded-lg border bg-white transition-all hover:shadow-md',
-        isSelected && 'border-blue-500 bg-blue-50/50 shadow-sm',
+        isSelected && 'ring-2 ring-gray-900 ring-offset-1',
         isDragging && 'opacity-50',
       )}
     >
