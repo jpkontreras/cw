@@ -25,26 +25,28 @@ export function AvailableItemCard({
     },
   });
 
-  // Don't apply transform to library items - they should stay in place
+  // Don't apply transform - let DragOverlay handle the visual feedback
   const style = {};
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        'group relative rounded-lg border bg-white transition-all hover:shadow-md',
+        'group relative rounded-lg border bg-white transition-all hover:shadow-md touch-none',
         isSelected && 'ring-2 ring-gray-900 ring-offset-1',
         isDragging && 'opacity-50',
       )}
     >
-      <div className="p-2.5">
-        <div className="flex gap-2.5 items-center">
-          {/* Drag Handle - Only this is draggable */}
+      <div 
+        {...attributes} 
+        {...listeners}
+        className="p-2.5 cursor-move"
+      >
+        <div className="flex gap-2.5 items-center pointer-events-none">
+          {/* Drag Handle Visual Indicator */}
           <div
-            ref={setNodeRef}
-            {...attributes} 
-            {...listeners}
-            style={style}
-            className="flex-shrink-0 cursor-move rounded p-1 transition-colors hover:bg-gray-100"
+            className="flex-shrink-0 rounded p-1 transition-colors group-hover:bg-gray-100"
             title="Drag to add to section"
           >
             <GripVertical className="h-4 w-4 text-gray-400" />
@@ -83,11 +85,19 @@ export function AvailableItemCard({
             <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
               {item.price ? formatCurrency(item.price) : 'No price'}
             </div>
-            <Checkbox 
-              checked={isSelected} 
-              onCheckedChange={onSelect}
-              className="h-5 w-5"
-            />
+            <div 
+              className="pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
+              <Checkbox 
+                checked={isSelected} 
+                onCheckedChange={onSelect}
+                className="h-5 w-5"
+              />
+            </div>
           </div>
         </div>
       </div>

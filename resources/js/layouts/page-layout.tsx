@@ -205,7 +205,7 @@ const PageSplitContent = ({ children, sidebar, className, mainClassName, sidebar
       )}
       
       {/* Content area - let the panel handle the collapse animation */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         {renderContent(isCollapsed, handleToggle)}
       </div>
     </div>
