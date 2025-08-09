@@ -41,6 +41,7 @@ class MenuItemData extends BaseData
         public readonly ?array $metadata = null,
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
+        public readonly ?object $baseItem = null, // The actual item details from items table
     ) {}
     
     #[Computed]
@@ -64,14 +65,20 @@ class MenuItemData extends BaseData
     
     public static function fromModel(MenuItem $item): self
     {
+        // Get display values from the item relationship if not overridden
+        $displayName = $item->display_name ?: ($item->item ? $item->item->name : null);
+        $displayDescription = $item->display_description ?: ($item->item ? $item->item->description : null);
+        $price = $item->price_override ?? ($item->item ? (float) $item->item->price : null);
+        $imageUrl = $item->image_url ?: ($item->item ? $item->item->image_url : null);
+        
         return new self(
             id: $item->id,
             menuId: $item->menu_id,
             menuSectionId: $item->menu_section_id,
             itemId: $item->item_id,
-            displayName: $item->display_name,
-            displayDescription: $item->display_description,
-            priceOverride: $item->price_override,
+            displayName: $displayName,
+            displayDescription: $displayDescription,
+            priceOverride: $price,
             isActive: $item->is_active,
             isFeatured: $item->is_featured,
             isRecommended: $item->is_recommended,
@@ -84,10 +91,11 @@ class MenuItemData extends BaseData
             allergenInfo: $item->allergen_info,
             calorieCount: $item->calorie_count,
             nutritionalInfo: $item->nutritional_info,
-            imageUrl: $item->image_url,
+            imageUrl: $imageUrl,
             metadata: $item->metadata,
             createdAt: $item->created_at,
             updatedAt: $item->updated_at,
+            baseItem: $item->item ? (object) $item->item->toArray() : null,
         );
     }
 }

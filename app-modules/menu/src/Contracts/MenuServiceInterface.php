@@ -8,6 +8,7 @@ use Colame\Menu\Data\CreateMenuData;
 use Colame\Menu\Data\UpdateMenuData;
 use Colame\Menu\Data\MenuData;
 use Colame\Menu\Data\MenuStructureData;
+use Colame\Menu\Data\SaveMenuStructureData;
 use Spatie\LaravelData\DataCollection;
 
 interface MenuServiceInterface
@@ -36,6 +37,11 @@ interface MenuServiceInterface
      * Get menu structure for a specific location
      */
     public function getMenuStructureForLocation(int $menuId, int $locationId): MenuStructureData;
+    
+    /**
+     * Save complete menu structure with sections and items
+     */
+    public function saveMenuStructure(int $menuId, SaveMenuStructureData $data): MenuStructureData;
     
     /**
      * Duplicate a menu

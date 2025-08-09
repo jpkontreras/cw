@@ -86,6 +86,14 @@ class MenuItem extends Model
         return $this->hasMany(MenuItemModifier::class);
     }
     
+    /**
+     * Relationship to the actual item in the items table
+     */
+    public function item()
+    {
+        return $this->belongsTo(\Colame\Item\Models\Item::class, 'item_id');
+    }
+    
     public function getDisplayNameAttribute($value)
     {
         return $value ?: $this->getItemName();
@@ -112,26 +120,22 @@ class MenuItem extends Model
      */
     protected function getItemName(): ?string
     {
-        // TODO: Fetch from item repository
-        return null;
+        return $this->item ? $this->item->name : null;
     }
     
     protected function getItemDescription(): ?string
     {
-        // TODO: Fetch from item repository
-        return null;
+        return $this->item ? $this->item->description : null;
     }
     
     protected function getItemPrice(): ?float
     {
-        // TODO: Fetch from item repository
-        return null;
+        return $this->item ? (float) $this->item->price : null;
     }
     
     protected function getItemPreparationTime(): ?int
     {
-        // TODO: Fetch from item repository
-        return null;
+        return $this->item ? $this->item->preparation_time : null;
     }
     
     public function isAvailable(): bool

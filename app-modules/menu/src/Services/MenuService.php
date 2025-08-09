@@ -14,6 +14,9 @@ use Colame\Menu\Data\UpdateMenuData;
 use Colame\Menu\Data\MenuData;
 use Colame\Menu\Data\MenuStructureData;
 use Colame\Menu\Data\MenuSectionWithItemsData;
+use Colame\Menu\Data\SaveMenuStructureData;
+use Colame\Menu\Data\SaveMenuSectionData;
+use Colame\Menu\Data\SaveMenuItemData;
 use Colame\Menu\Models\Menu;
 use Colame\Menu\Models\MenuSection;
 use Colame\Menu\Models\MenuItem;
@@ -29,13 +32,13 @@ class MenuService implements MenuServiceInterface
         private MenuItemRepositoryInterface $itemRepository,
         private MenuVersioningInterface $versioningService,
     ) {}
-    
+
     public function createMenu(CreateMenuData $data): MenuData
     {
         return DB::transaction(function () use ($data) {
             // Create the menu
             $menuData = $this->menuRepository->create($data->toArray());
-            
+
             // Create sections if provided
             if ($data->sections) {
                 foreach ($data->sections as $sectionData) {
@@ -45,12 +48,12 @@ class MenuService implements MenuServiceInterface
                     ]);
                 }
             }
-            
+
             // Assign to locations if provided
             if ($data->locationIds) {
                 $this->assignToLocations($menuData->id, $data->locationIds);
             }
-            
+
             // Create initial version
             if (config('features.menu.versioning')) {
                 $this->versioningService->createVersion(
@@ -59,16 +62,16 @@ class MenuService implements MenuServiceInterface
                     'Initial menu creation'
                 );
             }
-            
+
             return $menuData;
         });
     }
-    
+
     public function updateMenu(int $id, UpdateMenuData $data): MenuData
     {
         return DB::transaction(function () use ($id, $data) {
             $menuData = $this->menuRepository->update($id, $data->toArray());
-            
+
             // Create version snapshot if versioning is enabled
             if (config('features.menu.versioning')) {
                 $this->versioningService->createVersion(
@@ -77,11 +80,11 @@ class MenuService implements MenuServiceInterface
                     'Menu updated'
                 );
             }
-            
+
             return $menuData;
         });
     }
-    
+
     public function deleteMenu(int $id): bool
     {
         return DB::transaction(function () use ($id) {
@@ -93,11 +96,11 @@ class MenuService implements MenuServiceInterface
                     'Menu deleted'
                 );
             }
-            
+
             return $this->menuRepository->delete($id);
         });
     }
-    
+
     public function getMenuStructure(int $id): MenuStructureData
     {
         $menu = Menu::with([
@@ -105,18 +108,26 @@ class MenuService implements MenuServiceInterface
                 $query->whereNull('parent_id')
                     ->where('is_active', true)
                     ->orderBy('sort_order')
-                    ->with(['children' => function ($q) {
-                        $q->where('is_active', true)->orderBy('sort_order');
-                    }, 'activeItems']);
+                    ->with([
+                        'children' => function ($q) {
+                            $q->where('is_active', true)
+                              ->orderBy('sort_order')
+                              ->with('activeItems.item'); // Also load items for child sections
+                        }, 
+                        'activeItems.item' // Eager load the actual item relationship
+                    ]);
             }
         ])->findOrFail($id);
-        
-        $sections = new DataCollection(MenuSectionWithItemsData::class, []);
-        
+
+        // Build array of sections first, then create DataCollection
+        $sectionsArray = [];
         foreach ($menu->sections as $section) {
-            $sections->push(MenuSectionWithItemsData::fromModel($section));
+            $sectionsArray[] = MenuSectionWithItemsData::fromModel($section);
         }
         
+        // Create DataCollection from array using collect() method
+        $sections = MenuSectionWithItemsData::collect($sectionsArray, DataCollection::class);
+
         return new MenuStructureData(
             id: $menu->id,
             name: $menu->name,
@@ -130,60 +141,260 @@ class MenuService implements MenuServiceInterface
             metadata: $menu->metadata,
         );
     }
-    
+
+    public function saveMenuStructure(int $menuId, SaveMenuStructureData $data): MenuStructureData
+    {
+        return DB::transaction(function () use ($menuId, $data) {
+            // Verify menu exists
+            $menu = Menu::findOrFail($menuId);
+
+            // Track existing section and item IDs to handle deletions
+            $existingSectionIds = [];
+            $existingItemIds = [];
+
+            // Process sections if provided - handle empty menu case
+            if ($data->sections !== null && $data->sections->count() > 0) {
+                // Convert DataCollection to array for indexed iteration
+                $sectionsArray = $data->sections->toArray();
+                foreach ($sectionsArray as $sectionIndex => $sectionData) {
+                    // Convert array back to Data object if needed
+                    $sectionDataObject = is_array($sectionData)
+                        ? SaveMenuSectionData::from($sectionData)
+                        : $sectionData;
+
+                    $this->processSaveSection(
+                        $menuId,
+                        $sectionDataObject,
+                        (int) $sectionIndex,
+                        null,
+                        $existingSectionIds,
+                        $existingItemIds
+                    );
+                }
+            }
+
+            // Delete sections that are no longer in the structure
+            // If no sections exist, delete all sections for this menu
+            if (empty($existingSectionIds)) {
+                MenuSection::where('menu_id', $menuId)->delete();
+            } else {
+                MenuSection::where('menu_id', $menuId)
+                    ->whereNotIn('id', $existingSectionIds)
+                    ->delete();
+            }
+
+            // Delete items that are no longer in the structure
+            // If no items exist, delete all items for this menu
+            if (empty($existingItemIds)) {
+                MenuItem::where('menu_id', $menuId)->delete();
+            } else {
+                MenuItem::where('menu_id', $menuId)
+                    ->whereNotIn('id', $existingItemIds)
+                    ->delete();
+            }
+
+            // Create version snapshot if versioning is enabled
+            if (config('features.menu.versioning')) {
+                $this->versioningService->createVersion(
+                    $menuId,
+                    'structure_updated',
+                    'Menu structure updated'
+                );
+            }
+
+            // Return the updated structure
+            return $this->getMenuStructure($menuId);
+        });
+    }
+
+    private function processSaveSection(
+        int $menuId,
+        SaveMenuSectionData $sectionData,
+        int $sortOrder,
+        ?int $parentId,
+        array &$existingSectionIds,
+        array &$existingItemIds
+    ): int {
+        // Check if this is an existing section or a new one
+        // IDs over 1 billion are likely from Date.now() and should be treated as new
+        $isNewSection = !$sectionData->id || $sectionData->id > 1000000000;
+
+        if (!$isNewSection) {
+            // Try to find existing section
+            $section = MenuSection::find($sectionData->id);
+            $isNewSection = !$section;
+        }
+
+        if ($isNewSection) {
+            // Create new section
+            $section = MenuSection::create([
+                'menu_id' => $menuId,
+                'parent_id' => $parentId,
+                'name' => $sectionData->name,
+                'description' => $sectionData->description,
+                'icon' => $sectionData->icon,
+                'is_active' => $sectionData->isActive,
+                'is_featured' => $sectionData->isFeatured,
+                'sort_order' => $sortOrder,
+            ]);
+            $existingSectionIds[] = $section->id;
+        } else {
+            // Update existing section
+            $section->update([
+                'name' => $sectionData->name,
+                'description' => $sectionData->description,
+                'icon' => $sectionData->icon,
+                'is_active' => $sectionData->isActive,
+                'is_featured' => $sectionData->isFeatured,
+                'sort_order' => $sortOrder,
+                'parent_id' => $parentId,
+            ]);
+            $existingSectionIds[] = $sectionData->id;
+        }
+
+        // Process items in this section - convert DataCollection to array
+        $itemsArray = $sectionData->items->toArray();
+        foreach ($itemsArray as $itemIndex => $itemData) {
+            // Convert array back to Data object if needed
+            $itemDataObject = is_array($itemData)
+                ? SaveMenuItemData::from($itemData)
+                : $itemData;
+
+            $this->processSaveItem(
+                $menuId,
+                $section->id,
+                $itemDataObject,
+                (int) $itemIndex,
+                $existingItemIds
+            );
+        }
+
+        // Process child sections recursively
+        if ($sectionData->children) {
+            $childrenArray = $sectionData->children->toArray();
+            foreach ($childrenArray as $childIndex => $childData) {
+                // Convert array back to Data object if needed
+                $childDataObject = is_array($childData)
+                    ? SaveMenuSectionData::from($childData)
+                    : $childData;
+
+                $this->processSaveSection(
+                    $menuId,
+                    $childDataObject,
+                    (int) $childIndex,
+                    $section->id,
+                    $existingSectionIds,
+                    $existingItemIds
+                );
+            }
+        }
+
+        return $section->id;
+    }
+
+    private function processSaveItem(
+        int $menuId,
+        int $sectionId,
+        SaveMenuItemData $itemData,
+        int $sortOrder,
+        array &$existingItemIds
+    ): void {
+        // Check if this is an existing item or a new one
+        // IDs over 1 billion are likely from Date.now() and should be treated as new
+        $isNewItem = !$itemData->id || $itemData->id > 1000000000;
+
+        if (!$isNewItem) {
+            // Try to find existing item
+            $item = MenuItem::find($itemData->id);
+            $isNewItem = !$item;
+        }
+
+        if ($isNewItem) {
+            // Create new item
+            $item = MenuItem::create([
+                'menu_id' => $menuId,
+                'menu_section_id' => $sectionId,
+                'item_id' => $itemData->itemId,
+                'display_name' => $itemData->displayName,
+                'display_description' => $itemData->displayDescription,
+                'price_override' => $itemData->priceOverride,
+                'is_active' => true,
+                'is_featured' => $itemData->isFeatured,
+                'is_recommended' => $itemData->isRecommended,
+                'is_new' => $itemData->isNew,
+                'is_seasonal' => $itemData->isSeasonal,
+                'sort_order' => $sortOrder,
+            ]);
+            $existingItemIds[] = $item->id;
+        } else {
+            // Update existing item
+            $item->update([
+                'display_name' => $itemData->displayName,
+                'display_description' => $itemData->displayDescription,
+                'price_override' => $itemData->priceOverride,
+                'is_featured' => $itemData->isFeatured,
+                'is_recommended' => $itemData->isRecommended,
+                'is_new' => $itemData->isNew,
+                'is_seasonal' => $itemData->isSeasonal,
+                'sort_order' => $sortOrder,
+            ]);
+            $existingItemIds[] = $itemData->id;
+        }
+    }
+
     public function getMenuStructureForLocation(int $menuId, int $locationId): MenuStructureData
     {
         // Get base structure
         $structure = $this->getMenuStructure($menuId);
-        
+
         // Apply location-specific overrides
         $locationMenu = Menu::find($menuId)
             ->locations()
             ->where('location_id', $locationId)
             ->first();
-        
+
         if ($locationMenu && $locationMenu->overrides) {
             // Apply overrides to structure
             // This would modify prices, availability, etc. based on location
         }
-        
+
         return $structure;
     }
-    
+
     public function duplicateMenu(int $id, string $newName): MenuData
     {
         return $this->menuRepository->clone($id, $newName);
     }
-    
+
     public function buildFromTemplate(string $templateName, array $customizations = []): MenuData
     {
         // Load template configuration
         $templateConfig = config("menu-templates.{$templateName}");
-        
+
         if (!$templateConfig) {
             throw new \InvalidArgumentException("Template {$templateName} not found");
         }
-        
+
         // Merge customizations with template
         $menuData = array_merge($templateConfig, $customizations);
-        
+
         return $this->createMenu(CreateMenuData::from($menuData));
     }
-    
+
     public function assignToLocations(int $menuId, array $locationIds): bool
     {
         $menu = Menu::findOrFail($menuId);
-        
+
         foreach ($locationIds as $locationId) {
             $menu->locations()->updateOrCreate(
                 ['location_id' => $locationId],
                 ['is_active' => true, 'activated_at' => now()]
             );
         }
-        
+
         return true;
     }
-    
+
     public function removeFromLocation(int $menuId, int $locationId): bool
     {
         return Menu::find($menuId)
@@ -191,7 +402,7 @@ class MenuService implements MenuServiceInterface
             ->where('location_id', $locationId)
             ->delete() > 0;
     }
-    
+
     public function setPrimaryForLocation(int $menuId, int $locationId): bool
     {
         DB::transaction(function () use ($menuId, $locationId) {
@@ -200,35 +411,35 @@ class MenuService implements MenuServiceInterface
                 ->where('location_id', $locationId)
                 ->where('is_primary', true)
                 ->update(['is_primary' => false]);
-            
+
             // Set this menu as primary
             DB::table('menu_locations')
                 ->where('menu_id', $menuId)
                 ->where('location_id', $locationId)
                 ->update(['is_primary' => true]);
         });
-        
+
         return true;
     }
-    
+
     public function validateMenuStructure(int $menuId): array
     {
         $errors = [];
         $warnings = [];
-        
+
         $menu = Menu::with(['sections.items'])->find($menuId);
-        
+
         if (!$menu) {
             return ['errors' => ['Menu not found'], 'warnings' => []];
         }
-        
+
         // Check for empty sections
         foreach ($menu->sections as $section) {
             if ($section->items->isEmpty()) {
                 $warnings[] = "Section '{$section->name}' has no items";
             }
         }
-        
+
         // Check for duplicate items
         $itemIds = [];
         foreach ($menu->sections as $section) {
@@ -239,19 +450,19 @@ class MenuService implements MenuServiceInterface
                 $itemIds[] = $item->item_id;
             }
         }
-        
+
         // Check availability rules
         if ($menu->availabilityRules->isEmpty() && !$menu->is_default) {
             $warnings[] = "Menu has no availability rules configured";
         }
-        
+
         return [
             'errors' => $errors,
             'warnings' => $warnings,
             'valid' => empty($errors),
         ];
     }
-    
+
     public function getMenuAnalytics(int $menuId, \DateTimeInterface $from, \DateTimeInterface $to): array
     {
         // This would integrate with order data to provide analytics
@@ -270,54 +481,54 @@ class MenuService implements MenuServiceInterface
             ],
         ];
     }
-    
+
     public function exportMenu(int $menuId, string $format): string
     {
         $menu = $this->menuRepository->findWithRelations($menuId);
-        
+
         if (!$menu) {
             throw new \InvalidArgumentException("Menu not found");
         }
-        
+
         switch ($format) {
             case 'json':
                 return json_encode($menu->toArray(), JSON_PRETTY_PRINT);
-                
+
             case 'csv':
                 // Implement CSV export
                 return $this->exportToCsv($menu);
-                
+
             case 'pdf':
                 // Implement PDF export (would use a package like dompdf)
                 return $this->exportToPdf($menu);
-                
+
             default:
                 throw new \InvalidArgumentException("Unsupported export format: {$format}");
         }
     }
-    
+
     public function importMenu(string $filePath, string $format): MenuData
     {
         $content = file_get_contents($filePath);
-        
+
         switch ($format) {
             case 'json':
                 $data = json_decode($content, true);
                 return $this->createMenu(CreateMenuData::from($data));
-                
+
             case 'csv':
                 // Implement CSV import
                 throw new \Exception("CSV import not yet implemented");
-                
+
             default:
                 throw new \InvalidArgumentException("Unsupported import format: {$format}");
         }
     }
-    
+
     private function exportToCsv($menu): string
     {
         $csv = "Section,Item,Price,Description\n";
-        
+
         foreach ($menu->sections as $section) {
             foreach ($section->items as $item) {
                 $csv .= sprintf(
@@ -329,17 +540,17 @@ class MenuService implements MenuServiceInterface
                 );
             }
         }
-        
+
         return $csv;
     }
-    
+
     private function exportToPdf($menu): string
     {
         // This would use a PDF library
         // For now, return a placeholder
         return "PDF export not yet implemented";
     }
-    
+
     public function addItemsToSection(int $sectionId, array $items): void
     {
         foreach ($items as $itemData) {
@@ -353,21 +564,21 @@ class MenuService implements MenuServiceInterface
             ]);
         }
     }
-    
+
     public function removeItemFromSection(int $sectionId, int $itemId): bool
     {
         return MenuItem::where('menu_section_id', $sectionId)
             ->where('item_id', $itemId)
             ->delete() > 0;
     }
-    
+
     public function getSectionItems(int $sectionId): array
     {
         $items = MenuItem::where('menu_section_id', $sectionId)
             ->with(['modifiers'])
             ->orderBy('sort_order')
             ->get();
-        
+
         return $items->map(function ($item) {
             // Get item details from item module if available
             if (app()->bound(ItemRepositoryInterface::class) && $item->item_id) {
@@ -377,18 +588,18 @@ class MenuService implements MenuServiceInterface
                     $item->item_details = $itemData;
                 }
             }
-            
+
             return $item;
         })->toArray();
     }
-    
+
     public function updateItemModifiers(int $itemId, array $modifiers): void
     {
         $menuItem = MenuItem::findOrFail($itemId);
-        
+
         // Clear existing modifiers
         $menuItem->modifiers()->delete();
-        
+
         // Add new modifiers
         foreach ($modifiers as $modifier) {
             $menuItem->modifiers()->create([
