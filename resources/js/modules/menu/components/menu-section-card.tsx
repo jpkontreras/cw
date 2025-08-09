@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils } from 'lucide-react';
 import { MenuItemCard } from './menu-item-card';
@@ -18,6 +19,7 @@ import { SECTION_ICONS } from '../constants';
 
 interface MenuSectionCardProps {
   section: MenuSection;
+  isDraggedOver?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -32,6 +34,7 @@ interface MenuSectionCardProps {
 
 export function MenuSectionCard({
   section,
+  isDraggedOver = false,
   onEdit,
   onDelete,
   onDuplicate,
@@ -43,9 +46,18 @@ export function MenuSectionCard({
   selectedItems,
   onSelectItem,
 }: MenuSectionCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+  const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({ 
     id: `section-${section.id}` 
   });
+  
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: `section-${section.id}`,
+  });
+  
+  const setNodeRef = (node: HTMLElement | null) => {
+    setSortableRef(node);
+    setDroppableRef(node);
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -55,14 +67,24 @@ export function MenuSectionCard({
   const Icon = section.icon ? SECTION_ICONS[section.icon as keyof typeof SECTION_ICONS] : Utensils;
 
   return (
-    <div ref={setNodeRef} style={style} className={cn('mb-4', isDragging && 'opacity-50')}>
-      <Card className="shadow-sm transition-shadow hover:shadow-md">
+    <div ref={setNodeRef} style={style} className={cn('mb-4 transition-all', isDragging && 'opacity-50 scale-[1.02]')}>
+      <Card className={cn(
+        "shadow-sm transition-all hover:shadow-md group/card",
+        isDraggedOver && "ring-2 ring-blue-400 bg-blue-50/20"
+      )}>
         <CardHeader className="bg-white pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div {...attributes} {...listeners} className="cursor-move">
-                <GripVertical className="h-5 w-5 text-gray-400" />
-              </div>
+              <button
+                type="button"
+                {...attributes} 
+                {...listeners} 
+                className="cursor-move rounded p-1 transition-colors hover:bg-gray-100 group-hover/card:text-gray-600 touch-none"
+                title="Drag to reorder section"
+                style={{ touchAction: 'none' }}
+              >
+                <GripVertical className="h-5 w-5 text-gray-400 transition-colors group-hover/card:text-gray-500" />
+              </button>
 
               <button onClick={onToggleCollapse} className="rounded p-1 hover:bg-gray-100">
                 {section.isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -108,25 +130,10 @@ export function MenuSectionCard({
         {!section.isCollapsed && (
           <CardContent className="pt-0">
             {section.items.length === 0 ? (
-              <div
-                className="rounded-lg border-2 border-dashed py-8 text-center"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add('bg-blue-50', 'border-blue-300');
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('bg-blue-50', 'border-blue-300');
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove('bg-blue-50', 'border-blue-300');
-                  const itemData = e.dataTransfer.getData('item');
-                  if (itemData) {
-                    const item = JSON.parse(itemData);
-                    onAddItem(item);
-                  }
-                }}
-              >
+              <div className={cn(
+                "rounded-lg border-2 border-dashed py-8 text-center transition-colors",
+                isDraggedOver && "bg-blue-50 border-blue-400"
+              )}>
                 <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                 <p className="text-sm text-muted-foreground">Drag items here to add them</p>
               </div>

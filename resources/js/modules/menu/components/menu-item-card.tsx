@@ -47,15 +47,22 @@ export function MenuItemCard({
       style={style}
       className={cn(
         'group flex items-center gap-3 rounded-lg border bg-white p-3 transition-all hover:shadow-md',
-        isDragging && 'opacity-50',
+        isDragging && 'opacity-50 scale-[1.02]',
         isSelected && 'border-blue-500 bg-blue-50/50 shadow-sm',
       )}
     >
       <Checkbox checked={isSelected} onCheckedChange={onSelect} />
 
-      <div {...attributes} {...listeners} className="cursor-move">
-        <GripVertical className="h-4 w-4 text-gray-400" />
-      </div>
+      <button
+        type="button"
+        {...attributes} 
+        {...listeners} 
+        className="cursor-move rounded p-1 transition-colors hover:bg-gray-100 touch-none"
+        title="Drag to reorder item"
+        style={{ touchAction: 'none' }}
+      >
+        <GripVertical className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-600" />
+      </button>
 
       {item.baseItem?.imageUrl ? (
         <img 

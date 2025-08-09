@@ -184,3 +184,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Drag and Drop Enhancements */
+@layer utilities {
+  /* Drag handle cursor and hover effects */
+  [data-dnd-drag-handle], 
+  .cursor-move {
+    cursor: grab;
+  }
+  
+  [data-dnd-drag-handle]:active,
+  .cursor-move:active {
+    cursor: grabbing;
+  }
+  
+  /* Visual feedback during drag */
+  .dragging-over {
+    @apply bg-blue-50 border-blue-300;
+  }
+  
+  /* Smooth animations for drag operations */
+  [data-dnd-sortable-context] > * {
+    transition: transform 200ms ease;
+  }
+  
+  /* Prevent text selection during drag */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+}

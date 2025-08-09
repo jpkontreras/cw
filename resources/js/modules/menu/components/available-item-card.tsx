@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { Package, Plus } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Package, Plus } from 'lucide-react';
 import { type AvailableItem } from '../types';
 
 interface AvailableItemCardProps {
@@ -19,18 +21,40 @@ export function AvailableItemCard({
   onSelect,
   onQuickAdd,
 }: AvailableItemCardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `available-${item.id}`,
+    data: {
+      type: 'available-item',
+      item: item,
+    },
+  });
+
+  // Don't apply transform to library items - they should stay in place
+  const style = {};
+
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        'group cursor-move rounded-lg border bg-white p-2 transition-all hover:shadow-md',
+        'group rounded-lg border bg-white p-2 transition-all hover:shadow-md',
         isSelected && 'border-blue-500 bg-blue-50/50 shadow-sm',
+        isDragging && 'opacity-50',
       )}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('item', JSON.stringify(item));
-      }}
     >
-      <div className="grid grid-cols-[auto_44px_1fr_auto] gap-x-2 gap-y-0.5">
+      <div className="grid grid-cols-[20px_auto_44px_1fr_auto] gap-x-2 gap-y-0.5">
+        {/* Drag Handle */}
+        <button
+          type="button"
+          {...attributes} 
+          {...listeners} 
+          className="row-span-2 self-center cursor-move rounded p-0.5 transition-colors hover:bg-gray-100 touch-none"
+          title="Drag to add to section"
+          style={{ touchAction: 'none' }}
+        >
+          <GripVertical className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-600" />
+        </button>
+        
         {/* Checkbox */}
         <div className="row-span-2 self-center">
           <Checkbox checked={isSelected} onCheckedChange={onSelect} />

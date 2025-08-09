@@ -14,9 +14,23 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { 
+  closestCenter,
+  pointerWithin,
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay, 
+  DragStartEvent,
+  DragOverEvent,
+  KeyboardSensor, 
+  PointerSensor, 
+  UniqueIdentifier,
+  useSensor, 
+  useSensors 
+} from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, ChefHat, Eye, FileText, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
@@ -33,11 +47,17 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const [editingItem, setEditingItem] = useState<{ item: MenuItem; sectionId: number } | null>(null);
   const [showSectionDialog, setShowSectionDialog] = useState(false);
   const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [activeDraggedItem, setActiveDraggedItem] = useState<AvailableItem | null>(null);
+  const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const [droppedSuccessfully, setDroppedSuccessfully] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
+        delay: 100,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -93,9 +113,56 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     });
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id);
+    setDroppedSuccessfully(false); // Reset on new drag
+    
+    // Check if dragging an available item from library
+    if (active.data.current?.type === 'available-item') {
+      setActiveDraggedItem(active.data.current.item);
+    }
+  };
+  
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    // Only set overId for sections when dragging available items
+    if (active.data.current?.type === 'available-item' && over?.id.toString().startsWith('section-')) {
+      setOverId(over.id);
+    } else if (!active.data.current?.type) {
+      // For regular sorting
+      setOverId(over?.id || null);
+    } else {
+      setOverId(null);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    // Check if this was a successful drop of an available item
+    const isSuccessfulDrop = over && active.data.current?.type === 'available-item' && over.id.toString().startsWith('section-');
+    
+    if (isSuccessfulDrop) {
+      setDroppedSuccessfully(true);
+      const sectionId = parseInt(over.id.toString().replace('section-', ''));
+      const item = active.data.current.item as AvailableItem;
+      handleAddItemToSection(sectionId, item);
+      
+      // Immediately clean up for successful drops
+      setActiveId(null);
+      setActiveDraggedItem(null);
+      setOverId(null);
+      setTimeout(() => setDroppedSuccessfully(false), 50);
+      return;
+    }
 
+    // For cancelled drags or sorting, clean up normally
+    setActiveId(null);
+    setActiveDraggedItem(null);
+    setOverId(null);
+    
     if (!over) return;
 
     // Handle section reordering
@@ -342,35 +409,53 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
           }
         />
 
-        <Page.SplitContent
-          sidebar={
-            menu
-              ? {
-                  position: 'right',
-                  defaultSize: 35,
-                  minSize: 20,
-                  maxSize: 50,
-                  collapsedSize: 8,
-                  defaultCollapsed: false,
-                  onCollapsedChange: setIsLibraryCollapsed,
-                  resizable: true,
-                  showToggle: false,
-                  renderContent: (collapsed, toggleCollapse) => (
-                    <ItemLibrarySidebar
-                      availableItems={availableItems}
-                      sections={sections}
-                      selectedAvailableItems={selectedAvailableItems}
-                      onSelectItem={handleSelectAvailableItem}
-                      onBulkAssign={handleBulkAssign}
-                      onQuickAdd={handleQuickAdd}
-                      isCollapsed={collapsed}
-                      onToggleCollapsed={() => toggleCollapse()}
-                    />
-                  ),
-                }
-              : undefined
-          }
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={(args) => {
+            // Use pointerWithin for available items being dragged to sections
+            if (args.active.data.current?.type === 'available-item') {
+              const pointerCollisions = pointerWithin(args);
+              const sectionCollisions = pointerCollisions.filter(collision => 
+                collision.id?.toString().startsWith('section-')
+              );
+              return sectionCollisions.length > 0 ? sectionCollisions : [];
+            }
+            // Use closestCenter for sorting
+            return closestCenter(args);
+          }} 
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
         >
+          <Page.SplitContent
+            sidebar={
+              menu
+                ? {
+                    position: 'right',
+                    defaultSize: 35,
+                    minSize: 20,
+                    maxSize: 50,
+                    collapsedSize: 8,
+                    defaultCollapsed: false,
+                    onCollapsedChange: setIsLibraryCollapsed,
+                    resizable: true,
+                    showToggle: false,
+                    renderContent: (collapsed, toggleCollapse) => (
+                      <ItemLibrarySidebar
+                        availableItems={availableItems}
+                        sections={sections}
+                        selectedAvailableItems={selectedAvailableItems}
+                        onSelectItem={handleSelectAvailableItem}
+                        onBulkAssign={handleBulkAssign}
+                        onQuickAdd={handleQuickAdd}
+                        isCollapsed={collapsed}
+                        onToggleCollapsed={() => toggleCollapse()}
+                      />
+                    ),
+                  }
+                : undefined
+            }
+          >
           {/* Main content - Menu Sections */}
           <div className="flex h-full flex-col bg-gradient-to-br from-gray-50 to-gray-100/50">
             {/* Menu Selector Header */}
@@ -465,8 +550,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                     </div>
                   )}
 
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={sections.map((s) => `section-${s.id}`)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={sections.map((s) => `section-${s.id}`)} strategy={verticalListSortingStrategy}>
                       {sections.length === 0 ? (
                         <div className="flex min-h-[400px] items-center justify-center">
                           <div className="max-w-sm text-center">
@@ -489,6 +573,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                             <MenuSectionCard
                               key={section.id}
                               section={section}
+                              isDraggedOver={overId === `section-${section.id}` && !!activeDraggedItem}
                               onEdit={() => setEditingSection(section)}
                               onDelete={() => handleDeleteSection(section.id)}
                               onDuplicate={() => handleDuplicateSection(section)}
@@ -504,12 +589,52 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         </div>
                       )}
                     </SortableContext>
-                  </DndContext>
                 </div>
               )}
             </div>
           </div>
-        </Page.SplitContent>
+          </Page.SplitContent>
+          <DragOverlay 
+            dropAnimation={droppedSuccessfully ? {
+              duration: 0,
+            } : {
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}
+          >
+            {activeId ? (
+              <div className={cn("pointer-events-none", droppedSuccessfully && "opacity-0 transition-opacity duration-100")}>
+                {typeof activeId === 'string' && activeId.startsWith('section-') && (
+                  <div className="rounded-lg bg-white p-4 shadow-2xl opacity-90">
+                    <div className="font-medium">Moving section...</div>
+                  </div>
+                )}
+                {typeof activeId === 'string' && activeId.startsWith('item-') && (
+                  <div className="rounded-lg bg-white p-3 shadow-2xl opacity-90">
+                    <div className="text-sm">Moving item...</div>
+                  </div>
+                )}
+                {activeDraggedItem && (
+                  <div className="rounded-lg border-2 border-blue-400 bg-white p-2 shadow-2xl max-w-xs">
+                    <div className="flex items-center gap-2">
+                      {activeDraggedItem.imageUrl ? (
+                        <img src={activeDraggedItem.imageUrl} alt={activeDraggedItem.name} className="h-10 w-10 rounded object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
+                          <Package className="h-5 w-5 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{activeDraggedItem.name}</div>
+                        <div className="text-xs text-gray-500">Drag to section</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </Page>
 
       {/* Dialogs */}

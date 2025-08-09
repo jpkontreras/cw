@@ -336,3 +336,61 @@ export function ItemLibrarySidebar({
     </div>
   );
 }
+
+// Collapsed view item card with drag support
+function CollapsedItemCard({ 
+  item, 
+  isSelected,
+  onQuickAdd 
+}: { 
+  item: AvailableItem; 
+  isSelected: boolean;
+  onQuickAdd: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `available-collapsed-${item.id}`,
+    data: {
+      type: 'available-item',
+      item: item,
+    },
+  });
+
+  // Don't apply transform to library items - they should stay in place
+  const style = {};
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <div
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
+            isSelected && 'bg-blue-100',
+            isDragging && 'opacity-50',
+          )}
+        >
+          <div className="relative">
+            <ItemThumbnail item={item} size="auto" />
+            {isSelected && (
+              <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+            )}
+            <button
+              type="button"
+              {...attributes} 
+              {...listeners}
+              className="absolute bottom-0 right-0 cursor-move rounded-tl bg-white/90 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity touch-none"
+              title="Drag to add to section"
+              style={{ touchAction: 'none' }}
+            >
+              <GripVertical className="h-3 w-3 text-gray-600" />
+            </button>
+          </div>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent side="left" className="w-64">
+        <ItemDetails item={item} onQuickAdd={onQuickAdd} />
+      </PopoverContent>
+    </Popover>
+  );
+}
