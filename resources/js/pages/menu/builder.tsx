@@ -1,11 +1,10 @@
 import { EmptyState } from '@/components/empty-state';
 import {
-  AddSectionDialog,
+  AddSectionSheet,
   EditItemDialog,
   EditSectionDialog,
   ItemLibrarySidebar,
   MenuSectionCard,
-  SECTION_TEMPLATES,
   type AvailableItem,
   type MenuBuilderPageProps,
   type MenuItem,
@@ -15,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { 
@@ -33,7 +33,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, ChefHat, Eye, FileText, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
+import { ArrowLeft, ChefHat, Eye, FileText, GripVertical, Layers, Package, Plus, Save, SquarePen } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -55,8 +55,8 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
-        delay: 100,
+        distance: 10,  // Increased from 5 to allow scrolling
+        delay: 150,    // Increased delay to distinguish from scrolling
         tolerance: 5,
       },
     }),
@@ -198,12 +198,12 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     }
   };
 
-  const handleAddSection = (template?: (typeof SECTION_TEMPLATES)[0]) => {
+  const handleAddSection = (sectionData: Partial<MenuSection>) => {
     const newSection: MenuSection = {
       id: Date.now(),
-      name: template?.name || 'New Section',
-      description: template?.description || '',
-      icon: template?.icon,
+      name: sectionData.name || 'New Section',
+      description: sectionData.description || '',
+      icon: sectionData.icon,
       isActive: true,
       isFeatured: false,
       sortOrder: sections.length,
@@ -252,10 +252,39 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const handleBulkAssign = (sectionId: number, itemIds: number[]) => {
     const itemsToAdd = availableItems.filter((item) => itemIds.includes(item.id));
 
-    itemsToAdd.forEach((item) => {
-      handleAddItemToSection(sectionId, item);
-    });
+    // Create all new items at once
+    const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
+      id: Date.now() + index, // Ensure unique IDs by adding index
+      itemId: item.id,
+      isFeatured: false,
+      isRecommended: false,
+      isNew: false,
+      isSeasonal: false,
+      sortOrder: 0,
+      baseItem: {
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.category,
+        imageUrl: item.imageUrl,
+      },
+    }));
 
+    // Update sections in a single state update
+    setSections(
+      sections.map((section) => {
+        if (section.id === sectionId) {
+          return {
+            ...section,
+            items: [...section.items, ...newItems],
+          };
+        }
+        return section;
+      }),
+    );
+
+    setHasChanges(true);
+    toast.success(`Added ${itemsToAdd.length} items to section`);
     setSelectedAvailableItems(new Set());
   };
 
@@ -269,11 +298,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     setSelectedAvailableItems(newSelected);
   };
 
-  const handleQuickAdd = (item: AvailableItem) => {
-    if (sections.length > 0) {
-      handleAddItemToSection(sections[0].id, item);
-    }
-  };
 
   const handleEditSection = (section: MenuSection) => {
     setSections(sections.map((s) => (s.id === section.id ? section : s)));
@@ -435,7 +459,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                     defaultSize: 35,
                     minSize: 20,
                     maxSize: 50,
-                    collapsedSize: 8,
+                    collapsedSize: 8,  // Restored to original size
                     defaultCollapsed: false,
                     onCollapsedChange: setIsLibraryCollapsed,
                     resizable: true,
@@ -447,7 +471,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         selectedAvailableItems={selectedAvailableItems}
                         onSelectItem={handleSelectAvailableItem}
                         onBulkAssign={handleBulkAssign}
-                        onQuickAdd={handleQuickAdd}
                         isCollapsed={collapsed}
                         onToggleCollapsed={() => toggleCollapse()}
                       />
@@ -614,21 +637,52 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                   </div>
                 )}
                 {activeDraggedItem && (
-                  <div className="rounded-lg border-2 border-blue-400 bg-white p-2 shadow-2xl max-w-xs">
-                    <div className="flex items-center gap-2">
-                      {activeDraggedItem.imageUrl ? (
-                        <img src={activeDraggedItem.imageUrl} alt={activeDraggedItem.name} className="h-10 w-10 rounded object-cover" />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
-                          <Package className="h-5 w-5 text-gray-400" />
+                  // Check if dragging from collapsed view - show simple expanded card
+                  activeId?.toString().includes('collapsed') ? (
+                    <div className="-translate-x-32">
+                      <div className="rounded-lg bg-white border-2 border-blue-400 shadow-xl p-3 max-w-xs">
+                        <div className="flex items-center gap-3">
+                          {activeDraggedItem.imageUrl ? (
+                            <img 
+                              src={activeDraggedItem.imageUrl} 
+                              alt={activeDraggedItem.name} 
+                              className="h-12 w-12 rounded-lg object-cover flex-shrink-0" 
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 flex-shrink-0">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm text-gray-900">
+                              {activeDraggedItem.name}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
+                              {activeDraggedItem.category && ` • ${activeDraggedItem.category}`}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{activeDraggedItem.name}</div>
-                        <div className="text-xs text-gray-500">Drag to section</div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    // Regular compact card for expanded view drag
+                    <div className="rounded-lg border-2 border-blue-400 bg-white p-2 shadow-2xl max-w-xs">
+                      <div className="flex items-center gap-2">
+                        {activeDraggedItem.imageUrl ? (
+                          <img src={activeDraggedItem.imageUrl} alt={activeDraggedItem.name} className="h-10 w-10 rounded object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
+                            <Package className="h-5 w-5 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{activeDraggedItem.name}</div>
+                          <div className="text-xs text-gray-500">Drag to section</div>
+                        </div>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             ) : null}
@@ -637,7 +691,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
       </Page>
 
       {/* Dialogs */}
-      <AddSectionDialog open={showSectionDialog} onOpenChange={setShowSectionDialog} onAddSection={handleAddSection} />
+      <AddSectionSheet open={showSectionDialog} onOpenChange={setShowSectionDialog} onAddSection={handleAddSection} />
 
       <EditSectionDialog section={editingSection} onClose={handleCloseEditSection} onSave={handleEditSection} />
 

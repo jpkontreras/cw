@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
-import { Layers, Package, PanelRightClose, Plus, Search } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { GripVertical, Layers, Package, PanelRightClose, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
 import { AvailableItemCard } from './available-item-card';
 import { type AvailableItem, type MenuSection } from '../types';
 
@@ -38,7 +39,7 @@ function ItemThumbnail({ item, size = 'default', className }: { item: AvailableI
 }
 
 // Component for item details in popover
-function ItemDetails({ item, onQuickAdd }: { item: AvailableItem; onQuickAdd: () => void }) {
+function ItemDetails({ item }: { item: AvailableItem }) {
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium">{item.name}</div>
@@ -51,10 +52,6 @@ function ItemDetails({ item, onQuickAdd }: { item: AvailableItem; onQuickAdd: ()
           </Badge>
         )}
       </div>
-      <Button size="sm" className="w-full" onClick={onQuickAdd}>
-        <Plus className="mr-2 h-3 w-3" />
-        Add to Menu
-      </Button>
     </div>
   );
 }
@@ -64,12 +61,10 @@ function ItemList({
   items,
   selectedItems,
   onSelectItem,
-  onQuickAdd,
 }: {
   items: AvailableItem[];
   selectedItems: Set<number>;
   onSelectItem: (id: number) => void;
-  onQuickAdd: (item: AvailableItem) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -79,7 +74,6 @@ function ItemList({
           item={item}
           isSelected={selectedItems.has(item.id)}
           onSelect={() => onSelectItem(item.id)}
-          onQuickAdd={() => onQuickAdd(item)}
         />
       ))}
     </div>
@@ -92,7 +86,6 @@ interface ItemLibrarySidebarProps {
   selectedAvailableItems: Set<number>;
   onSelectItem: (itemId: number) => void;
   onBulkAssign: (sectionId: number, itemIds: number[]) => void;
-  onQuickAdd: (item: AvailableItem) => void;
   isCollapsed: boolean;
   onToggleCollapsed: (collapsed: boolean) => void;
 }
@@ -103,7 +96,6 @@ export function ItemLibrarySidebar({
   selectedAvailableItems,
   onSelectItem,
   onBulkAssign,
-  onQuickAdd,
   isCollapsed,
   onToggleCollapsed,
 }: ItemLibrarySidebarProps) {
@@ -144,18 +136,10 @@ export function ItemLibrarySidebar({
     onBulkAssign(sectionId, itemIds);
   };
 
-  const handleQuickAdd = (item: AvailableItem) => {
-    if (sections.length > 0) {
-      onQuickAdd(item);
-    } else {
-      toast.error('Please add a section first');
-    }
-  };
-
   if (isCollapsed) {
     return (
-      <div className="flex h-full flex-col bg-white">
-        <div className="flex-shrink-0 border-b bg-gray-50/50">
+      <div className="flex h-full flex-col bg-gray-50">
+        <div className="flex-shrink-0 border-b bg-white">
           <Button
             variant="ghost"
             size="sm"
@@ -164,33 +148,30 @@ export function ItemLibrarySidebar({
             aria-label="Expand sidebar"
           >
             <PanelRightClose className="h-4 w-4 rotate-180" />
-            <span className="ml-1.5 text-xs font-medium">{filteredItems.length}</span>
           </Button>
         </div>
 
-        <div className="relative h-full">
-          <div className="absolute inset-0 overflow-y-scroll p-2">
+        <div className="relative h-full bg-white">
+          <div className="absolute inset-0 overflow-y-auto p-3">
             {availableItems.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <Package className="h-6 w-6 text-gray-400" />
+                <Package className="h-5 w-5 text-gray-400" />
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <Search className="h-6 w-6 text-gray-400" />
+                <Search className="h-5 w-5 text-gray-400" />
               </div>
             ) : (
-              <ScrollArea>
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredItems.map((item) => (
-                    <CollapsedItemCard 
-                      key={item.id} 
-                      item={item} 
-                      isSelected={selectedAvailableItems.has(item.id)}
-                      onQuickAdd={() => handleQuickAdd(item)}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="flex flex-col items-center gap-2">
+                {filteredItems.map((item) => (
+                  <CollapsedItemCard 
+                    key={item.id} 
+                    item={item} 
+                    isSelected={selectedAvailableItems.has(item.id)}
+                    onSelect={() => onSelectItem(item.id)}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -312,7 +293,7 @@ export function ItemLibrarySidebar({
             </div>
           ) : (
             <ScrollArea>
-              <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} onQuickAdd={handleQuickAdd} />
+              <ItemList items={filteredItems} selectedItems={selectedAvailableItems} onSelectItem={onSelectItem} />
             </ScrollArea>
           )}
         </div>
@@ -325,11 +306,11 @@ export function ItemLibrarySidebar({
 function CollapsedItemCard({ 
   item, 
   isSelected,
-  onQuickAdd 
+  onSelect,
 }: { 
   item: AvailableItem; 
   isSelected: boolean;
-  onQuickAdd: () => void;
+  onSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `available-collapsed-${item.id}`,
@@ -348,32 +329,59 @@ function CollapsedItemCard({
         <div
           ref={setNodeRef}
           style={style}
+          {...attributes} 
+          {...listeners}
           className={cn(
-            'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
-            isSelected && 'bg-blue-100',
+            'group relative h-12 w-12 cursor-move rounded-lg transition-all',
+            'hover:ring-2 hover:ring-blue-400 hover:ring-offset-1',
+            isSelected && 'ring-2 ring-blue-500 ring-offset-1',
             isDragging && 'opacity-50',
           )}
+          title={item.name}
         >
-          <div className="relative">
-            <ItemThumbnail item={item} size="auto" />
-            {isSelected && (
-              <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-            )}
-            <button
-              type="button"
-              {...attributes} 
-              {...listeners}
-              className="absolute bottom-0 right-0 cursor-move rounded-tl bg-white/90 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity touch-none"
-              title="Drag to add to section"
-              style={{ touchAction: 'none' }}
-            >
-              <GripVertical className="h-3 w-3 text-gray-600" />
-            </button>
+          {/* Item image/icon */}
+          {item.imageUrl ? (
+            <img 
+              src={item.imageUrl} 
+              alt={item.name} 
+              className="h-full w-full rounded-lg object-cover" 
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100">
+              <Package className="h-6 w-6 text-gray-400" />
+            </div>
+          )}
+          
+          {/* Selection indicator */}
+          {isSelected && (
+            <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+
+          {/* Drag indicator on hover */}
+          <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+            <GripVertical className="h-4 w-4 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
       </PopoverTrigger>
       <PopoverContent side="left" className="w-64">
-        <ItemDetails item={item} onQuickAdd={onQuickAdd} />
+        <ItemDetails item={item} />
+        <div className="mt-3 pt-3 border-t">
+          <Button
+            size="sm"
+            variant={isSelected ? "outline" : "default"}
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+          >
+            {isSelected ? 'Deselect' : 'Select for bulk assign'}
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

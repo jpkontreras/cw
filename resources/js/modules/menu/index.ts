@@ -1,6 +1,7 @@
 // Re-export components
 export {
   AddSectionDialog,
+  AddSectionSheet,
   AvailableItemCard,
   EditItemDialog,
   EditSectionDialog,
@@ -10,7 +11,7 @@ export {
 } from './components';
 
 // Re-export constants
-export { SECTION_ICONS, SECTION_TEMPLATES } from './constants';
+export { SECTION_ICONS, SECTION_TEMPLATES, SECTION_TEMPLATE_CATEGORIES } from './constants';
 
 // Re-export types
 export type {
