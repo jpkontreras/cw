@@ -35,7 +35,7 @@ class MenuItem extends Model
         'menu_id' => 'integer',
         'menu_section_id' => 'integer',
         'item_id' => 'integer',
-        'price_override' => 'decimal:2',
+        'price_override' => 'float',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'is_recommended' => 'boolean',

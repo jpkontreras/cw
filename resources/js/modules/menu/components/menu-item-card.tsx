@@ -41,7 +41,7 @@ export function MenuItemCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-3 rounded-lg border bg-white p-3 transition-all hover:shadow-md',
+        'group flex items-center gap-2 rounded-lg border bg-white p-2 transition-all hover:shadow-md',
         isDragging && 'opacity-50 scale-[1.02]',
       )}
     >
@@ -49,7 +49,7 @@ export function MenuItemCard({
         type="button"
         {...attributes} 
         {...listeners} 
-        className="cursor-move rounded p-1 transition-colors hover:bg-gray-100 touch-none"
+        className="cursor-move rounded p-0.5 transition-colors hover:bg-gray-100 touch-none"
         title="Drag to reorder item"
         style={{ touchAction: 'none' }}
       >
@@ -60,11 +60,11 @@ export function MenuItemCard({
         <img 
           src={item.baseItem.imageUrl} 
           alt={item.displayName || item.baseItem?.name} 
-          className="h-12 w-12 rounded object-cover" 
+          className="h-10 w-10 rounded object-cover" 
         />
       ) : (
-        <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-100">
-          <Package className="h-6 w-6 text-gray-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
+          <Package className="h-5 w-5 text-gray-400" />
         </div>
       )}
 

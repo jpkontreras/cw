@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils, AlertTriangle, AlertCircle } from 'lucide-react';
 import { MenuItemCard } from './menu-item-card';
 import { type MenuItem, type MenuSection } from '../types';
 import { SECTION_ICONS } from '../constants';
@@ -20,6 +20,7 @@ import { SECTION_ICONS } from '../constants';
 interface MenuSectionCardProps {
   section: MenuSection;
   isDraggedOver?: boolean;
+  duplicateItemCount?: number;
   isDeleting?: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -35,6 +36,7 @@ interface MenuSectionCardProps {
 export function MenuSectionCard({
   section,
   isDraggedOver = false,
+  duplicateItemCount = 0,
   isDeleting = false,
   onEdit,
   onDelete,
@@ -67,13 +69,13 @@ export function MenuSectionCard({
   const Icon = section.icon ? SECTION_ICONS[section.icon as keyof typeof SECTION_ICONS] : Utensils;
 
   return (
-    <div ref={setNodeRef} style={style} className={cn('mb-4 transition-all', isDragging && 'opacity-50 scale-[1.02]')}>
+    <div ref={setNodeRef} style={style} className={cn('mb-2 transition-all', isDragging && 'opacity-50 scale-[1.02]')}>
       <Card className={cn(
         "shadow-sm transition-all hover:shadow-md group/card",
         isDraggedOver && "ring-2 ring-gray-400 bg-gray-50/50",
         isDeleting && "ring-2 ring-red-500/20"
       )}>
-        <CardHeader className="bg-white pb-3">
+        <CardHeader className="bg-white py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
@@ -166,18 +168,28 @@ export function MenuSectionCard({
         )}
 
         {!section.isCollapsed && (
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 pb-2">
+            {isDraggedOver && duplicateItemCount > 0 && (
+              <div className="mb-2 flex items-center gap-2 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2 text-sm text-yellow-800 animate-in fade-in duration-200">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  {duplicateItemCount === 1 
+                    ? "This item is already in this section" 
+                    : `${duplicateItemCount} items are already in this section`}
+                </span>
+              </div>
+            )}
             {section.items.length === 0 ? (
               <div className={cn(
-                "rounded-lg border-2 border-dashed py-8 text-center transition-colors",
+                "rounded-lg border-2 border-dashed py-4 text-center transition-colors",
                 isDraggedOver && "bg-gray-50 border-gray-400"
               )}>
-                <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                <p className="text-sm text-muted-foreground">Drag items here to add them</p>
+                <Package className="mx-auto mb-1 h-6 w-6 text-gray-400" />
+                <p className="text-xs text-muted-foreground">Drag items here to add them</p>
               </div>
             ) : (
               <SortableContext items={section.items.map((i) => `item-${i.id}`)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {section.items.map((item) => (
                     <MenuItemCard
                       key={item.id}

@@ -141,8 +141,10 @@ class MenuBuilderController extends Controller
                 ]);
             }
             
-            // For Inertia requests, use redirect with flash message
-            return back()->with('success', 'Menu structure saved successfully');
+            // For Inertia requests, redirect back with success message
+            // The page will reload with fresh data including correct database IDs
+            return redirect()->route('menu.builder', ['menu' => $menuId])
+                ->with('success', 'Menu structure saved successfully');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             // For AJAX requests, return validation errors as JSON

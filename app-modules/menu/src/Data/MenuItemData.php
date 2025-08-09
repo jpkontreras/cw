@@ -68,7 +68,15 @@ class MenuItemData extends BaseData
         // Get display values from the item relationship if not overridden
         $displayName = $item->display_name ?: ($item->item ? $item->item->name : null);
         $displayDescription = $item->display_description ?: ($item->item ? $item->item->description : null);
-        $price = $item->price_override ?? ($item->item ? (float) $item->item->base_price : null);
+        
+        // Ensure price is properly cast to float or null
+        $price = null;
+        if ($item->price_override !== null) {
+            $price = is_numeric($item->price_override) ? (float) $item->price_override : null;
+        } elseif ($item->item && $item->item->base_price !== null) {
+            $price = is_numeric($item->item->base_price) ? (float) $item->item->base_price : null;
+        }
+        
         $imageUrl = $item->image_url ?: ($item->item ? $item->item->image_url : null);
         
         return new self(
