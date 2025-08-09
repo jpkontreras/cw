@@ -12,7 +12,7 @@ export interface MenuItem {
   baseItem?: {
     name: string;
     description?: string;
-    price: number;
+    basePrice: number | null;
     preparationTime?: number;
     category?: string;
     imageUrl?: string;
@@ -36,7 +36,7 @@ export interface AvailableItem {
   id: number;
   name: string;
   description?: string;
-  price: number;
+  basePrice: number | null;
   category?: string;
   isActive: boolean;
   imageUrl?: string;

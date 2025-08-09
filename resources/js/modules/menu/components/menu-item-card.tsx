@@ -92,11 +92,11 @@ export function MenuItemCard({
 
       <div className="text-right">
         <div className="text-sm font-medium">
-          {formatCurrency(item.priceOverride ?? item.baseItem?.price ?? 0)}
+          {formatCurrency(item.priceOverride ?? item.baseItem?.basePrice ?? 0)}
         </div>
-        {item.priceOverride !== null && item.priceOverride !== undefined && item.baseItem?.price && item.priceOverride !== item.baseItem.price && (
+        {item.priceOverride !== null && item.priceOverride !== undefined && item.baseItem?.basePrice && item.priceOverride !== item.baseItem.basePrice && (
           <div className="text-xs text-muted-foreground line-through">
-            {formatCurrency(item.baseItem.price)}
+            {formatCurrency(item.baseItem.basePrice)}
           </div>
         )}
       </div>

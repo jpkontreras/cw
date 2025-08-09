@@ -167,9 +167,9 @@ export function ItemLibrarySidebar({
                         <div key={item.id} className="flex items-center gap-2 text-xs">
                           <div className="h-1.5 w-1.5 bg-gray-400 rounded-full" />
                           <span className="truncate flex-1">{item.name}</span>
-                          {item.price && (
+                          {item.basePrice && (
                             <span className="text-muted-foreground">
-                              {formatCurrency(item.price)}
+                              {formatCurrency(item.basePrice)}
                             </span>
                           )}
                         </div>
@@ -425,7 +425,7 @@ function CollapsedItemCard({
             )}
             <div className="flex items-center gap-2 pt-1">
               <span className="text-sm font-semibold text-blue-600">
-                {item.price ? formatCurrency(item.price) : '—'}
+                {item.basePrice ? formatCurrency(item.basePrice) : '—'}
               </span>
               {item.category && (
                 <Badge variant="outline" className="text-xs">

@@ -65,7 +65,7 @@ export function EditItemDialog({ item, onClose, onSave }: EditItemDialogProps) {
               step="0.01"
               value={item.item.priceOverride || ''}
               onChange={(e) => handleChange('priceOverride', e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder={item.item.baseItem?.price?.toString()}
+              placeholder={item.item.baseItem?.basePrice?.toString()}
             />
           </div>
 

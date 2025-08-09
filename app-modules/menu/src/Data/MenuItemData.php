@@ -68,7 +68,7 @@ class MenuItemData extends BaseData
         // Get display values from the item relationship if not overridden
         $displayName = $item->display_name ?: ($item->item ? $item->item->name : null);
         $displayDescription = $item->display_description ?: ($item->item ? $item->item->description : null);
-        $price = $item->price_override ?? ($item->item ? (float) $item->item->price : null);
+        $price = $item->price_override ?? ($item->item ? (float) $item->item->base_price : null);
         $imageUrl = $item->image_url ?: ($item->item ? $item->item->image_url : null);
         
         return new self(
@@ -95,7 +95,14 @@ class MenuItemData extends BaseData
             metadata: $item->metadata,
             createdAt: $item->created_at,
             updatedAt: $item->updated_at,
-            baseItem: $item->item ? (object) $item->item->toArray() : null,
+            baseItem: $item->item ? (object) [
+                'name' => $item->item->name,
+                'description' => $item->item->description,
+                'basePrice' => (float) $item->item->base_price,
+                'preparationTime' => $item->item->preparation_time,
+                'category' => null, // TODO: Add category from taxonomy module
+                'imageUrl' => null, // TODO: Add image handling
+            ] : null,
         );
     }
 }

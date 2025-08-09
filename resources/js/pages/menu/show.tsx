@@ -464,7 +464,7 @@ function MenuShowContent({ menu, structure, availability }: PageProps) {
                                       </div>
                                     </div>
                                     <span className="font-medium">
-                                      {formatCurrency(item.priceOverride || item.baseItem?.price || 0)}
+                                      {formatCurrency(item.priceOverride || item.baseItem?.basePrice || 0)}
                                     </span>
                                   </div>
                                 ))}

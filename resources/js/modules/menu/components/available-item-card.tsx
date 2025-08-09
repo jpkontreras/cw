@@ -90,7 +90,7 @@ export function AvailableItemCard({
           {/* Price and Checkbox */}
           <div className="flex flex-col items-end gap-2">
             <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-              {item.price ? formatCurrency(item.price) : 'No price'}
+              {item.basePrice !== null && item.basePrice !== undefined ? formatCurrency(item.basePrice) : 'No price'}
             </div>
             <div 
               className="pointer-events-auto"

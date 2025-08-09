@@ -331,7 +331,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
             baseItem: {
               name: item.name,
               description: item.description,
-              price: item.price,
+              basePrice: item.basePrice,
               category: item.category,
               imageUrl: item.imageUrl,
             },
@@ -373,7 +373,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
             baseItem: {
               name: item.name,
               description: item.description,
-              price: item.price,
+              basePrice: item.basePrice,
               category: item.category,
               imageUrl: item.imageUrl,
             },
@@ -425,7 +425,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
             baseItem: {
               name: item.name,
               description: item.description,
-              price: item.price,
+              basePrice: item.basePrice,
               category: item.category,
               imageUrl: item.imageUrl,
             },
@@ -900,7 +900,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                               </div>
                             ) : (
                               <>
-                                {activeDraggedItem.price ? formatCurrency(activeDraggedItem.price) : 'No price'}
+                                {activeDraggedItem.basePrice ? formatCurrency(activeDraggedItem.basePrice) : 'No price'}
                                 {activeDraggedItem.category && <div className="mt-1 font-medium text-gray-600">{activeDraggedItem.category}</div>}
                               </>
                             )}

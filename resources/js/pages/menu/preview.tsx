@@ -45,7 +45,7 @@ interface MenuItem {
   baseItem?: {
     name: string;
     description?: string;
-    price: number;
+    basePrice: number;
   };
 }
 
@@ -91,7 +91,7 @@ const dietaryLabelStyles: Record<string, { icon: string; color: string }> = {
 function MenuItemCard({ item }: { item: MenuItem }) {
   const name = item.displayName || item.baseItem?.name || 'Unnamed Item';
   const description = item.displayDescription || item.baseItem?.description;
-  const price = item.priceOverride ?? item.baseItem?.price ?? 0;
+  const price = item.priceOverride ?? item.baseItem?.basePrice ?? 0;
   
   return (
     <div className="flex justify-between items-start py-4 group">
@@ -182,9 +182,9 @@ function MenuItemCard({ item }: { item: MenuItem }) {
         <div className="font-semibold text-gray-900">
           {formatCurrency(price)}
         </div>
-        {item.priceOverride && item.baseItem?.price && (
+        {item.priceOverride && item.baseItem?.basePrice && (
           <div className="text-xs text-gray-500 line-through">
-            {formatCurrency(item.baseItem.price)}
+            {formatCurrency(item.baseItem.basePrice)}
           </div>
         )}
       </div>
