@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils, AlertTriangle } from 'lucide-react';
 import { MenuItemCard } from './menu-item-card';
 import { type MenuItem, type MenuSection } from '../types';
 import { SECTION_ICONS } from '../constants';
@@ -20,8 +20,11 @@ import { SECTION_ICONS } from '../constants';
 interface MenuSectionCardProps {
   section: MenuSection;
   isDraggedOver?: boolean;
+  isDeleting?: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onConfirmDelete?: () => void;
+  onCancelDelete?: () => void;
   onDuplicate: () => void;
   onToggleCollapse: () => void;
   onEditItem: (item: MenuItem) => void;
@@ -32,8 +35,11 @@ interface MenuSectionCardProps {
 export function MenuSectionCard({
   section,
   isDraggedOver = false,
+  isDeleting = false,
   onEdit,
   onDelete,
+  onConfirmDelete,
+  onCancelDelete,
   onDuplicate,
   onToggleCollapse,
   onEditItem,
@@ -64,7 +70,8 @@ export function MenuSectionCard({
     <div ref={setNodeRef} style={style} className={cn('mb-4 transition-all', isDragging && 'opacity-50 scale-[1.02]')}>
       <Card className={cn(
         "shadow-sm transition-all hover:shadow-md group/card",
-        isDraggedOver && "ring-2 ring-gray-400 bg-gray-50/50"
+        isDraggedOver && "ring-2 ring-gray-400 bg-gray-50/50",
+        isDeleting && "ring-2 ring-red-500/20"
       )}>
         <CardHeader className="bg-white pb-3">
           <div className="flex items-center justify-between">
@@ -120,6 +127,43 @@ export function MenuSectionCard({
             </div>
           </div>
         </CardHeader>
+
+        {/* Delete Confirmation Bar */}
+        {isDeleting && (
+          <div className="border-t bg-red-50 px-6 py-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    Delete "{section.name}" section?
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    This will remove the section and all {section.items.length} item{section.items.length !== 1 ? 's' : ''} from the menu.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onCancelDelete}
+                  className="min-w-[80px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={onConfirmDelete}
+                  className="min-w-[80px]"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!section.isCollapsed && (
           <CardContent className="pt-0">

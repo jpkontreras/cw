@@ -11,7 +11,7 @@ export {
 } from './components';
 
 // Re-export constants
-export { SECTION_ICONS, SECTION_TEMPLATES, SECTION_TEMPLATE_CATEGORIES } from './constants';
+export { SECTION_ICONS, SECTION_TEMPLATES, SECTION_TEMPLATE_CATEGORIES, MENU_TEMPLATES } from './constants';
 
 // Re-export types
 export type {

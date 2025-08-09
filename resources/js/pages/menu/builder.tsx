@@ -54,6 +54,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const [activeDraggedItems, setActiveDraggedItems] = useState<AvailableItem[]>([]);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [droppedSuccessfully, setDroppedSuccessfully] = useState(false);
+  const [deletingSectionId, setDeletingSectionId] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -271,44 +272,71 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     }
   };
 
-  const handleAddSection = (sectionData: Partial<MenuSection>) => {
-    const newSection: MenuSection = {
-      id: Date.now(),
-      name: sectionData.name || 'New Section',
-      description: sectionData.description || '',
-      icon: sectionData.icon,
-      isActive: true,
-      isFeatured: false,
-      sortOrder: sections.length,
-      items: [],
-    };
-
-    setSections([...sections, newSection]);
+  const handleAddSection = (sectionData: Partial<MenuSection> | Partial<MenuSection>[]) => {
+    if (Array.isArray(sectionData)) {
+      // Adding multiple sections from a template
+      const newSections: MenuSection[] = sectionData.map((data, index) => ({
+        id: Date.now() + index,
+        name: data.name || 'New Section',
+        description: data.description || '',
+        icon: data.icon,
+        isActive: true,
+        isFeatured: false,
+        sortOrder: sections.length + index,
+        items: data.items || [],
+      }));
+      
+      setSections([...sections, ...newSections]);
+      toast.success(`Added ${newSections.length} sections from template`);
+    } else {
+      // Adding a single section
+      const newSection: MenuSection = {
+        id: Date.now(),
+        name: sectionData.name || 'New Section',
+        description: sectionData.description || '',
+        icon: sectionData.icon,
+        isActive: true,
+        isFeatured: false,
+        sortOrder: sections.length,
+        items: [],
+      };
+      
+      setSections([...sections, newSection]);
+    }
+    
     setHasChanges(true);
     setShowSectionDialog(false);
   };
 
   const handleAddItemToSection = (sectionId: number, item: AvailableItem) => {
-    const newItem: MenuItem = {
-      id: Date.now(),
-      itemId: item.id,
-      isFeatured: false,
-      isRecommended: false,
-      isNew: false,
-      isSeasonal: false,
-      sortOrder: 0,
-      baseItem: {
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        imageUrl: item.imageUrl,
-      },
-    };
-
     setSections(
       sections.map((section) => {
         if (section.id === sectionId) {
+          // Check if item already exists in this section
+          const existingItem = section.items.find(i => i.itemId === item.id);
+          if (existingItem) {
+            // Item already exists in this section, update it instead
+            toast.info(`"${item.name}" is already in this section`);
+            return section;
+          }
+          
+          const newItem: MenuItem = {
+            id: Date.now(),
+            itemId: item.id,
+            isFeatured: false,
+            isRecommended: false,
+            isNew: false,
+            isSeasonal: false,
+            sortOrder: section.items.length,
+            baseItem: {
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              category: item.category,
+              imageUrl: item.imageUrl,
+            },
+          };
+          
           return {
             ...section,
             items: [...section.items, newItem],
@@ -321,26 +349,42 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   };
 
   const handleAddMultipleItemsToSection = (sectionId: number, items: AvailableItem[]) => {
-    const newItems: MenuItem[] = items.map((item, index) => ({
-      id: Date.now() + index, // Ensure unique IDs
-      itemId: item.id,
-      isFeatured: false,
-      isRecommended: false,
-      isNew: false,
-      isSeasonal: false,
-      sortOrder: 0,
-      baseItem: {
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        imageUrl: item.imageUrl,
-      },
-    }));
-
     setSections(
       sections.map((section) => {
         if (section.id === sectionId) {
+          // Filter out items that already exist in this section
+          const existingItemIds = new Set(section.items.map(i => i.itemId));
+          const itemsToAdd = items.filter(item => !existingItemIds.has(item.id));
+          const skippedCount = items.length - itemsToAdd.length;
+          
+          if (itemsToAdd.length === 0) {
+            toast.info('All selected items are already in this section');
+            return section;
+          }
+          
+          const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
+            id: Date.now() + index, // Ensure unique IDs
+            itemId: item.id,
+            isFeatured: false,
+            isRecommended: false,
+            isNew: false,
+            isSeasonal: false,
+            sortOrder: section.items.length + index,
+            baseItem: {
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              category: item.category,
+              imageUrl: item.imageUrl,
+            },
+          }));
+          
+          if (skippedCount > 0) {
+            toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
+          } else {
+            toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
+          }
+          
           return {
             ...section,
             items: [...section.items, ...newItems],
@@ -351,34 +395,48 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     );
 
     setHasChanges(true);
-    toast.success(`Added ${items.length} item${items.length > 1 ? 's' : ''} to section`);
   };
 
   const handleBulkAssign = (sectionId: number, itemIds: number[]) => {
-    const itemsToAdd = availableItems.filter((item) => itemIds.includes(item.id));
-
-    // Create all new items at once
-    const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
-      id: Date.now() + index, // Ensure unique IDs by adding index
-      itemId: item.id,
-      isFeatured: false,
-      isRecommended: false,
-      isNew: false,
-      isSeasonal: false,
-      sortOrder: 0,
-      baseItem: {
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        imageUrl: item.imageUrl,
-      },
-    }));
-
-    // Update sections in a single state update
     setSections(
       sections.map((section) => {
         if (section.id === sectionId) {
+          // Filter out items that already exist in this section
+          const existingItemIds = new Set(section.items.map(i => i.itemId));
+          const itemsToAdd = availableItems.filter(
+            (item) => itemIds.includes(item.id) && !existingItemIds.has(item.id)
+          );
+          const skippedCount = itemIds.length - itemsToAdd.length;
+          
+          if (itemsToAdd.length === 0) {
+            toast.info('All selected items are already in this section');
+            return section;
+          }
+          
+          // Create all new items at once
+          const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
+            id: Date.now() + index, // Ensure unique IDs by adding index
+            itemId: item.id,
+            isFeatured: false,
+            isRecommended: false,
+            isNew: false,
+            isSeasonal: false,
+            sortOrder: section.items.length + index,
+            baseItem: {
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              category: item.category,
+              imageUrl: item.imageUrl,
+            },
+          }));
+          
+          if (skippedCount > 0) {
+            toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
+          } else {
+            toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
+          }
+          
           return {
             ...section,
             items: [...section.items, ...newItems],
@@ -389,7 +447,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     );
 
     setHasChanges(true);
-    toast.success(`Added ${itemsToAdd.length} items to section`);
     setSelectedAvailableItems(new Set());
   };
 
@@ -436,10 +493,20 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   };
 
   const handleDeleteSection = (sectionId: number) => {
-    if (confirm('Delete this section?')) {
-      setSections(sections.filter((s) => s.id !== sectionId));
+    setDeletingSectionId(sectionId);
+  };
+
+  const confirmDeleteSection = () => {
+    if (deletingSectionId !== null) {
+      setSections(sections.filter((s) => s.id !== deletingSectionId));
       setHasChanges(true);
+      setDeletingSectionId(null);
+      toast.success('Section deleted');
     }
+  };
+
+  const cancelDeleteSection = () => {
+    setDeletingSectionId(null);
   };
 
   const handleDuplicateSection = (section: MenuSection) => {
@@ -602,17 +669,17 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
               {/* Menu Selector Header */}
               <div className="flex-shrink-0 bg-white shadow-sm">
                 <div className="px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-start">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-start min-w-0">
                       {allMenus.length > 0 ? (
                         <Select value={menu?.id.toString() || ''} onValueChange={handleMenuChange}>
-                          <SelectTrigger className="h-8 w-[240px] border-gray-200 bg-gray-50 font-medium transition-colors hover:bg-white">
+                          <SelectTrigger className="h-8 w-[200px] sm:w-[240px] border-gray-200 bg-gray-50 font-medium transition-colors hover:bg-white">
                             <div className="flex items-center gap-2">
-                              <ChefHat className="h-4 w-4 text-gray-500" />
+                              <ChefHat className="h-4 w-4 text-gray-500 flex-shrink-0" />
                               <SelectValue placeholder="Select a menu to edit" />
                             </div>
                           </SelectTrigger>
-                          <SelectContent className="w-[240px]">
+                          <SelectContent className="w-[200px] sm:w-[240px]">
                             {allMenus.map((m) => (
                               <SelectItem key={m.id} value={m.id.toString()}>
                                 <div className="flex w-full items-center gap-2">
@@ -637,16 +704,20 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                         <div className="text-sm text-muted-foreground">No menus available</div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {menu && hasChanges && (
-                        <Badge variant="outline" className="border-orange-200 bg-orange-50 text-xs text-orange-700">
+                        <Badge variant="outline" className="hidden sm:flex border-orange-200 bg-orange-50 text-xs text-orange-700 whitespace-nowrap">
                           Unsaved changes
                         </Badge>
                       )}
+                      {menu && hasChanges && (
+                        <div className="sm:hidden flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" title="Unsaved changes" />
+                      )}
                       {menu && (
-                        <Button onClick={() => setShowSectionDialog(true)} className="h-8">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Section
+                        <Button onClick={() => setShowSectionDialog(true)} className="h-8 whitespace-nowrap">
+                          <Plus className="mr-1.5 h-4 w-4" />
+                          <span className="hidden sm:inline">Add Section</span>
+                          <span className="sm:hidden">Add</span>
                         </Button>
                       )}
                     </div>
@@ -724,8 +795,11 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                                 key={section.id}
                                 section={section}
                                 isDraggedOver={overId === `section-${section.id}` && !!activeDraggedItem}
+                                isDeleting={deletingSectionId === section.id}
                                 onEdit={() => setEditingSection(section)}
                                 onDelete={() => handleDeleteSection(section.id)}
+                                onConfirmDelete={confirmDeleteSection}
+                                onCancelDelete={cancelDeleteSection}
                                 onDuplicate={() => handleDuplicateSection(section)}
                                 onToggleCollapse={() => handleToggleSectionCollapse(section.id)}
                                 onEditItem={(item) => handleEditItemClick(item, section.id)}

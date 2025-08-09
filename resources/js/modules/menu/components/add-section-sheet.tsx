@@ -11,15 +11,15 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { FolderPlus, Sparkles } from 'lucide-react';
+import { FolderPlus, Sparkles, Layout } from 'lucide-react';
 import { useState } from 'react';
-import { SECTION_ICONS, SECTION_TEMPLATES, SECTION_TEMPLATE_CATEGORIES } from '../constants';
+import { SECTION_ICONS, SECTION_TEMPLATES, SECTION_TEMPLATE_CATEGORIES, MENU_TEMPLATES } from '../constants';
 import type { MenuSection } from '../types';
 
 interface AddSectionSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddSection: (section: Partial<MenuSection>) => void;
+  onAddSection: (section: Partial<MenuSection> | Partial<MenuSection>[]) => void;
 }
 
 export function AddSectionSheet({ open, onOpenChange, onAddSection }: AddSectionSheetProps) {
@@ -52,6 +52,16 @@ export function AddSectionSheet({ open, onOpenChange, onAddSection }: AddSection
     onOpenChange(false);
   };
 
+  const handleAddMenuTemplate = (template: typeof MENU_TEMPLATES[0]) => {
+    const sections = template.sections.map(section => ({
+      name: section.name,
+      description: section.description,
+      icon: section.icon,
+    }));
+    onAddSection(sections);
+    onOpenChange(false);
+  };
+
   // Group templates by category
   const templatesByCategory = Object.entries(SECTION_TEMPLATE_CATEGORIES).reduce((acc, [key, label]) => {
     acc[key] = {
@@ -71,17 +81,54 @@ export function AddSectionSheet({ open, onOpenChange, onAddSection }: AddSection
           </SheetDescription>
         </SheetHeader>
 
-        <Tabs defaultValue="templates" className="mt-6 px-6 pb-6">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="full-menus" className="mt-6 px-6 pb-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="full-menus" className="flex items-center gap-2">
+              <Layout className="h-4 w-4" />
+              Full Menus
+            </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
-              Templates
+              Sections
             </TabsTrigger>
             <TabsTrigger value="custom" className="flex items-center gap-2">
               <FolderPlus className="h-4 w-4" />
               Custom
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="full-menus" className="mt-6 space-y-3">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground mb-4">
+                Choose a complete menu template to quickly set up all sections for your restaurant type.
+              </p>
+              {MENU_TEMPLATES.map((template) => {
+                const Icon = SECTION_ICONS[template.icon as keyof typeof SECTION_ICONS];
+                return (
+                  <button
+                    key={template.name}
+                    onClick={() => handleAddMenuTemplate(template)}
+                    className="w-full flex items-start gap-3 rounded-lg border border-gray-200 p-4 text-left transition-all hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-gray-100 to-gray-200">
+                      <Icon className="h-6 w-6 text-gray-700" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm mb-0.5">{template.name}</div>
+                      <div className="text-xs text-gray-600 mb-2">{template.description}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {template.sections.map((section, idx) => (
+                          <span key={idx} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                            {section.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </TabsContent>
 
           <TabsContent value="templates" className="mt-6 space-y-6">
             {Object.entries(templatesByCategory).map(([category, { label, templates }]) => (
