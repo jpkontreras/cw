@@ -1,10 +1,10 @@
-import { InertiaDataTable } from '@/components/data-table';
+import { InertiaDataTable } from '@/modules/data-table';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/empty-state';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import type { OrderListPageProps } from '@/types/modules/order';
-import { formatCurrency } from '@/types/modules/order/utils';
+import type { OrderListPageProps } from '@/modules/order';
+import { formatCurrency } from '@/modules/order';
 import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, Clock, CreditCard, Plus, ShoppingCart } from 'lucide-react';
 import { useMemo } from 'react';

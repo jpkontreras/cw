@@ -10,7 +10,7 @@ import {
   type MenuBuilderPageProps,
   type MenuItem,
   type MenuSection,
-} from '@/components/modules/menu';
+} from '@/modules/menu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

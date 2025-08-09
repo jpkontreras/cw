@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { InertiaDataTable } from '@/components/data-table';
+import { InertiaDataTable } from '@/modules/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ItemSelector } from '@/components/modules/item/item-selector';
+import { ItemSelector } from '@/modules/item';
 import { 
   Settings,
   Plus,

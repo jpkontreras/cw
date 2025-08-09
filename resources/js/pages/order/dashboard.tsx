@@ -6,8 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
-import type { OrderDashboardPageProps } from '@/types/modules/order';
-import { formatCurrency, getStatusColor, getStatusLabel } from '@/types/modules/order/utils';
+import type { OrderDashboardPageProps } from '@/modules/order';
+import { formatCurrency, getStatusColor, getStatusLabel } from '@/modules/order';
 import { Head } from '@inertiajs/react';
 import {
   Activity,

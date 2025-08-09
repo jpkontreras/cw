@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import type { Order } from '@/types/modules/order';
+import type { Order } from '@/modules/order';
 import {
   formatCurrency,
   formatOrderNumber,
@@ -16,7 +16,7 @@ import {
   getStatusColor,
   getStatusLabel,
   getTypeLabel,
-} from '@/types/modules/order/utils';
+} from '@/modules/order';
 import { Head, router } from '@inertiajs/react';
 import {
   Activity,

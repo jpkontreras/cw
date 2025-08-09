@@ -1,4 +1,4 @@
-import { BottomActionBar, MenuItemCard, ViewModeToggle, type ViewMode } from '@/components/modules/order';
+import { BottomActionBar, MenuItemCard, ViewModeToggle, type ViewMode } from '@/modules/order';
 import Page from '@/layouts/page-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmptyState } from '@/components/empty-state';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import type { CreateOrderRequest, OrderType } from '@/types/modules/order';
-import { ORDER_TYPE_CONFIG } from '@/types/modules/order/constants';
-import { calculateTax, calculateTotal, formatCurrency } from '@/types/modules/order/utils';
+import type { CreateOrderRequest, OrderType } from '@/modules/order';
+import { ORDER_TYPE_CONFIG } from '@/modules/order';
+import { calculateTax, calculateTotal, formatCurrency } from '@/modules/order';
 import { Head, useForm } from '@inertiajs/react';
 import { AlertTriangle, Clock, CreditCard, DollarSign, Package, Plus, ShoppingBag, Truck, Utensils } from 'lucide-react';
 import { FormEventHandler, useEffect, useMemo, useState } from 'react';

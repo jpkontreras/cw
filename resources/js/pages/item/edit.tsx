@@ -55,7 +55,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { ImageField } from '@/components/ui/image-field';
-import { BundleSelector } from '@/components/modules/item/bundle-selector';
+import { BundleSelector } from '@/modules/item';
 
 interface Category {
   id: number;

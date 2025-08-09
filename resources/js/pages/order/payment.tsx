@@ -10,8 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import type { Order, OrderItem, PaymentTransaction } from '@/types/modules/order';
-import { formatCurrency, formatOrderNumber, getPaymentStatusColor, getPaymentStatusLabel } from '@/types/modules/order/utils';
+import type { Order, OrderItem, PaymentTransaction } from '@/modules/order';
+import { formatCurrency, formatOrderNumber, getPaymentStatusColor, getPaymentStatusLabel } from '@/modules/order';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
   AlertCircle,

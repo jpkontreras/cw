@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { InertiaDataTable } from '@/components/data-table';
+import { InertiaDataTable } from '@/modules/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

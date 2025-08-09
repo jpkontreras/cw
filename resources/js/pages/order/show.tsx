@@ -16,8 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import type { Order, OrderDetailPageProps, PaymentTransaction } from '@/types/modules/order';
-import { PAYMENT_METHOD_CONFIG } from '@/types/modules/order/constants';
+import type { Order, OrderDetailPageProps, PaymentTransaction } from '@/modules/order';
+import { PAYMENT_METHOD_CONFIG } from '@/modules/order';
 import {
   formatCurrency,
   formatOrderNumber,
@@ -27,7 +27,7 @@ import {
   getOrderAge,
   getStatusLabel,
   getTypeLabel,
-} from '@/types/modules/order/utils';
+} from '@/modules/order';
 import { Head, Link, router } from '@inertiajs/react';
 import {
   AlertCircle,
