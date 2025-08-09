@@ -4,7 +4,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Package, Plus } from 'lucide-react';
 import { type AvailableItem } from '../types';
 

@@ -14,7 +14,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronDown, ChevronRight, Copy, Edit2, GripVertical, MoreVertical, Package, Trash2, Utensils } from 'lucide-react';
 import { MenuItemCard } from './menu-item-card';
-import { type AvailableItem, type MenuItem, type MenuSection } from '../types';
+import { type MenuItem, type MenuSection } from '../types';
 import { SECTION_ICONS } from '../constants';
 
 interface MenuSectionCardProps {
@@ -24,7 +24,6 @@ interface MenuSectionCardProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onToggleCollapse: () => void;
-  onAddItem: (item: AvailableItem) => void;
   onEditItem: (item: MenuItem) => void;
   onDeleteItem: (itemId: number) => void;
   onDuplicateItem: (item: MenuItem) => void;
@@ -39,7 +38,6 @@ export function MenuSectionCard({
   onDelete,
   onDuplicate,
   onToggleCollapse,
-  onAddItem,
   onEditItem,
   onDeleteItem,
   onDuplicateItem,

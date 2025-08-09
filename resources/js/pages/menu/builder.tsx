@@ -46,7 +46,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const [editingSection, setEditingSection] = useState<MenuSection | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: MenuItem; sectionId: number } | null>(null);
   const [showSectionDialog, setShowSectionDialog] = useState(false);
-  const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
+  const [, setIsLibraryCollapsed] = useState(false);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [activeDraggedItem, setActiveDraggedItem] = useState<AvailableItem | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
@@ -578,7 +578,6 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                               onDelete={() => handleDeleteSection(section.id)}
                               onDuplicate={() => handleDuplicateSection(section)}
                               onToggleCollapse={() => handleToggleSectionCollapse(section.id)}
-                              onAddItem={(item) => handleAddItemToSection(section.id, item)}
                               onEditItem={(item) => handleEditItemClick(item, section.id)}
                               onDeleteItem={(itemId) => handleDeleteItem(section.id, itemId)}
                               onDuplicateItem={(item) => handleDuplicateItem(section.id, item)}

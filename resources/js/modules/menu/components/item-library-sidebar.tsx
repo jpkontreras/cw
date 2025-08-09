@@ -182,28 +182,12 @@ export function ItemLibrarySidebar({
               <ScrollArea>
                 <div className="grid grid-cols-1 gap-2">
                   {filteredItems.map((item) => (
-                    <Popover key={item.id}>
-                      <PopoverTrigger asChild>
-                        <div
-                          className={cn(
-                            'group relative cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100',
-                            selectedAvailableItems.has(item.id) && 'bg-blue-100',
-                          )}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('item', JSON.stringify(item));
-                          }}
-                        >
-                          <ItemThumbnail item={item} size="auto" />
-                          {selectedAvailableItems.has(item.id) && (
-                            <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-                          )}
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent side="left" className="w-64">
-                        <ItemDetails item={item} onQuickAdd={() => handleQuickAdd(item)} />
-                      </PopoverContent>
-                    </Popover>
+                    <CollapsedItemCard 
+                      key={item.id} 
+                      item={item} 
+                      isSelected={selectedAvailableItems.has(item.id)}
+                      onQuickAdd={() => handleQuickAdd(item)}
+                    />
                   ))}
                 </div>
               </ScrollArea>
