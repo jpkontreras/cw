@@ -55,6 +55,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [droppedSuccessfully, setDroppedSuccessfully] = useState(false);
   const [deletingSectionId, setDeletingSectionId] = useState<number | null>(null);
+  const [duplicateItemsMap, setDuplicateItemsMap] = useState<Map<number, number>>(new Map());
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -71,7 +72,10 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
 
   const handleSave = async () => {
     if (!menu) {
-      toast.error('Please select a menu first');
+      toast.error('Please select a menu first', {
+        description: 'Choose a menu from the dropdown to continue',
+        duration: 4000,
+      });
       return;
     }
 
@@ -114,31 +118,32 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
           sections: sectionsData as any, // Type assertion for Inertia compatibility
         },
         {
-          preserveState: true,
+          preserveState: false, // Reload with fresh data to get correct database IDs
           preserveScroll: true,
           onSuccess: () => {
-            toast.success('Menu saved successfully');
+            toast.success('Saved successfully');
             setHasChanges(false);
           },
           onError: (errors) => {
-            // Handle validation errors
             console.error('Save errors:', errors);
-
-            // Check if errors is an object with field-specific errors
+            
+            // Check for duplicate item errors
             if (typeof errors === 'object' && errors !== null) {
-              // Display each validation error
-              Object.entries(errors).forEach(([field, messages]) => {
-                if (Array.isArray(messages)) {
-                  messages.forEach((message) => {
-                    toast.error(`${field}: ${message}`);
-                  });
-                } else if (typeof messages === 'string') {
-                  toast.error(`${field}: ${messages}`);
+              const errorMessages = Object.entries(errors);
+              if (errorMessages.length > 0) {
+                const [, messages] = errorMessages[0];
+                const firstMessage = Array.isArray(messages) ? messages[0] : messages;
+                
+                if (firstMessage && firstMessage.toString().includes('duplicate')) {
+                  toast.error('Duplicate items in section');
+                } else {
+                  toast.error('Save failed');
                 }
-              });
+              } else {
+                toast.error('Save failed');
+              }
             } else {
-              // Fallback for generic error
-              toast.error('Failed to save menu. Please check your input and try again.');
+              toast.error('Save failed');
             }
           },
           onFinish: () => {
@@ -148,7 +153,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
       );
     } catch (error) {
       console.error('Unexpected error during save:', error);
-      toast.error('An unexpected error occurred while saving');
+      toast.error('Save failed');
       setIsSaving(false);
     }
   };
@@ -171,6 +176,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     const { active } = event;
     setActiveId(active.id);
     setDroppedSuccessfully(false); // Reset on new drag
+    setDuplicateItemsMap(new Map()); // Reset duplicate tracking
 
     // Check if dragging available items from library
     if (active.data.current && (active.data.current.type === 'available-item' || active.data.current.type === 'available-items-multi')) {
@@ -189,11 +195,28 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
       over?.id.toString().startsWith('section-')
     ) {
       setOverId(over.id);
+      
+      // Check for duplicate items
+      const sectionId = parseInt(over.id.toString().replace('section-', ''));
+      const section = sections.find(s => s.id === sectionId);
+      
+      if (section) {
+        const draggedItems = active.data.current.type === 'available-items-multi' 
+          ? active.data.current.items as AvailableItem[]
+          : [active.data.current.item as AvailableItem];
+        
+        const existingItemIds = new Set(section.items.map(i => i.itemId));
+        const duplicateCount = draggedItems.filter(item => existingItemIds.has(item.id)).length;
+        
+        setDuplicateItemsMap(new Map([[sectionId, duplicateCount]]));
+      }
     } else if (!active.data.current || !active.data.current.type) {
       // For regular sorting
       setOverId(over?.id || null);
+      setDuplicateItemsMap(new Map());
     } else {
       setOverId(null);
+      setDuplicateItemsMap(new Map());
     }
   };
 
@@ -227,6 +250,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
       setActiveDraggedItem(null);
       setActiveDraggedItems([]);
       setOverId(null);
+      setDuplicateItemsMap(new Map());
       setTimeout(() => setDroppedSuccessfully(false), 50);
       return;
     }
@@ -236,6 +260,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
     setActiveDraggedItem(null);
     setActiveDraggedItems([]);
     setOverId(null);
+    setDuplicateItemsMap(new Map());
 
     if (!over) return;
 
@@ -309,17 +334,21 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   };
 
   const handleAddItemToSection = (sectionId: number, item: AvailableItem) => {
+    // First check if item already exists in this section
+    const targetSection = sections.find(s => s.id === sectionId);
+    if (targetSection) {
+      const existingItem = targetSection.items.find(i => i.itemId === item.id);
+      if (existingItem) {
+        // Item already exists in this section, don't modify state
+        toast.info(`"${item.name}" is already in this section`);
+        return; // Exit without modifying state or marking changes
+      }
+    }
+    
+    // Item doesn't exist, proceed with adding it
     setSections(
       sections.map((section) => {
         if (section.id === sectionId) {
-          // Check if item already exists in this section
-          const existingItem = section.items.find(i => i.itemId === item.id);
-          if (existingItem) {
-            // Item already exists in this section, update it instead
-            toast.info(`"${item.name}" is already in this section`);
-            return section;
-          }
-          
           const newItem: MenuItem = {
             id: Date.now(),
             itemId: item.id,
@@ -349,105 +378,115 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
   };
 
   const handleAddMultipleItemsToSection = (sectionId: number, items: AvailableItem[]) => {
-    setSections(
-      sections.map((section) => {
-        if (section.id === sectionId) {
-          // Filter out items that already exist in this section
-          const existingItemIds = new Set(section.items.map(i => i.itemId));
-          const itemsToAdd = items.filter(item => !existingItemIds.has(item.id));
-          const skippedCount = items.length - itemsToAdd.length;
-          
-          if (itemsToAdd.length === 0) {
-            toast.info('All selected items are already in this section');
-            return section;
+    // First check if any items will actually be added
+    const targetSection = sections.find(s => s.id === sectionId);
+    if (targetSection) {
+      const existingItemIds = new Set(targetSection.items.map(i => i.itemId));
+      const itemsToAdd = items.filter(item => !existingItemIds.has(item.id));
+      const skippedCount = items.length - itemsToAdd.length;
+      
+      if (itemsToAdd.length === 0) {
+        // No items to add, don't modify state
+        toast.info('All selected items are already in this section');
+        return; // Exit without modifying state or marking changes
+      }
+      
+      // Some items will be added, proceed with state update
+      setSections(
+        sections.map((section) => {
+          if (section.id === sectionId) {
+            const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
+              id: Date.now() + index, // Ensure unique IDs
+              itemId: item.id,
+              isFeatured: false,
+              isRecommended: false,
+              isNew: false,
+              isSeasonal: false,
+              sortOrder: section.items.length + index,
+              baseItem: {
+                name: item.name,
+                description: item.description,
+                basePrice: item.basePrice,
+                category: item.category,
+                imageUrl: item.imageUrl,
+              },
+            }));
+            
+            if (skippedCount > 0) {
+              toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
+            } else {
+              toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
+            }
+            
+            return {
+              ...section,
+              items: [...section.items, ...newItems],
+            };
           }
-          
-          const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
-            id: Date.now() + index, // Ensure unique IDs
-            itemId: item.id,
-            isFeatured: false,
-            isRecommended: false,
-            isNew: false,
-            isSeasonal: false,
-            sortOrder: section.items.length + index,
-            baseItem: {
-              name: item.name,
-              description: item.description,
-              basePrice: item.basePrice,
-              category: item.category,
-              imageUrl: item.imageUrl,
-            },
-          }));
-          
-          if (skippedCount > 0) {
-            toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
-          } else {
-            toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
-          }
-          
-          return {
-            ...section,
-            items: [...section.items, ...newItems],
-          };
-        }
-        return section;
-      }),
-    );
-
-    setHasChanges(true);
+          return section;
+        }),
+      );
+      
+      setHasChanges(true);
+    }
   };
 
   const handleBulkAssign = (sectionId: number, itemIds: number[]) => {
-    setSections(
-      sections.map((section) => {
-        if (section.id === sectionId) {
-          // Filter out items that already exist in this section
-          const existingItemIds = new Set(section.items.map(i => i.itemId));
-          const itemsToAdd = availableItems.filter(
-            (item) => itemIds.includes(item.id) && !existingItemIds.has(item.id)
-          );
-          const skippedCount = itemIds.length - itemsToAdd.length;
-          
-          if (itemsToAdd.length === 0) {
-            toast.info('All selected items are already in this section');
-            return section;
+    // First check if any items will actually be added
+    const targetSection = sections.find(s => s.id === sectionId);
+    if (targetSection) {
+      const existingItemIds = new Set(targetSection.items.map(i => i.itemId));
+      const itemsToAdd = availableItems.filter(
+        (item) => itemIds.includes(item.id) && !existingItemIds.has(item.id)
+      );
+      const skippedCount = itemIds.length - itemsToAdd.length;
+      
+      if (itemsToAdd.length === 0) {
+        // No items to add, don't modify state
+        toast.info('All selected items are already in this section');
+        return; // Exit without modifying state or marking changes
+      }
+      
+      // Some items will be added, proceed with state update
+      setSections(
+        sections.map((section) => {
+          if (section.id === sectionId) {
+            // Create all new items at once
+            const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
+              id: Date.now() + index, // Ensure unique IDs by adding index
+              itemId: item.id,
+              isFeatured: false,
+              isRecommended: false,
+              isNew: false,
+              isSeasonal: false,
+              sortOrder: section.items.length + index,
+              baseItem: {
+                name: item.name,
+                description: item.description,
+                basePrice: item.basePrice,
+                category: item.category,
+                imageUrl: item.imageUrl,
+              },
+            }));
+            
+            if (skippedCount > 0) {
+              toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
+            } else {
+              toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
+            }
+            
+            return {
+              ...section,
+              items: [...section.items, ...newItems],
+            };
           }
-          
-          // Create all new items at once
-          const newItems: MenuItem[] = itemsToAdd.map((item, index) => ({
-            id: Date.now() + index, // Ensure unique IDs by adding index
-            itemId: item.id,
-            isFeatured: false,
-            isRecommended: false,
-            isNew: false,
-            isSeasonal: false,
-            sortOrder: section.items.length + index,
-            baseItem: {
-              name: item.name,
-              description: item.description,
-              basePrice: item.basePrice,
-              category: item.category,
-              imageUrl: item.imageUrl,
-            },
-          }));
-          
-          if (skippedCount > 0) {
-            toast.info(`Added ${itemsToAdd.length} new item${itemsToAdd.length > 1 ? 's' : ''}, skipped ${skippedCount} duplicate${skippedCount > 1 ? 's' : ''}`);
-          } else {
-            toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to section`);
-          }
-          
-          return {
-            ...section,
-            items: [...section.items, ...newItems],
-          };
-        }
-        return section;
-      }),
-    );
-
-    setHasChanges(true);
-    setSelectedAvailableItems(new Set());
+          return section;
+        }),
+      );
+      
+      setHasChanges(true);
+      setSelectedAvailableItems(new Set());
+    }
   };
 
   const handleSelectAvailableItem = (itemId: number) => {
@@ -795,6 +834,7 @@ export default function MenuBuilder({ menu, allMenus, structure, availableItems 
                                 key={section.id}
                                 section={section}
                                 isDraggedOver={overId === `section-${section.id}` && !!activeDraggedItem}
+                                duplicateItemCount={duplicateItemsMap.get(section.id) || 0}
                                 isDeleting={deletingSectionId === section.id}
                                 onEdit={() => setEditingSection(section)}
                                 onDelete={() => handleDeleteSection(section.id)}

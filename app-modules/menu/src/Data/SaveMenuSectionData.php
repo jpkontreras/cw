@@ -15,6 +15,8 @@ use Spatie\LaravelData\Attributes\Validation\Nullable;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\StringType;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Support\Validation\ValidationContext;
+use Illuminate\Validation\Validator;
 
 class SaveMenuSectionData extends BaseData
 {
@@ -53,4 +55,70 @@ class SaveMenuSectionData extends BaseData
         #[DataCollectionOf(SaveMenuSectionData::class)]
         public readonly ?DataCollection $children = null,
     ) {}
+    
+    /**
+     * Custom validation rules to ensure no duplicate items within the section
+     */
+    public static function rules(ValidationContext $context): array
+    {
+        return [
+            'items' => [
+                function ($attribute, mixed $value, \Closure $fail) {
+                    if (!is_array($value)) {
+                        return;
+                    }
+                    
+                    $itemIds = [];
+                    foreach ($value as $item) {
+                        if (!isset($item['itemId'])) {
+                            continue;
+                        }
+                        
+                        $itemId = $item['itemId'];
+                        if (in_array($itemId, $itemIds)) {
+                            $fail("Section contains duplicate item with ID {$itemId}. Each item can only appear once per section.");
+                            return;
+                        }
+                        $itemIds[] = $itemId;
+                    }
+                },
+            ],
+        ];
+    }
+    
+    /**
+     * Additional validation after data is created
+     */
+    public static function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $data = $validator->getData();
+            
+            // Check for duplicate items in child sections recursively
+            if (isset($data['children']) && is_array($data['children'])) {
+                foreach ($data['children'] as $childIndex => $child) {
+                    if (!isset($child['items']) || !is_array($child['items'])) {
+                        continue;
+                    }
+                    
+                    $childItemIds = [];
+                    foreach ($child['items'] as $item) {
+                        if (!isset($item['itemId'])) {
+                            continue;
+                        }
+                        
+                        $itemId = $item['itemId'];
+                        if (in_array($itemId, $childItemIds)) {
+                            $validator->errors()->add(
+                                "children.{$childIndex}.items",
+                                "Child section '{$child['name']}' contains duplicate item with ID {$itemId}."
+                            );
+                            return;
+                        }
+                        $childItemIds[] = $itemId;
+                    }
+                }
+            }
+        });
+    }
 }

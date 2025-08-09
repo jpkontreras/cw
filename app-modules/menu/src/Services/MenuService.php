@@ -147,6 +147,9 @@ class MenuService implements MenuServiceInterface
         return DB::transaction(function () use ($menuId, $data) {
             // Verify menu exists
             $menu = Menu::findOrFail($menuId);
+            
+            // Pre-validate structure for duplicate items within sections
+            $this->validateSectionItems($data);
 
             // Track existing section and item IDs to handle deletions
             $existingSectionIds = [];
@@ -220,8 +223,10 @@ class MenuService implements MenuServiceInterface
         $isNewSection = !$sectionData->id || $sectionData->id > 1000000000;
 
         if (!$isNewSection) {
-            // Try to find existing section
-            $section = MenuSection::find($sectionData->id);
+            // Try to find existing section that belongs to this menu
+            $section = MenuSection::where('id', $sectionData->id)
+                ->where('menu_id', $menuId)
+                ->first();
             $isNewSection = !$section;
         }
 
@@ -249,7 +254,7 @@ class MenuService implements MenuServiceInterface
                 'sort_order' => $sortOrder,
                 'parent_id' => $parentId,
             ]);
-            $existingSectionIds[] = $sectionData->id;
+            $existingSectionIds[] = $section->id;
         }
 
         // Process items in this section - convert DataCollection to array
@@ -302,32 +307,77 @@ class MenuService implements MenuServiceInterface
         // Check if this is an existing item or a new one
         // IDs over 1 billion are likely from Date.now() and should be treated as new
         $isNewItem = !$itemData->id || $itemData->id > 1000000000;
+        $item = null;
 
         if (!$isNewItem) {
-            // Try to find existing item
-            $item = MenuItem::find($itemData->id);
-            $isNewItem = !$item;
+            // Try to find existing item IN THIS MENU AND SECTION
+            // Items can exist in multiple sections, so we need to check both menu_id and section_id
+            $item = MenuItem::where('id', $itemData->id)
+                ->where('menu_id', $menuId)
+                ->where('menu_section_id', $sectionId)
+                ->first();
+            
+            // If the item exists but in a different section, treat as new item in this section
+            if (!$item) {
+                // Check if it exists in a different section
+                $itemInDifferentSection = MenuItem::where('id', $itemData->id)
+                    ->where('menu_id', $menuId)
+                    ->first();
+                    
+                if ($itemInDifferentSection) {
+                    // The item ID exists but in a different section
+                    // We'll create a new item in this section
+                    $isNewItem = true;
+                } else {
+                    // The item doesn't exist at all in this menu
+                    $isNewItem = true;
+                }
+            }
         }
 
         if ($isNewItem) {
-            // Create new item
-            $item = MenuItem::create([
-                'menu_id' => $menuId,
-                'menu_section_id' => $sectionId,
-                'item_id' => $itemData->itemId,
-                'display_name' => $itemData->displayName,
-                'display_description' => $itemData->displayDescription,
-                'price_override' => $itemData->priceOverride,
-                'is_active' => true,
-                'is_featured' => $itemData->isFeatured,
-                'is_recommended' => $itemData->isRecommended,
-                'is_new' => $itemData->isNew,
-                'is_seasonal' => $itemData->isSeasonal,
-                'sort_order' => $sortOrder,
-            ]);
-            $existingItemIds[] = $item->id;
+            // Check if this item_id already exists in THIS SPECIFIC SECTION
+            // Items can exist in multiple sections, but not duplicates within the same section
+            $existingMenuItemInSection = MenuItem::where('menu_id', $menuId)
+                ->where('menu_section_id', $sectionId)
+                ->where('item_id', $itemData->itemId)
+                ->first();
+                
+            if ($existingMenuItemInSection) {
+                // Item already exists in this section, update it instead of creating duplicate
+                $existingMenuItemInSection->update([
+                    'display_name' => $itemData->displayName,
+                    'display_description' => $itemData->displayDescription,
+                    'price_override' => $itemData->priceOverride,
+                    'is_featured' => $itemData->isFeatured,
+                    'is_recommended' => $itemData->isRecommended,
+                    'is_new' => $itemData->isNew,
+                    'is_seasonal' => $itemData->isSeasonal,
+                    'sort_order' => $sortOrder,
+                ]);
+                $existingItemIds[] = $existingMenuItemInSection->id;
+            } else {
+                // Create new item in this section
+                // This allows the same item_id to exist in multiple sections
+                $item = MenuItem::create([
+                    'menu_id' => $menuId,
+                    'menu_section_id' => $sectionId,
+                    'item_id' => $itemData->itemId,
+                    'display_name' => $itemData->displayName,
+                    'display_description' => $itemData->displayDescription,
+                    'price_override' => $itemData->priceOverride,
+                    'is_active' => true,
+                    'is_featured' => $itemData->isFeatured,
+                    'is_recommended' => $itemData->isRecommended,
+                    'is_new' => $itemData->isNew,
+                    'is_seasonal' => $itemData->isSeasonal,
+                    'sort_order' => $sortOrder,
+                ]);
+                $existingItemIds[] = $item->id;
+            }
         } else {
-            // Update existing item
+            // Update existing item (we already have $item from the query above)
+            // Keep it in the same section
             $item->update([
                 'display_name' => $itemData->displayName,
                 'display_description' => $itemData->displayDescription,
@@ -338,7 +388,7 @@ class MenuService implements MenuServiceInterface
                 'is_seasonal' => $itemData->isSeasonal,
                 'sort_order' => $sortOrder,
             ]);
-            $existingItemIds[] = $itemData->id;
+            $existingItemIds[] = $item->id;
         }
     }
 
@@ -438,16 +488,32 @@ class MenuService implements MenuServiceInterface
             if ($section->items->isEmpty()) {
                 $warnings[] = "Section '{$section->name}' has no items";
             }
+            
+            // Check for duplicate items within the same section
+            $sectionItemIds = [];
+            foreach ($section->items as $item) {
+                if (in_array($item->item_id, $sectionItemIds)) {
+                    $errors[] = "Section '{$section->name}' contains duplicate item with ID {$item->item_id}";
+                }
+                $sectionItemIds[] = $item->item_id;
+            }
         }
 
-        // Check for duplicate items
-        $itemIds = [];
+        // Check for items in multiple sections (this is allowed but noted as informational)
+        $globalItemCounts = [];
         foreach ($menu->sections as $section) {
             foreach ($section->items as $item) {
-                if (in_array($item->item_id, $itemIds)) {
-                    $warnings[] = "Item ID {$item->item_id} appears in multiple sections";
+                if (!isset($globalItemCounts[$item->item_id])) {
+                    $globalItemCounts[$item->item_id] = [];
                 }
-                $itemIds[] = $item->item_id;
+                $globalItemCounts[$item->item_id][] = $section->name;
+            }
+        }
+        
+        foreach ($globalItemCounts as $itemId => $sections) {
+            if (count($sections) > 1) {
+                $sectionsList = implode(', ', $sections);
+                $warnings[] = "Item ID {$itemId} appears in multiple sections: {$sectionsList} (this is allowed)";
             }
         }
 
@@ -549,6 +615,70 @@ class MenuService implements MenuServiceInterface
         // This would use a PDF library
         // For now, return a placeholder
         return "PDF export not yet implemented";
+    }
+    
+    /**
+     * Validate that sections don't contain duplicate items
+     * 
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function validateSectionItems(SaveMenuStructureData $data): void
+    {
+        $errors = [];
+        
+        if ($data->sections !== null) {
+            foreach ($data->sections as $sectionIndex => $section) {
+                $sectionData = is_array($section) ? $section : $section->toArray();
+                $sectionName = $sectionData['name'] ?? 'Unnamed Section';
+                
+                // Check for duplicate items within this section
+                $itemIds = [];
+                if (isset($sectionData['items']) && is_array($sectionData['items'])) {
+                    foreach ($sectionData['items'] as $itemIndex => $item) {
+                        $itemData = is_array($item) ? $item : $item->toArray();
+                        $itemId = $itemData['itemId'] ?? null;
+                        
+                        if ($itemId !== null) {
+                            if (in_array($itemId, $itemIds)) {
+                                $errors["sections.{$sectionIndex}.items.{$itemIndex}"] = [
+                                    "Section '{$sectionName}' contains duplicate item with ID {$itemId}. Each item can only appear once per section."
+                                ];
+                            }
+                            $itemIds[] = $itemId;
+                        }
+                    }
+                }
+                
+                // Check child sections recursively
+                if (isset($sectionData['children']) && is_array($sectionData['children'])) {
+                    foreach ($sectionData['children'] as $childIndex => $child) {
+                        $childData = is_array($child) ? $child : $child->toArray();
+                        $childName = $childData['name'] ?? 'Unnamed Child Section';
+                        
+                        $childItemIds = [];
+                        if (isset($childData['items']) && is_array($childData['items'])) {
+                            foreach ($childData['items'] as $childItemIndex => $childItem) {
+                                $childItemData = is_array($childItem) ? $childItem : $childItem->toArray();
+                                $childItemId = $childItemData['itemId'] ?? null;
+                                
+                                if ($childItemId !== null) {
+                                    if (in_array($childItemId, $childItemIds)) {
+                                        $errors["sections.{$sectionIndex}.children.{$childIndex}.items.{$childItemIndex}"] = [
+                                            "Child section '{$childName}' contains duplicate item with ID {$childItemId}."
+                                        ];
+                                    }
+                                    $childItemIds[] = $childItemId;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (!empty($errors)) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
     }
 
     public function addItemsToSection(int $sectionId, array $items): void
