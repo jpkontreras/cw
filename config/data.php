@@ -138,8 +138,8 @@ return [
      * global strategy here, or override it on a specific data object.
      */
     'name_mapping_strategy' => [
-        'input' => SnakeCaseMapper::class,
-        'output' => null,
+        'input' => null,  // Frontend sends camelCase, DTOs use camelCase
+        'output' => null, // Output as camelCase to match frontend expectations
     ],
 
     /*

@@ -10,19 +10,22 @@ use Colame\Menu\Contracts\MenuSectionRepositoryInterface;
 use Colame\Menu\Contracts\MenuItemRepositoryInterface;
 use Colame\Menu\Contracts\MenuVersioningInterface;
 use Colame\Menu\Data\CreateMenuData;
+use Colame\Menu\Data\CreateMenuSectionData;
 use Colame\Menu\Data\UpdateMenuData;
+use Colame\Menu\Data\UpdateMenuSectionData;
 use Colame\Menu\Data\MenuData;
 use Colame\Menu\Data\MenuStructureData;
-use Colame\Menu\Data\MenuSectionWithItemsData;
 use Colame\Menu\Data\SaveMenuStructureData;
 use Colame\Menu\Data\SaveMenuSectionData;
 use Colame\Menu\Data\SaveMenuItemData;
-use Colame\Menu\Models\Menu;
-use Colame\Menu\Models\MenuSection;
+use Colame\Menu\Data\CreateMenuItemData;
+use Colame\Menu\Data\UpdateMenuItemData;
+use Colame\Menu\Data\MenuItemData;
 use Colame\Menu\Models\MenuItem;
-use Colame\Item\Contracts\ItemRepositoryInterface;
-use Illuminate\Support\Facades\DB;
+use Colame\Menu\Contracts\MenuLocationRepositoryInterface;
+use App\Core\Contracts\ItemRepositoryInterface;
 use Spatie\LaravelData\DataCollection;
+use Illuminate\Support\Facades\DB;
 
 class MenuService implements MenuServiceInterface
 {
@@ -31,21 +34,24 @@ class MenuService implements MenuServiceInterface
         private MenuSectionRepositoryInterface $sectionRepository,
         private MenuItemRepositoryInterface $itemRepository,
         private MenuVersioningInterface $versioningService,
+        private MenuLocationRepositoryInterface $locationRepository,
+        private ?ItemRepositoryInterface $itemDetailsRepository = null,
     ) {}
 
     public function createMenu(CreateMenuData $data): MenuData
     {
         return DB::transaction(function () use ($data) {
             // Create the menu
-            $menuData = $this->menuRepository->create($data->toArray());
+            $menuData = $this->menuRepository->create($data);
 
             // Create sections if provided
             if ($data->sections) {
                 foreach ($data->sections as $sectionData) {
-                    $this->sectionRepository->create([
-                        'menu_id' => $menuData->id,
+                    $createSectionData = CreateMenuSectionData::from([
+                        'menuId' => $menuData->id,
                         ...$sectionData,
                     ]);
+                    $this->sectionRepository->create($createSectionData);
                 }
             }
 
@@ -70,7 +76,7 @@ class MenuService implements MenuServiceInterface
     public function updateMenu(int $id, UpdateMenuData $data): MenuData
     {
         return DB::transaction(function () use ($id, $data) {
-            $menuData = $this->menuRepository->update($id, $data->toArray());
+            $menuData = $this->menuRepository->update($id, $data);
 
             // Create version snapshot if versioning is enabled
             if (config('features.menu.versioning')) {
@@ -103,50 +109,46 @@ class MenuService implements MenuServiceInterface
 
     public function getMenuStructure(int $id): MenuStructureData
     {
-        $menu = Menu::with([
-            'sections' => function ($query) {
-                $query->whereNull('parent_id')
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->with([
-                        'children' => function ($q) {
-                            $q->where('is_active', true)
-                              ->orderBy('sort_order')
-                              ->with('activeItems.item'); // Also load items for child sections
-                        }, 
-                        'activeItems.item' // Eager load the actual item relationship
-                    ]);
-            }
-        ])->findOrFail($id);
-
-        // Build array of sections first, then create DataCollection
-        $sectionsArray = [];
-        foreach ($menu->sections as $section) {
-            $sectionsArray[] = MenuSectionWithItemsData::fromModel($section);
-        }
+        $menuWithRelations = $this->menuRepository->findWithSectionsForStructure($id);
         
-        // Create DataCollection from array using collect() method
-        $sections = MenuSectionWithItemsData::collect($sectionsArray, DataCollection::class);
+        if (!$menuWithRelations) {
+            throw new \InvalidArgumentException("Menu with id {$id} not found");
+        }
+
+        // Resolve lazy-loaded sections if needed
+        $sections = $menuWithRelations->sections instanceof \Spatie\LaravelData\Lazy
+            ? $menuWithRelations->sections->resolve()
+            : $menuWithRelations->sections;
+
+        // Check availability using the service
+        $isAvailable = $this->checkMenuAvailability($id);
 
         return new MenuStructureData(
-            id: $menu->id,
-            name: $menu->name,
-            slug: $menu->slug,
-            description: $menu->description,
-            type: $menu->type,
-            isActive: $menu->is_active,
-            isAvailable: $menu->isAvailable(),
+            id: $menuWithRelations->id,
+            name: $menuWithRelations->name,
+            slug: $menuWithRelations->slug,
+            description: $menuWithRelations->description,
+            type: $menuWithRelations->type,
+            isActive: $menuWithRelations->isActive,
+            isAvailable: $isAvailable,
             sections: $sections,
             availability: null, // Will be populated by availability service
-            metadata: $menu->metadata,
+            metadata: $menuWithRelations->metadata,
         );
+    }
+    
+    private function checkMenuAvailability(int $menuId): bool
+    {
+        // This would check availability rules - for now return active status
+        $menu = $this->menuRepository->find($menuId);
+        return $menu ? $menu->isActive : false;
     }
 
     public function saveMenuStructure(int $menuId, SaveMenuStructureData $data): MenuStructureData
     {
         return DB::transaction(function () use ($menuId, $data) {
             // Verify menu exists
-            $menu = Menu::findOrFail($menuId);
+            $menu = $this->menuRepository->findOrFail($menuId);
             
             // Pre-validate structure for duplicate items within sections
             $this->validateSectionItems($data);
@@ -177,24 +179,10 @@ class MenuService implements MenuServiceInterface
             }
 
             // Delete sections that are no longer in the structure
-            // If no sections exist, delete all sections for this menu
-            if (empty($existingSectionIds)) {
-                MenuSection::where('menu_id', $menuId)->delete();
-            } else {
-                MenuSection::where('menu_id', $menuId)
-                    ->whereNotIn('id', $existingSectionIds)
-                    ->delete();
-            }
+            $this->sectionRepository->deleteExcept($menuId, $existingSectionIds);
 
             // Delete items that are no longer in the structure
-            // If no items exist, delete all items for this menu
-            if (empty($existingItemIds)) {
-                MenuItem::where('menu_id', $menuId)->delete();
-            } else {
-                MenuItem::where('menu_id', $menuId)
-                    ->whereNotIn('id', $existingItemIds)
-                    ->delete();
-            }
+            $this->itemRepository->deleteExcept($menuId, $existingItemIds);
 
             // Create version snapshot if versioning is enabled
             if (config('features.menu.versioning')) {
@@ -221,40 +209,43 @@ class MenuService implements MenuServiceInterface
         // Check if this is an existing section or a new one
         // IDs over 1 billion are likely from Date.now() and should be treated as new
         $isNewSection = !$sectionData->id || $sectionData->id > 1000000000;
+        $section = null;
 
         if (!$isNewSection) {
             // Try to find existing section that belongs to this menu
-            $section = MenuSection::where('id', $sectionData->id)
-                ->where('menu_id', $menuId)
-                ->first();
-            $isNewSection = !$section;
+            $sectionDto = $this->sectionRepository->findByIdAndMenuId($sectionData->id, $menuId);
+            $isNewSection = !$sectionDto;
+            $sectionId = $sectionDto ? $sectionDto->id : null;
         }
 
         if ($isNewSection) {
             // Create new section
-            $section = MenuSection::create([
-                'menu_id' => $menuId,
-                'parent_id' => $parentId,
+            $createSectionData = CreateMenuSectionData::from([
+                'menuId' => $menuId,
+                'parentId' => $parentId,
                 'name' => $sectionData->name,
                 'description' => $sectionData->description,
                 'icon' => $sectionData->icon,
-                'is_active' => $sectionData->isActive,
-                'is_featured' => $sectionData->isFeatured,
-                'sort_order' => $sortOrder,
+                'isActive' => $sectionData->isActive,
+                'isFeatured' => $sectionData->isFeatured,
+                'sortOrder' => $sortOrder,
             ]);
-            $existingSectionIds[] = $section->id;
+            $sectionDto = $this->sectionRepository->create($createSectionData);
+            $sectionId = $sectionDto->id;
+            $existingSectionIds[] = $sectionId;
         } else {
             // Update existing section
-            $section->update([
+            $updateSectionData = UpdateMenuSectionData::from([
+                'parentId' => $parentId,
                 'name' => $sectionData->name,
                 'description' => $sectionData->description,
                 'icon' => $sectionData->icon,
-                'is_active' => $sectionData->isActive,
-                'is_featured' => $sectionData->isFeatured,
-                'sort_order' => $sortOrder,
-                'parent_id' => $parentId,
+                'isActive' => $sectionData->isActive,
+                'isFeatured' => $sectionData->isFeatured,
+                'sortOrder' => $sortOrder,
             ]);
-            $existingSectionIds[] = $section->id;
+            $sectionDto = $this->sectionRepository->update($sectionId, $updateSectionData);
+            $existingSectionIds[] = $sectionId;
         }
 
         // Process items in this section - convert DataCollection to array
@@ -267,7 +258,7 @@ class MenuService implements MenuServiceInterface
 
             $this->processSaveItem(
                 $menuId,
-                $section->id,
+                $sectionId,
                 $itemDataObject,
                 (int) $itemIndex,
                 $existingItemIds
@@ -287,14 +278,14 @@ class MenuService implements MenuServiceInterface
                     $menuId,
                     $childDataObject,
                     (int) $childIndex,
-                    $section->id,
+                    $sectionId,
                     $existingSectionIds,
                     $existingItemIds
                 );
             }
         }
 
-        return $section->id;
+        return $sectionId;
     }
 
     private function processSaveItem(
@@ -307,88 +298,67 @@ class MenuService implements MenuServiceInterface
         // Check if this is an existing item or a new one
         // IDs over 1 billion are likely from Date.now() and should be treated as new
         $isNewItem = !$itemData->id || $itemData->id > 1000000000;
-        $item = null;
+        $itemDto = null;
+        $itemId = null;
 
         if (!$isNewItem) {
             // Try to find existing item IN THIS MENU AND SECTION
-            // Items can exist in multiple sections, so we need to check both menu_id and section_id
-            $item = MenuItem::where('id', $itemData->id)
-                ->where('menu_id', $menuId)
-                ->where('menu_section_id', $sectionId)
-                ->first();
+            $itemDto = $this->itemRepository->findByIdInMenuAndSection($itemData->id, $menuId, $sectionId);
             
-            // If the item exists but in a different section, treat as new item in this section
-            if (!$item) {
+            if (!$itemDto) {
                 // Check if it exists in a different section
-                $itemInDifferentSection = MenuItem::where('id', $itemData->id)
-                    ->where('menu_id', $menuId)
-                    ->first();
-                    
-                if ($itemInDifferentSection) {
+                $itemInDifferentSection = $this->itemRepository->find($itemData->id);
+                if ($itemInDifferentSection && $itemInDifferentSection->menuId === $menuId) {
                     // The item ID exists but in a different section
-                    // We'll create a new item in this section
                     $isNewItem = true;
                 } else {
                     // The item doesn't exist at all in this menu
                     $isNewItem = true;
                 }
+            } else {
+                $itemId = $itemDto->id;
             }
         }
 
+        $itemValues = [
+            'menu_id' => $menuId,
+            'menu_section_id' => $sectionId,
+            'item_id' => $itemData->itemId,
+            'display_name' => $itemData->displayName,
+            'display_description' => $itemData->displayDescription,
+            'price_override' => $itemData->priceOverride,
+            'is_active' => true,
+            'is_featured' => $itemData->isFeatured,
+            'is_recommended' => $itemData->isRecommended,
+            'is_new' => $itemData->isNew,
+            'is_seasonal' => $itemData->isSeasonal,
+            'sort_order' => $sortOrder,
+        ];
+
         if ($isNewItem) {
             // Check if this item_id already exists in THIS SPECIFIC SECTION
-            // Items can exist in multiple sections, but not duplicates within the same section
-            $existingMenuItemInSection = MenuItem::where('menu_id', $menuId)
-                ->where('menu_section_id', $sectionId)
-                ->where('item_id', $itemData->itemId)
-                ->first();
+            $existingMenuItemInSection = $this->itemRepository->findByItemIdInMenuAndSection(
+                $itemData->itemId, 
+                $menuId, 
+                $sectionId
+            );
                 
             if ($existingMenuItemInSection) {
                 // Item already exists in this section, update it instead of creating duplicate
-                $existingMenuItemInSection->update([
-                    'display_name' => $itemData->displayName,
-                    'display_description' => $itemData->displayDescription,
-                    'price_override' => $itemData->priceOverride,
-                    'is_featured' => $itemData->isFeatured,
-                    'is_recommended' => $itemData->isRecommended,
-                    'is_new' => $itemData->isNew,
-                    'is_seasonal' => $itemData->isSeasonal,
-                    'sort_order' => $sortOrder,
-                ]);
-                $existingItemIds[] = $existingMenuItemInSection->id;
+                $updateData = UpdateMenuItemData::from($itemValues);
+                $updatedItem = $this->itemRepository->update($existingMenuItemInSection->id, $updateData);
+                $existingItemIds[] = $updatedItem->id;
             } else {
                 // Create new item in this section
-                // This allows the same item_id to exist in multiple sections
-                $item = MenuItem::create([
-                    'menu_id' => $menuId,
-                    'menu_section_id' => $sectionId,
-                    'item_id' => $itemData->itemId,
-                    'display_name' => $itemData->displayName,
-                    'display_description' => $itemData->displayDescription,
-                    'price_override' => $itemData->priceOverride,
-                    'is_active' => true,
-                    'is_featured' => $itemData->isFeatured,
-                    'is_recommended' => $itemData->isRecommended,
-                    'is_new' => $itemData->isNew,
-                    'is_seasonal' => $itemData->isSeasonal,
-                    'sort_order' => $sortOrder,
-                ]);
-                $existingItemIds[] = $item->id;
+                $createData = CreateMenuItemData::from($itemValues);
+                $newItem = $this->itemRepository->create($createData);
+                $existingItemIds[] = $newItem->id;
             }
         } else {
-            // Update existing item (we already have $item from the query above)
-            // Keep it in the same section
-            $item->update([
-                'display_name' => $itemData->displayName,
-                'display_description' => $itemData->displayDescription,
-                'price_override' => $itemData->priceOverride,
-                'is_featured' => $itemData->isFeatured,
-                'is_recommended' => $itemData->isRecommended,
-                'is_new' => $itemData->isNew,
-                'is_seasonal' => $itemData->isSeasonal,
-                'sort_order' => $sortOrder,
-            ]);
-            $existingItemIds[] = $item->id;
+            // Update existing item
+            $updateData = UpdateMenuItemData::from($itemValues);
+            $updatedItem = $this->itemRepository->update($itemId, $updateData);
+            $existingItemIds[] = $updatedItem->id;
         }
     }
 
@@ -398,10 +368,8 @@ class MenuService implements MenuServiceInterface
         $structure = $this->getMenuStructure($menuId);
 
         // Apply location-specific overrides
-        $locationMenu = Menu::find($menuId)
-            ->locations()
-            ->where('location_id', $locationId)
-            ->first();
+        $locations = $this->locationRepository->getMenuLocations($menuId);
+        $locationMenu = $locations->first(fn($loc) => $loc->locationId === $locationId);
 
         if ($locationMenu && $locationMenu->overrides) {
             // Apply overrides to structure
@@ -433,43 +401,20 @@ class MenuService implements MenuServiceInterface
 
     public function assignToLocations(int $menuId, array $locationIds): bool
     {
-        $menu = Menu::findOrFail($menuId);
-
-        foreach ($locationIds as $locationId) {
-            $menu->locations()->updateOrCreate(
-                ['location_id' => $locationId],
-                ['is_active' => true, 'activated_at' => now()]
-            );
-        }
-
-        return true;
+        // Verify menu exists
+        $this->menuRepository->findOrFail($menuId);
+        
+        return $this->locationRepository->assignToLocations($menuId, $locationIds);
     }
 
     public function removeFromLocation(int $menuId, int $locationId): bool
     {
-        return Menu::find($menuId)
-            ->locations()
-            ->where('location_id', $locationId)
-            ->delete() > 0;
+        return $this->locationRepository->removeFromLocation($menuId, $locationId);
     }
 
     public function setPrimaryForLocation(int $menuId, int $locationId): bool
     {
-        DB::transaction(function () use ($menuId, $locationId) {
-            // Remove primary status from other menus at this location
-            DB::table('menu_locations')
-                ->where('location_id', $locationId)
-                ->where('is_primary', true)
-                ->update(['is_primary' => false]);
-
-            // Set this menu as primary
-            DB::table('menu_locations')
-                ->where('menu_id', $menuId)
-                ->where('location_id', $locationId)
-                ->update(['is_primary' => true]);
-        });
-
-        return true;
+        return $this->locationRepository->setPrimaryForLocation($menuId, $locationId);
     }
 
     public function validateMenuStructure(int $menuId): array
@@ -477,7 +422,7 @@ class MenuService implements MenuServiceInterface
         $errors = [];
         $warnings = [];
 
-        $menu = Menu::with(['sections.items'])->find($menuId);
+        $menu = $this->menuRepository->findWithRelations($menuId);
 
         if (!$menu) {
             return ['errors' => ['Menu not found'], 'warnings' => []];
@@ -684,60 +629,78 @@ class MenuService implements MenuServiceInterface
     public function addItemsToSection(int $sectionId, array $items): void
     {
         foreach ($items as $itemData) {
-            MenuItem::create([
-                'menu_section_id' => $sectionId,
-                'item_id' => $itemData['itemId'],
-                'price' => $itemData['price'] ?? null,
-                'sort_order' => $itemData['sortOrder'] ?? 0,
-                'is_available' => $itemData['isAvailable'] ?? true,
-                'is_featured' => $itemData['isFeatured'] ?? false,
-            ]);
+            $createData = new CreateMenuItemData(
+                menuId: 0, // Will be set by repository based on section
+                menuSectionId: $sectionId,
+                itemId: $itemData['itemId'],
+                priceOverride: $itemData['price'] ?? null,
+                sortOrder: $itemData['sortOrder'] ?? 0,
+                isActive: $itemData['isAvailable'] ?? true,
+                isFeatured: $itemData['isFeatured'] ?? false,
+            );
+            
+            $this->itemRepository->createInSection($sectionId, $createData);
         }
     }
 
     public function removeItemFromSection(int $sectionId, int $itemId): bool
     {
-        return MenuItem::where('menu_section_id', $sectionId)
-            ->where('item_id', $itemId)
-            ->delete() > 0;
+        return $this->itemRepository->deleteFromSection($sectionId, $itemId);
     }
 
+    /**
+     * Get menu items for a section.
+     * 
+     * Note: Item enrichment should be handled at the application layer
+     * or through event-driven architecture to maintain module boundaries.
+     * 
+     * @param int $sectionId
+     * @return array
+     */
     public function getSectionItems(int $sectionId): array
     {
-        $items = MenuItem::where('menu_section_id', $sectionId)
-            ->with(['modifiers'])
-            ->orderBy('sort_order')
-            ->get();
-
-        return $items->map(function ($item) {
-            // Get item details from item module if available
-            if (app()->bound(ItemRepositoryInterface::class) && $item->item_id) {
-                $itemRepository = app(ItemRepositoryInterface::class);
-                $itemData = $itemRepository->find($item->item_id);
-                if ($itemData) {
-                    $item->item_details = $itemData;
-                }
-            }
-
-            return $item;
-        })->toArray();
+        $items = $this->itemRepository->findBySection($sectionId);
+        return $items->toArray();
     }
 
     public function updateItemModifiers(int $itemId, array $modifiers): void
     {
-        $menuItem = MenuItem::findOrFail($itemId);
-
-        // Clear existing modifiers
-        $menuItem->modifiers()->delete();
-
-        // Add new modifiers
-        foreach ($modifiers as $modifier) {
-            $menuItem->modifiers()->create([
-                'modifier_id' => $modifier['modifierId'],
-                'is_available' => $modifier['isAvailable'] ?? true,
-                'price_override' => $modifier['priceOverride'] ?? null,
-                'is_default' => $modifier['isDefault'] ?? false,
-            ]);
+        // This method should be moved to a ModifierService when the modifier module is implemented
+        // For now, we'll throw an exception as modifiers should be handled by their own module
+        // Parameters are kept for interface compatibility but not used
+        unset($itemId, $modifiers);
+        
+        throw new \BadMethodCallException(
+            'Modifier management should be handled by the Modifier module. ' .
+            'This method will be removed once the Modifier module is implemented.'
+        );
+    }
+    
+    /**
+     * Get menu item with details from item module
+     * This method enriches menu items with details from the item module
+     */
+    public function getMenuItemWithDetails(int $menuItemId): ?MenuItemData
+    {
+        $menuItem = $this->itemRepository->find($menuItemId);
+        
+        if (!$menuItem) {
+            return null;
         }
+        
+        // If item repository is available, enrich with item details
+        if ($this->itemDetailsRepository) {
+            $itemDetails = $this->itemDetailsRepository->getItemDetails($menuItem->itemId);
+            
+            if ($itemDetails) {
+                // Return menu item with enriched details from repository
+                $enrichedMenuItem = $this->itemRepository->find($menuItem->id);
+                if ($enrichedMenuItem) {
+                    return MenuItemData::fromModel($enrichedMenuItem, $itemDetails);
+                }
+            }
+        }
+        
+        return $menuItem;
     }
 }

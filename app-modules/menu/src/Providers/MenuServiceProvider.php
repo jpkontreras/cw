@@ -8,12 +8,17 @@ use Illuminate\Support\ServiceProvider;
 use Colame\Menu\Contracts\MenuRepositoryInterface;
 use Colame\Menu\Contracts\MenuSectionRepositoryInterface;
 use Colame\Menu\Contracts\MenuItemRepositoryInterface;
+use Colame\Menu\Contracts\MenuLocationRepositoryInterface;
 use Colame\Menu\Contracts\MenuAvailabilityInterface;
 use Colame\Menu\Contracts\MenuVersioningInterface;
 use Colame\Menu\Contracts\MenuServiceInterface;
 use Colame\Menu\Repositories\MenuRepository;
 use Colame\Menu\Repositories\MenuSectionRepository;
 use Colame\Menu\Repositories\MenuItemRepository;
+use Colame\Menu\Repositories\MenuLocationRepository;
+use Colame\Menu\Services\MenuAvailabilityService;
+use Colame\Menu\Services\MenuVersioningService;
+use Colame\Menu\Services\MenuService;
 
 class MenuServiceProvider extends ServiceProvider
 {
@@ -32,11 +37,12 @@ class MenuServiceProvider extends ServiceProvider
         $this->app->bind(MenuRepositoryInterface::class, MenuRepository::class);
         $this->app->bind(MenuSectionRepositoryInterface::class, MenuSectionRepository::class);
         $this->app->bind(MenuItemRepositoryInterface::class, MenuItemRepository::class);
+        $this->app->bind(MenuLocationRepositoryInterface::class, MenuLocationRepository::class);
         
         // Bind services
-        $this->app->bind(MenuAvailabilityInterface::class, \Colame\Menu\Services\MenuAvailabilityService::class);
-        $this->app->bind(MenuVersioningInterface::class, \Colame\Menu\Services\MenuVersioningService::class);
-        $this->app->bind(MenuServiceInterface::class, \Colame\Menu\Services\MenuService::class);
+        $this->app->bind(MenuAvailabilityInterface::class, MenuAvailabilityService::class);
+        $this->app->bind(MenuVersioningInterface::class, MenuVersioningService::class);
+        $this->app->bind(MenuServiceInterface::class, MenuService::class);
     }
     
     /**

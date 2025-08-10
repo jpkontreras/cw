@@ -26,10 +26,10 @@ class MenuSectionWithItemsData extends BaseData
         public readonly bool $isAvailable,
         
         #[DataCollectionOf(MenuItemData::class)]
-        public readonly DataCollection $items,
+        public readonly Lazy|DataCollection $items,
         
         #[DataCollectionOf(MenuSectionWithItemsData::class)]
-        public readonly DataCollection $children,
+        public readonly Lazy|DataCollection $children,
         
         public readonly ?array $metadata,
     ) {}
@@ -48,8 +48,12 @@ class MenuSectionWithItemsData extends BaseData
             isFeatured: $section->is_featured,
             sortOrder: $section->sort_order,
             isAvailable: $section->isAvailable(),
-            items: MenuItemData::collect($section->activeItems, DataCollection::class),
-            children: self::collect($section->children, DataCollection::class),
+            items: Lazy::whenLoaded('activeItems', $section,
+                fn() => MenuItemData::collect($section->activeItems, DataCollection::class)
+            ),
+            children: Lazy::whenLoaded('children', $section,
+                fn() => self::collect($section->children, DataCollection::class)
+            ),
             metadata: $section->metadata,
         );
     }

@@ -63,21 +63,28 @@ class MenuItemData extends BaseData
         return !empty($this->dietaryLabels) || !empty($this->allergenInfo);
     }
     
-    public static function fromModel(MenuItem $item): self
+    /**
+     * Create from Eloquent model
+     * 
+     * @param MenuItem $item The menu item model
+     * @param object|null $itemDetails Optional item details from item module (passed via service layer)
+     */
+    public static function fromModel(MenuItem $item, ?object $itemDetails = null): self
     {
-        // Get display values from the item relationship if not overridden
-        $displayName = $item->display_name ?: ($item->item ? $item->item->name : null);
-        $displayDescription = $item->display_description ?: ($item->item ? $item->item->description : null);
+        // Use display overrides if set, otherwise use provided item details
+        $displayName = $item->display_name ?: ($itemDetails?->name ?? null);
+        $displayDescription = $item->display_description ?: ($itemDetails?->description ?? null);
         
         // Ensure price is properly cast to float or null
         $price = null;
         if ($item->price_override !== null) {
             $price = is_numeric($item->price_override) ? (float) $item->price_override : null;
-        } elseif ($item->item && $item->item->base_price !== null) {
-            $price = is_numeric($item->item->base_price) ? (float) $item->item->base_price : null;
+        } elseif ($itemDetails && isset($itemDetails->basePrice)) {
+            $price = is_numeric($itemDetails->basePrice) ? (float) $itemDetails->basePrice : null;
         }
         
-        $imageUrl = $item->image_url ?: ($item->item ? $item->item->image_url : null);
+        // Use image override if set, otherwise use provided item details
+        $imageUrl = $item->image_url ?: ($itemDetails?->imageUrl ?? null);
         
         return new self(
             id: $item->id,
@@ -103,14 +110,29 @@ class MenuItemData extends BaseData
             metadata: $item->metadata,
             createdAt: $item->created_at,
             updatedAt: $item->updated_at,
-            baseItem: $item->item ? (object) [
-                'name' => $item->item->name,
-                'description' => $item->item->description,
-                'basePrice' => (float) $item->item->base_price,
-                'preparationTime' => $item->item->preparation_time,
-                'category' => null, // TODO: Add category from taxonomy module
-                'imageUrl' => null, // TODO: Add image handling
+            baseItem: $itemDetails ? (object) [
+                'name' => $itemDetails->name ?? null,
+                'description' => $itemDetails->description ?? null,
+                'basePrice' => isset($itemDetails->basePrice) ? (float) $itemDetails->basePrice : null,
+                'preparationTime' => $itemDetails->preparationTime ?? null,
+                'category' => $itemDetails->category ?? null,
+                'imageUrl' => $itemDetails->imageUrl ?? null,
             ] : null,
         );
+    }
+    
+    /**
+     * Magic creation method for Laravel-data compatibility
+     * This ensures that collect() and other automatic conversions work properly
+     */
+    public static function from(mixed ...$payloads): static
+    {
+        // If the first payload is a MenuItem model, use our custom fromModel method
+        if (count($payloads) === 1 && $payloads[0] instanceof MenuItem) {
+            return static::fromModel($payloads[0], null);
+        }
+        
+        // Otherwise, use the parent implementation
+        return parent::from(...$payloads);
     }
 }

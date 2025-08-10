@@ -23,12 +23,20 @@ class MenuAvailabilityController extends Controller
      */
     public function check(int $menuId, Request $request): JsonResponse
     {
-        $request->validate([
-            'datetime' => 'nullable|date',
-            'location_id' => 'nullable|integer',
-        ]);
-        
-        $datetime = $request->input('datetime') ? Carbon::parse($request->input('datetime')) : now();
+        // Manual validation for simple optional fields
+        $datetimeInput = $request->input('datetime');
+        if ($datetimeInput) {
+            try {
+                $datetime = Carbon::parse($datetimeInput);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid datetime format',
+                ], 422);
+            }
+        } else {
+            $datetime = now();
+        }
         $locationId = $request->input('location_id');
         
         $isAvailable = $this->availabilityService->isMenuAvailableAtTime($menuId, $datetime, $locationId);
@@ -51,14 +59,16 @@ class MenuAvailabilityController extends Controller
      */
     public function schedule(int $menuId, Request $request): JsonResponse
     {
-        $request->validate([
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'location_id' => 'nullable|integer',
-        ]);
-        
-        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : now();
-        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : now()->addDays(7);
+        // Manual validation for date fields
+        try {
+            $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : now();
+            $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : now()->addDays(7);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid date format',
+            ], 422);
+        }
         $locationId = $request->input('location_id');
         
         $schedule = [];
@@ -95,12 +105,8 @@ class MenuAvailabilityController extends Controller
      */
     public function current(Request $request): JsonResponse
     {
-        $request->validate([
-            'location_id' => 'nullable|integer',
-            'type' => 'nullable|string',
-        ]);
-        
-        $locationId = $request->input('location_id');
+        // Simple input retrieval without validation for optional fields
+        $locationId = $request->input('location_id') ? (int) $request->input('location_id') : null;
         $type = $request->input('type');
         
         $menus = $this->menuRepository->all();
@@ -146,12 +152,15 @@ class MenuAvailabilityController extends Controller
      */
     public function byLocation(int $locationId, Request $request): JsonResponse
     {
-        $request->validate([
-            'datetime' => 'nullable|date',
-            'include_inactive' => 'nullable|boolean',
-        ]);
-        
-        $datetime = $request->input('datetime') ? Carbon::parse($request->input('datetime')) : now();
+        // Manual validation for datetime field
+        try {
+            $datetime = $request->input('datetime') ? Carbon::parse($request->input('datetime')) : now();
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid datetime format',
+            ], 422);
+        }
         $includeInactive = $request->boolean('include_inactive', false);
         
         $menus = $this->menuRepository->all();

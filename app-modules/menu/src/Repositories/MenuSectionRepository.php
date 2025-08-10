@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Colame\Menu\Repositories;
 
 use Colame\Menu\Contracts\MenuSectionRepositoryInterface;
+use Colame\Menu\Data\CreateMenuSectionData;
 use Colame\Menu\Data\MenuSectionData;
 use Colame\Menu\Data\MenuSectionWithItemsData;
+use Colame\Menu\Data\UpdateMenuSectionData;
 use Colame\Menu\Models\MenuSection;
 use Spatie\LaravelData\DataCollection;
 
@@ -60,16 +62,16 @@ class MenuSectionRepository implements MenuSectionRepositoryInterface
         return MenuSectionData::collect($sections, DataCollection::class);
     }
     
-    public function create(array $data): MenuSectionData
+    public function create(CreateMenuSectionData $data): MenuSectionData
     {
-        $section = MenuSection::create($data);
+        $section = MenuSection::create($data->toArray());
         return MenuSectionData::fromModel($section);
     }
     
-    public function update(int $id, array $data): MenuSectionData
+    public function update(int $id, UpdateMenuSectionData $data): MenuSectionData
     {
         $section = MenuSection::findOrFail($id);
-        $section->update($data);
+        $section->update($data->toArray());
         return MenuSectionData::fromModel($section);
     }
     
@@ -113,6 +115,31 @@ class MenuSectionRepository implements MenuSectionRepositoryInterface
         return true;
     }
     
+    public function findByIdAndMenuId(int $id, int $menuId): ?MenuSectionData
+    {
+        $section = MenuSection::where('id', $id)
+            ->where('menu_id', $menuId)
+            ->first();
+        return $section ? MenuSectionData::fromModel($section) : null;
+    }
+    
+    public function updateOrCreate(array $attributes, array $values): MenuSectionData
+    {
+        $section = MenuSection::updateOrCreate($attributes, $values);
+        return MenuSectionData::fromModel($section);
+    }
+    
+    public function deleteExcept(int $menuId, array $exceptIds): int
+    {
+        if (empty($exceptIds)) {
+            return MenuSection::where('menu_id', $menuId)->delete();
+        }
+        
+        return MenuSection::where('menu_id', $menuId)
+            ->whereNotIn('id', $exceptIds)
+            ->delete();
+    }
+    
     private function isDescendant(int $parentId, int $possibleDescendantId): bool
     {
         $section = MenuSection::find($possibleDescendantId);
@@ -125,5 +152,11 @@ class MenuSectionRepository implements MenuSectionRepositoryInterface
         }
         
         return false;
+    }
+    
+    public function isActive(int $id): bool
+    {
+        $section = MenuSection::find($id);
+        return $section ? $section->is_active : false;
     }
 }

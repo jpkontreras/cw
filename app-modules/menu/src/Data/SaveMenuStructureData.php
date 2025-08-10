@@ -7,11 +7,12 @@ namespace Colame\Menu\Data;
 use App\Core\Data\BaseData;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Lazy;
 
 class SaveMenuStructureData extends BaseData
 {
     public function __construct(
         #[DataCollectionOf(SaveMenuSectionData::class)]
-        public readonly ?DataCollection $sections = null,
+        public readonly Lazy|DataCollection $sections,
     ) {}
 }

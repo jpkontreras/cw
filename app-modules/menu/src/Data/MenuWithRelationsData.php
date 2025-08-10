@@ -25,7 +25,7 @@ class MenuWithRelationsData extends BaseData
         public readonly ?\DateTimeInterface $availableUntil,
         public readonly ?array $metadata,
         
-        #[DataCollectionOf(MenuSectionData::class)]
+        #[DataCollectionOf(MenuSectionWithItemsData::class)]
         public readonly Lazy|DataCollection $sections,
         
         #[DataCollectionOf(MenuItemData::class)]
@@ -55,8 +55,8 @@ class MenuWithRelationsData extends BaseData
             availableFrom: $menu->available_from,
             availableUntil: $menu->available_until,
             metadata: $menu->metadata,
-            sections: Lazy::whenLoaded('sections', $menu, 
-                fn() => MenuSectionData::collect($menu->sections, DataCollection::class)
+            sections: Lazy::whenLoaded('sections', $menu,
+                fn() => MenuSectionWithItemsData::collect($menu->sections, DataCollection::class)
             ),
             items: Lazy::whenLoaded('items', $menu,
                 fn() => MenuItemData::collect($menu->items, DataCollection::class)

@@ -81,16 +81,26 @@ class MenuSectionController extends Controller
      */
     public function reorder(Request $request, int $menuId): JsonResponse
     {
-        $request->validate([
-            'sections' => 'required|array',
-            'sections.*.id' => 'required|integer',
-            'sections.*.sortOrder' => 'required|integer|min:0',
-        ]);
+        $sections = $request->input('sections', []);
         
-        foreach ($request->input('sections') as $sectionData) {
-            $this->sectionRepository->update($sectionData['id'], [
-                'sortOrder' => $sectionData['sortOrder'],
+        if (empty($sections)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No sections provided for reordering',
+            ], 422);
+        }
+        
+        foreach ($sections as $sectionData) {
+            if (!isset($sectionData['id']) || !isset($sectionData['sortOrder'])) {
+                continue;
+            }
+            
+            // Create UpdateMenuSectionData with just sort order
+            $updateData = UpdateMenuSectionData::from([
+                'sortOrder' => (int) $sectionData['sortOrder'],
             ]);
+            
+            $this->sectionRepository->update($sectionData['id'], $updateData);
         }
         
         return response()->json([

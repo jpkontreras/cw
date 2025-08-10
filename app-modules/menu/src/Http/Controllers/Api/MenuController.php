@@ -5,17 +5,24 @@ declare(strict_types=1);
 namespace Colame\Menu\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Core\Traits\HandlesPaginationBounds;
 use Colame\Menu\Contracts\MenuServiceInterface;
 use Colame\Menu\Contracts\MenuRepositoryInterface;
 use Colame\Menu\Contracts\MenuAvailabilityInterface;
 use Colame\Menu\Data\CreateMenuData;
 use Colame\Menu\Data\UpdateMenuData;
+use Colame\Menu\Data\DuplicateMenuData;
+use Colame\Menu\Data\MenuFilterData;
+use Colame\Menu\Data\AvailabilityCheckData;
+use Colame\Menu\Data\MenuLocationFilterData;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class MenuController extends Controller
 {
+    use HandlesPaginationBounds;
+    
     public function __construct(
         private MenuServiceInterface $menuService,
         private MenuRepositoryInterface $menuRepository,
@@ -27,34 +34,29 @@ class MenuController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $request->validate([
-            'location_id' => 'nullable|integer',
-            'type' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-            'available_now' => 'nullable|boolean',
-        ]);
+        $filters = MenuFilterData::from($request);
         
         $menus = $this->menuRepository->all();
         
         // Filter by location if provided
-        if ($request->has('location_id')) {
-            $menus = $menus->filter(function ($menu) use ($request) {
-                return $menu->locations->contains('location_id', $request->location_id);
+        if ($filters->locationId !== null) {
+            $menus = $menus->filter(function ($menu) use ($filters) {
+                return $menu->locations->contains('location_id', $filters->locationId);
             });
         }
         
         // Filter by type if provided
-        if ($request->has('type')) {
-            $menus = $menus->where('type', $request->type);
+        if ($filters->type !== null) {
+            $menus = $menus->where('type', $filters->type);
         }
         
         // Filter by active status
-        if ($request->has('is_active')) {
-            $menus = $menus->where('isActive', $request->boolean('is_active'));
+        if ($filters->isActive !== null) {
+            $menus = $menus->where('isActive', $filters->isActive);
         }
         
         // Filter by current availability
-        if ($request->boolean('available_now')) {
+        if ($filters->availableNow === true) {
             $menus = $menus->filter(function ($menu) {
                 return $this->availabilityService->isMenuAvailable($menu->id);
             });
@@ -230,13 +232,10 @@ class MenuController extends Controller
      */
     public function availability(int $id, Request $request): JsonResponse
     {
-        $request->validate([
-            'location_id' => 'nullable|integer',
-            'datetime' => 'nullable|date',
-        ]);
+        $data = AvailabilityCheckData::from($request);
         
-        $locationId = $request->input('location_id');
-        $datetime = $request->input('datetime') ? \Carbon\Carbon::parse($request->input('datetime')) : now();
+        $locationId = $data->locationId;
+        $datetime = $data->getDateTime();
         
         $isAvailable = $this->availabilityService->isMenuAvailableAtTime($id, $datetime, $locationId);
         $availability = $this->availabilityService->getMenuAvailability($id);
@@ -258,16 +257,14 @@ class MenuController extends Controller
      */
     public function active(Request $request): JsonResponse
     {
-        $request->validate([
-            'location_id' => 'nullable|integer',
-        ]);
+        $filter = MenuLocationFilterData::from($request);
         
         $menus = $this->menuRepository->all()->where('isActive', true);
         
         // Filter by location if provided
-        if ($request->has('location_id')) {
-            $menus = $menus->filter(function ($menu) use ($request) {
-                return $menu->locations->contains('location_id', $request->location_id);
+        if ($filter->locationId !== null) {
+            $menus = $menus->filter(function ($menu) use ($filter) {
+                return $menu->locations->contains('location_id', $filter->locationId);
             });
         }
         
@@ -321,11 +318,9 @@ class MenuController extends Controller
      */
     public function getDefault(Request $request): JsonResponse
     {
-        $request->validate([
-            'location_id' => 'nullable|integer',
-        ]);
+        $filter = MenuLocationFilterData::from($request);
         
-        $locationId = $request->input('location_id');
+        $locationId = $filter->locationId;
         
         // Get default menu, optionally filtered by location
         $menu = $this->menuRepository->all()
@@ -360,12 +355,10 @@ class MenuController extends Controller
      */
     public function duplicate(Request $request, int $id): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $data = DuplicateMenuData::validateAndCreate($request);
         
         try {
-            $menu = $this->menuService->duplicateMenu($id, $request->input('name'));
+            $menu = $this->menuService->duplicateMenu($id, $data->name);
             
             return response()->json([
                 'success' => true,

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Colame\Menu\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Core\Traits\HandlesPaginationBounds;
 use Colame\Menu\Contracts\MenuServiceInterface;
 use Colame\Menu\Contracts\MenuRepositoryInterface;
 use Colame\Menu\Contracts\MenuAvailabilityInterface;
 use Colame\Menu\Data\CreateMenuData;
 use Colame\Menu\Data\UpdateMenuData;
+use Colame\Menu\Data\DuplicateMenuData;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -17,6 +19,8 @@ use Inertia\Response;
 
 class MenuController extends Controller
 {
+    use HandlesPaginationBounds;
+    
     public function __construct(
         private MenuServiceInterface $menuService,
         private MenuRepositoryInterface $menuRepository,
@@ -136,11 +140,9 @@ class MenuController extends Controller
     
     public function duplicate(Request $request, int $id): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $data = DuplicateMenuData::validateAndCreate($request);
         
-        $menu = $this->menuService->duplicateMenu($id, $request->name);
+        $menu = $this->menuService->duplicateMenu($id, $data->name);
         
         return redirect()->route('menu.edit', $menu->id)
             ->with('success', 'Menu duplicated successfully');

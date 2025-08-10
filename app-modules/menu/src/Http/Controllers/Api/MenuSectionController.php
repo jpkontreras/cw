@@ -82,11 +82,10 @@ class MenuSectionController extends Controller
     public function store(Request $request, int $menuId): JsonResponse
     {
         try {
-            $data = CreateMenuSectionData::validateAndCreate(
-                array_merge($request->all(), ['menuId' => $menuId])
-            );
+            $request->merge(['menuId' => $menuId]);
+            $data = CreateMenuSectionData::validateAndCreate($request);
             
-            $section = $this->sectionRepository->create($data->toArray());
+            $section = $this->sectionRepository->create($data);
             
             return response()->json([
                 'success' => true,
@@ -118,7 +117,7 @@ class MenuSectionController extends Controller
             }
             
             $data = UpdateMenuSectionData::validateAndCreate($request);
-            $updated = $this->sectionRepository->update($sectionId, $data->toArray());
+            $updated = $this->sectionRepository->update($sectionId, $data);
             
             return response()->json([
                 'success' => true,
@@ -166,20 +165,27 @@ class MenuSectionController extends Controller
      */
     public function reorder(Request $request, int $menuId): JsonResponse
     {
-        $request->validate([
-            'sections' => 'required|array',
-            'sections.*.id' => 'required|integer',
-            'sections.*.sortOrder' => 'required|integer|min:0',
-        ]);
+        $sections = $request->input('sections', []);
+        
+        if (empty($sections)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No sections provided for reordering',
+            ], 422);
+        }
         
         try {
-            foreach ($request->input('sections') as $sectionData) {
+            foreach ($sections as $sectionData) {
+                if (!isset($sectionData['id']) || !isset($sectionData['sortOrder'])) {
+                    continue;
+                }
                 $section = $this->sectionRepository->find($sectionData['id']);
                 
                 if ($section && $section->menuId === $menuId) {
-                    $this->sectionRepository->update($sectionData['id'], [
-                        'sortOrder' => $sectionData['sortOrder'],
+                    $updateData = UpdateMenuSectionData::from([
+                        'sortOrder' => (int) $sectionData['sortOrder'],
                     ]);
+                    $this->sectionRepository->update($sectionData['id'], $updateData);
                 }
             }
             
@@ -201,12 +207,14 @@ class MenuSectionController extends Controller
      */
     public function addItems(Request $request, int $menuId, int $sectionId): JsonResponse
     {
-        $request->validate([
-            'items' => 'required|array',
-            'items.*.itemId' => 'required|integer',
-            'items.*.price' => 'nullable|numeric|min:0',
-            'items.*.sortOrder' => 'nullable|integer|min:0',
-        ]);
+        $items = $request->input('items', []);
+        
+        if (empty($items)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items provided to add',
+            ], 422);
+        }
         
         try {
             $section = $this->sectionRepository->find($sectionId);

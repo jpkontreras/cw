@@ -6,7 +6,9 @@ namespace Colame\Menu\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Colame\Menu\Contracts\MenuServiceInterface;
-use Colame\Menu\Models\MenuItem;
+use Colame\Menu\Contracts\MenuItemRepositoryInterface;
+use Colame\Menu\Data\CreateMenuItemData;
+use Colame\Menu\Data\UpdateMenuItemData;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -15,6 +17,7 @@ class MenuItemController extends Controller
 {
     public function __construct(
         private MenuServiceInterface $menuService,
+        private MenuItemRepositoryInterface $itemRepository,
     ) {}
     
     /**
@@ -22,16 +25,11 @@ class MenuItemController extends Controller
      */
     public function index(int $menuId): JsonResponse
     {
-        $items = MenuItem::whereHas('section', function ($query) use ($menuId) {
-            $query->where('menu_id', $menuId);
-        })
-            ->with(['section', 'modifiers'])
-            ->orderBy('sort_order')
-            ->get();
+        $items = $this->itemRepository->getByMenuWithRelations($menuId, ['section', 'modifiers']);
         
         return response()->json([
             'success' => true,
-            'data' => $items,
+            'data' => $items->toArray(),
         ]);
     }
     
@@ -40,18 +38,11 @@ class MenuItemController extends Controller
      */
     public function featured(int $menuId): JsonResponse
     {
-        $items = MenuItem::whereHas('section', function ($query) use ($menuId) {
-            $query->where('menu_id', $menuId);
-        })
-            ->where('is_featured', true)
-            ->where('is_available', true)
-            ->with(['section', 'modifiers'])
-            ->orderBy('sort_order')
-            ->get();
+        $items = $this->itemRepository->getFeaturedAvailableByMenu($menuId);
         
         return response()->json([
             'success' => true,
-            'data' => $items,
+            'data' => $items->toArray(),
         ]);
     }
     
@@ -60,46 +51,31 @@ class MenuItemController extends Controller
      */
     public function store(Request $request, int $menuId): JsonResponse
     {
-        $request->validate([
-            'section_id' => 'required|integer',
-            'item_id' => 'required|integer',
-            'price' => 'nullable|numeric|min:0',
-            'custom_name' => 'nullable|string|max:255',
-            'custom_description' => 'nullable|string',
-            'is_featured' => 'nullable|boolean',
-            'is_available' => 'nullable|boolean',
-            'sort_order' => 'nullable|integer|min:0',
-        ]);
+        // Add menu_id to request data
+        $request->merge(['menu_id' => $menuId]);
+        
+        // Create data object with validation
+        $data = CreateMenuItemData::validateAndCreate($request);
         
         try {
             // Verify section belongs to menu
-            $sectionExists = MenuItem::whereHas('section', function ($query) use ($menuId, $request) {
-                $query->where('menu_id', $menuId)
-                    ->where('id', $request->section_id);
-            })->exists();
-            
-            if (!$sectionExists) {
+            if (!$this->itemRepository->sectionExistsInMenu($data->menuSectionId, $menuId)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Section not found in this menu',
                 ], 404);
             }
             
-            $item = MenuItem::create([
-                'menu_section_id' => $request->section_id,
-                'item_id' => $request->item_id,
-                'price' => $request->price,
-                'custom_name' => $request->custom_name,
-                'custom_description' => $request->custom_description,
-                'is_featured' => $request->is_featured ?? false,
-                'is_available' => $request->is_available ?? true,
-                'sort_order' => $request->sort_order ?? 0,
-            ]);
+            // Create the item using repository
+            $item = $this->itemRepository->create($data);
+            
+            // Get item with relations
+            $itemWithRelations = $this->itemRepository->findWithModifiers($item->id);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Menu item created successfully',
-                'data' => $item->fresh(['section', 'modifiers']),
+                'data' => $itemWithRelations?->toArray(),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -113,23 +89,15 @@ class MenuItemController extends Controller
     /**
      * Delete a menu item
      */
-    public function destroy(int $menuId, int $itemId): Response
+    public function destroy(int $menuId, int $itemId): Response|JsonResponse
     {
         try {
-            $item = MenuItem::where('id', $itemId)
-                ->whereHas('section', function ($query) use ($menuId) {
-                    $query->where('menu_id', $menuId);
-                })
-                ->first();
-            
-            if (!$item) {
+            if (!$this->itemRepository->deleteByIdInMenu($itemId, $menuId)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Menu item not found',
                 ], 404);
             }
-            
-            $item->delete();
             
             return response()->noContent();
         } catch (\Exception $e) {
@@ -146,17 +114,11 @@ class MenuItemController extends Controller
      */
     public function indexBySection(int $menuId, int $sectionId): JsonResponse
     {
-        $items = MenuItem::where('menu_section_id', $sectionId)
-            ->whereHas('section', function ($query) use ($menuId) {
-                $query->where('menu_id', $menuId);
-            })
-            ->with(['modifiers'])
-            ->orderBy('sort_order')
-            ->get();
+        $items = $this->itemRepository->getBySectionWithRelations($sectionId, $menuId, ['modifiers']);
         
         return response()->json([
             'success' => true,
-            'data' => $items,
+            'data' => $items->toArray(),
         ]);
     }
     
@@ -165,13 +127,7 @@ class MenuItemController extends Controller
      */
     public function show(int $menuId, int $sectionId, int $itemId): JsonResponse
     {
-        $item = MenuItem::where('id', $itemId)
-            ->where('menu_section_id', $sectionId)
-            ->whereHas('section', function ($query) use ($menuId) {
-                $query->where('menu_id', $menuId);
-            })
-            ->with(['modifiers'])
-            ->first();
+        $item = $this->itemRepository->findWithRelations($itemId, $menuId, $sectionId);
         
         if (!$item) {
             return response()->json([
@@ -182,7 +138,7 @@ class MenuItemController extends Controller
         
         return response()->json([
             'success' => true,
-            'data' => $item,
+            'data' => $item->toArray(),
         ]);
     }
     
@@ -191,24 +147,12 @@ class MenuItemController extends Controller
      */
     public function update(Request $request, int $menuId, int $sectionId, int $itemId): JsonResponse
     {
-        $request->validate([
-            'price' => 'nullable|numeric|min:0',
-            'isAvailable' => 'nullable|boolean',
-            'isFeatured' => 'nullable|boolean',
-            'sortOrder' => 'nullable|integer|min:0',
-            'customName' => 'nullable|string|max:255',
-            'customDescription' => 'nullable|string',
-            'preparationTime' => 'nullable|integer|min:0',
-            'maxQuantity' => 'nullable|integer|min:0',
-        ]);
+        // Create data object with validation
+        $data = UpdateMenuItemData::validateAndCreate($request);
         
         try {
-            $item = MenuItem::where('id', $itemId)
-                ->where('menu_section_id', $sectionId)
-                ->whereHas('section', function ($query) use ($menuId) {
-                    $query->where('menu_id', $menuId);
-                })
-                ->first();
+            // Verify item exists in menu and section
+            $item = $this->itemRepository->findWithRelations($itemId, $menuId, $sectionId);
             
             if (!$item) {
                 return response()->json([
@@ -217,21 +161,13 @@ class MenuItemController extends Controller
                 ], 404);
             }
             
-            $item->update($request->only([
-                'price',
-                'is_available',
-                'is_featured',
-                'sort_order',
-                'custom_name',
-                'custom_description',
-                'preparation_time',
-                'max_quantity',
-            ]));
+            // Update using repository with DTO
+            $updatedItem = $this->itemRepository->update($itemId, $data);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Menu item updated successfully',
-                'data' => $item->fresh(['modifiers']),
+                'data' => $updatedItem->toArray(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -248,12 +184,7 @@ class MenuItemController extends Controller
     public function toggleAvailability(int $menuId, int $sectionId, int $itemId): JsonResponse
     {
         try {
-            $item = MenuItem::where('id', $itemId)
-                ->where('menu_section_id', $sectionId)
-                ->whereHas('section', function ($query) use ($menuId) {
-                    $query->where('menu_id', $menuId);
-                })
-                ->first();
+            $item = $this->itemRepository->toggleAvailability($itemId, $menuId, $sectionId);
             
             if (!$item) {
                 return response()->json([
@@ -262,13 +193,10 @@ class MenuItemController extends Controller
                 ], 404);
             }
             
-            $item->is_available = !$item->is_available;
-            $item->save();
-            
             return response()->json([
                 'success' => true,
-                'message' => $item->is_available ? 'Item marked as available' : 'Item marked as unavailable',
-                'data' => ['is_available' => $item->is_available],
+                'message' => $item->isActive ? 'Item marked as available' : 'Item marked as unavailable',
+                'data' => ['is_available' => $item->isActive],
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -284,43 +212,12 @@ class MenuItemController extends Controller
      */
     public function updateModifiers(Request $request, int $menuId, int $sectionId, int $itemId): JsonResponse
     {
-        $request->validate([
-            'modifiers' => 'required|array',
-            'modifiers.*.modifierId' => 'required|integer',
-            'modifiers.*.isAvailable' => 'nullable|boolean',
-            'modifiers.*.priceOverride' => 'nullable|numeric|min:0',
-            'modifiers.*.isDefault' => 'nullable|boolean',
-        ]);
-        
-        try {
-            $item = MenuItem::where('id', $itemId)
-                ->where('menu_section_id', $sectionId)
-                ->whereHas('section', function ($query) use ($menuId) {
-                    $query->where('menu_id', $menuId);
-                })
-                ->first();
-            
-            if (!$item) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Menu item not found',
-                ], 404);
-            }
-            
-            $this->menuService->updateItemModifiers($itemId, $request->input('modifiers'));
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Item modifiers updated successfully',
-                'data' => $item->fresh(['modifiers']),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update item modifiers',
-                'error' => $e->getMessage(),
-            ], 422);
-        }
+        // Modifiers should be handled by the Modifier module when implemented
+        // For now, return an error response
+        return response()->json([
+            'success' => false,
+            'message' => 'Modifier management is not yet implemented. This will be handled by the Modifier module.',
+        ], 501);
     }
     
     /**
@@ -328,28 +225,18 @@ class MenuItemController extends Controller
      */
     public function bulkUpdateAvailability(Request $request, int $menuId): JsonResponse
     {
-        $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|integer',
-            'items.*.isAvailable' => 'required|boolean',
-        ]);
+        // For bulk operations, we'll validate each item individually
+        $items = $request->input('items', []);
+        
+        if (empty($items)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items provided for update',
+            ], 422);
+        }
         
         try {
-            $updatedCount = 0;
-            
-            foreach ($request->input('items') as $itemData) {
-                $item = MenuItem::where('id', $itemData['id'])
-                    ->whereHas('section', function ($query) use ($menuId) {
-                        $query->where('menu_id', $menuId);
-                    })
-                    ->first();
-                
-                if ($item) {
-                    $item->is_available = $itemData['isAvailable'];
-                    $item->save();
-                    $updatedCount++;
-                }
-            }
+            $updatedCount = $this->itemRepository->bulkUpdateAvailability($items, $menuId);
             
             return response()->json([
                 'success' => true,
@@ -370,25 +257,14 @@ class MenuItemController extends Controller
      */
     public function popular(int $menuId, Request $request): JsonResponse
     {
-        $request->validate([
-            'limit' => 'nullable|integer|min:1|max:50',
-        ]);
+        $limit = (int) $request->input('limit', 10);
+        $limit = max(1, min(50, $limit)); // Clamp between 1 and 50
         
-        $limit = $request->input('limit', 10);
-        
-        $items = MenuItem::whereHas('section', function ($query) use ($menuId) {
-            $query->where('menu_id', $menuId);
-        })
-            ->where('is_available', true)
-            ->where('is_featured', true)
-            ->with(['section', 'modifiers'])
-            ->orderBy('sort_order')
-            ->limit($limit)
-            ->get();
+        $items = $this->itemRepository->getPopularByMenu($menuId, $limit);
         
         return response()->json([
             'success' => true,
-            'data' => $items,
+            'data' => $items->toArray(),
         ]);
     }
     
@@ -397,31 +273,21 @@ class MenuItemController extends Controller
      */
     public function search(int $menuId, Request $request): JsonResponse
     {
-        $request->validate([
-            'query' => 'required|string|min:2',
-            'section_id' => 'nullable|integer',
-        ]);
-        
-        $query = $request->input('query');
+        $query = $request->input('query', '');
         $sectionId = $request->input('section_id');
         
-        $items = MenuItem::whereHas('section', function ($q) use ($menuId) {
-            $q->where('menu_id', $menuId);
-        })
-            ->when($sectionId, function ($q) use ($sectionId) {
-                $q->where('menu_section_id', $sectionId);
-            })
-            ->where(function ($q) use ($query) {
-                $q->where('custom_name', 'like', "%{$query}%")
-                    ->orWhere('custom_description', 'like', "%{$query}%");
-            })
-            ->with(['section', 'modifiers'])
-            ->orderBy('sort_order')
-            ->get();
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Search query must be at least 2 characters',
+            ], 422);
+        }
+        
+        $items = $this->itemRepository->searchInMenu($menuId, $query, $sectionId);
         
         return response()->json([
             'success' => true,
-            'data' => $items,
+            'data' => $items->toArray(),
             'meta' => [
                 'query' => $query,
                 'count' => $items->count(),

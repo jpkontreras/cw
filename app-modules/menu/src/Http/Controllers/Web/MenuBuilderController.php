@@ -10,22 +10,27 @@ use Colame\Menu\Contracts\MenuRepositoryInterface;
 use Colame\Menu\Contracts\MenuSectionRepositoryInterface;
 use Colame\Menu\Contracts\MenuItemRepositoryInterface;
 use Colame\Menu\Data\SaveMenuStructureData;
-use Colame\Item\Contracts\ItemRepositoryInterface;
 use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class MenuBuilderController extends Controller
 {
+    private ?object $itemRepository = null;
+    
     public function __construct(
         private MenuServiceInterface $menuService,
         private MenuRepositoryInterface $menuRepository,
         private MenuSectionRepositoryInterface $sectionRepository,
-        private MenuItemRepositoryInterface $itemRepository,
-        private ItemRepositoryInterface $items,
-    ) {}
+        private MenuItemRepositoryInterface $menuItemRepository,
+    ) {
+        // Optional dependency - inject item repository if available
+        $itemRepositoryClass = 'Colame\\Item\\Contracts\\ItemRepositoryInterface';
+        if (app()->bound($itemRepositoryClass)) {
+            $this->itemRepository = app($itemRepositoryClass);
+        }
+    }
     
     public function index(int $menuId): Response
     {
@@ -37,8 +42,11 @@ class MenuBuilderController extends Controller
         
         $structure = $this->menuService->getMenuStructure($menuId);
         
-        // Get available items from item module
-        $availableItems = $this->items->getActiveItems();
+        // Get available items from item module if available
+        $availableItems = [];
+        if ($this->itemRepository) {
+            $availableItems = $this->itemRepository->getActiveItems();
+        }
         
         // Get all menus for dropdown
         $allMenus = $this->menuRepository->all();
@@ -91,7 +99,10 @@ class MenuBuilderController extends Controller
             
             if ($defaultMenu) {
                 $structure = $this->menuService->getMenuStructure($defaultMenu['id']);
-                $availableItems = $this->items->getActiveItems();
+                // Get available items from item module if available
+                if ($this->itemRepository) {
+                    $availableItems = $this->itemRepository->getActiveItems();
+                }
             }
         }
         
@@ -117,7 +128,7 @@ class MenuBuilderController extends Controller
     {
         try {
             // Authorization check - ensure user can update menus
-            $menu = $this->menuRepository->find($menuId);
+            $menu = $this->menuRepository->findWithRelations($menuId);
             if (!$menu) {
                 // For Inertia, we should use back() with errors
                 return back()->withErrors(['menu' => 'Menu not found']);
@@ -126,8 +137,8 @@ class MenuBuilderController extends Controller
             // TODO: Add proper authorization policy check when implemented
             // $this->authorize('update', $menu);
             
-            // Validate using Data object - following the order module pattern
-            $data = SaveMenuStructureData::validateAndCreate($request->all());
+            // Create data object from request using validation
+            $data = SaveMenuStructureData::validateAndCreate($request);
             
             // Save menu structure using service layer
             $structure = $this->menuService->saveMenuStructure($menuId, $data);
@@ -141,10 +152,10 @@ class MenuBuilderController extends Controller
                 ]);
             }
             
-            // For Inertia requests, redirect back with success message
-            // The page will reload with fresh data including correct database IDs
-            return redirect()->route('menu.builder', ['menu' => $menuId])
-                ->with('success', 'Menu structure saved successfully');
+            // For Inertia requests, redirect to the builder page with fresh data
+            // This ensures the menu structure is properly loaded after save
+            // Don't send flash message since frontend uses Sonner toast
+            return redirect()->route('menu.builder', ['menu' => $menuId]);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             // For AJAX requests, return validation errors as JSON
@@ -160,6 +171,13 @@ class MenuBuilderController extends Controller
             throw $e;
             
         } catch (\Exception $e) {
+            Log::error('Menu save failed', [
+                'menu_id' => $menuId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->all(),
+            ]);
+            
             // For AJAX requests
             if ($request->wantsJson()) {
                 return response()->json([

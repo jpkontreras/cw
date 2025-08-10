@@ -6,7 +6,6 @@ namespace Colame\Menu\Data;
 
 use App\Core\Data\BaseData;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\Validation\IntegerType;
 use Spatie\LaravelData\Attributes\Validation\BooleanType;
 use Spatie\LaravelData\Attributes\Validation\Max;
@@ -15,6 +14,7 @@ use Spatie\LaravelData\Attributes\Validation\Nullable;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\StringType;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Lazy;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 use Illuminate\Validation\Validator;
 
@@ -25,7 +25,7 @@ class SaveMenuSectionData extends BaseData
         public readonly string $name,
         
         #[DataCollectionOf(SaveMenuItemData::class)]
-        public readonly DataCollection $items,
+        public readonly Lazy|DataCollection $items,
         
         #[Nullable, IntegerType]
         public readonly ?int $id = null,
@@ -37,23 +37,19 @@ class SaveMenuSectionData extends BaseData
         public readonly ?string $icon = null,
         
         #[BooleanType]
-        #[MapInputName('isActive')]
         public readonly bool $isActive = true,
         
         #[BooleanType]
-        #[MapInputName('isFeatured')]
         public readonly bool $isFeatured = false,
         
         #[BooleanType]
-        #[MapInputName('isCollapsed')]
         public readonly ?bool $isCollapsed = false,
         
         #[IntegerType, Min(0)]
-        #[MapInputName('sortOrder')]
         public readonly int $sortOrder = 0,
         
         #[DataCollectionOf(SaveMenuSectionData::class)]
-        public readonly ?DataCollection $children = null,
+        public readonly Lazy|DataCollection|null $children = null,
     ) {}
     
     /**

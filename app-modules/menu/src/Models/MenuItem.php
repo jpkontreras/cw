@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Colame\Menu\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Colame\Menu\Data\MenuItemMetadataData;
+use Colame\Menu\Data\MenuItemModifiersConfigData;
+use Colame\Menu\Data\DietaryLabelsData;
+use Colame\Menu\Data\AllergenInfoData;
+use Colame\Menu\Data\NutritionalInfoData;
 
 class MenuItem extends Model
 {
@@ -43,12 +48,12 @@ class MenuItem extends Model
         'is_seasonal' => 'boolean',
         'sort_order' => 'integer',
         'preparation_time_override' => 'integer',
-        'available_modifiers' => 'array',
-        'dietary_labels' => 'array',
-        'allergen_info' => 'array',
+        'available_modifiers' => MenuItemModifiersConfigData::class,
+        'dietary_labels' => DietaryLabelsData::class,
+        'allergen_info' => AllergenInfoData::class,
         'calorie_count' => 'integer',
-        'nutritional_info' => 'array',
-        'metadata' => 'array',
+        'nutritional_info' => NutritionalInfoData::class,
+        'metadata' => MenuItemMetadataData::class,
     ];
     
     protected $attributes = [
@@ -87,55 +92,48 @@ class MenuItem extends Model
     }
     
     /**
-     * Relationship to the actual item in the items table
+     * Note: Direct item relationship removed to maintain module boundaries.
+     * Use MenuService methods to fetch item details through proper interfaces.
+     * 
+     * To get item details, use:
+     * $menuService->getMenuItemWithDetails($menuItemId)
      */
-    public function item()
-    {
-        return $this->belongsTo(\Colame\Item\Models\Item::class, 'item_id');
-    }
+    // Relationship removed - use service layer instead
     
+    /**
+     * Display name accessor - returns override or null
+     * Item data should be fetched through MenuService when needed
+     */
     public function getDisplayNameAttribute($value)
     {
-        return $value ?: $this->getItemName();
-    }
-    
-    public function getDisplayDescriptionAttribute($value)
-    {
-        return $value ?: $this->getItemDescription();
-    }
-    
-    public function getPriceAttribute()
-    {
-        return $this->price_override ?: $this->getItemPrice();
-    }
-    
-    public function getPreparationTimeAttribute()
-    {
-        return $this->preparation_time_override ?: $this->getItemPreparationTime();
+        return $value;
     }
     
     /**
-     * These methods will be replaced with actual item data retrieval
-     * when integrating with the item module
+     * Display description accessor - returns override or null
+     * Item data should be fetched through MenuService when needed
      */
-    protected function getItemName(): ?string
+    public function getDisplayDescriptionAttribute($value)
     {
-        return $this->item ? $this->item->name : null;
+        return $value;
     }
     
-    protected function getItemDescription(): ?string
+    /**
+     * Price accessor - returns override or null
+     * Base item price should be fetched through MenuService when needed
+     */
+    public function getPriceAttribute()
     {
-        return $this->item ? $this->item->description : null;
+        return $this->price_override;
     }
     
-    protected function getItemPrice(): ?float
+    /**
+     * Preparation time accessor - returns override or null
+     * Base preparation time should be fetched through MenuService when needed
+     */
+    public function getPreparationTimeAttribute()
     {
-        return $this->item ? (float) $this->item->price : null;
-    }
-    
-    protected function getItemPreparationTime(): ?int
-    {
-        return $this->item ? $this->item->preparation_time : null;
+        return $this->preparation_time_override;
     }
     
     public function isAvailable(): bool
