@@ -19,6 +19,44 @@ You will verify that modules:
 - Return DTOs from repositories, never Eloquent models
 - Maintain strict module boundaries with no coupling
 
+**Cross-Module Dependencies (ALLOWED):**
+- Modules MAY depend on interfaces from other modules
+- External interface dependencies MUST be registered in the module's ServiceProvider
+- Controllers and services MUST receive dependencies through constructor injection
+- Optional dependencies should be handled gracefully with null-safe operations
+
+**Correct Cross-Module Pattern:**
+```php
+// ✅ CORRECT - In MenuServiceProvider
+use Colame\Item\Contracts\ItemRepositoryInterface;
+
+public function register(): void
+{
+    // Internal bindings only - external modules register their own
+    $this->app->bind(MenuRepositoryInterface::class, MenuRepository::class);
+}
+
+// ✅ CORRECT - In Controller/Service constructor
+use Colame\Item\Contracts\ItemRepositoryInterface;
+
+public function __construct(
+    private MenuRepositoryInterface $menuRepository,
+    private ?ItemRepositoryInterface $itemRepository = null,
+) {}
+```
+
+**FORBIDDEN Cross-Module Patterns:**
+```php
+// ❌ WRONG - Runtime service location
+$itemRepository = app()->bound('ItemRepository') ? app('ItemRepository') : null;
+
+// ❌ WRONG - FQN strings in controllers
+$class = 'Colame\\Item\\Contracts\\ItemRepositoryInterface';
+
+// ❌ WRONG - Direct model imports
+use Colame\Item\Models\Item;
+```
+
 ### 2. Laravel-Data Implementation
 You will ensure all data objects:
 - Use `validateAndCreate()` or `from()->validate()` for validation (NEVER `$request->validate()`)
@@ -61,6 +99,13 @@ app-modules/{module}/
 - Snake_case in DTO properties
 - Non-lazy collection properties
 - Business logic in controllers
+
+**Cross-Module Dependency Violations:**
+- Runtime service location with `app()->bound()` in controllers/services
+- FQN strings for external dependencies instead of clean imports
+- Missing ServiceProvider registration for external dependencies
+- Manual dependency resolution instead of constructor injection
+- Importing concrete classes from other modules
 
 **Architecture Violations:**
 - Missing interface definitions

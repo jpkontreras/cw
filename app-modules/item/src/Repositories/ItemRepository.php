@@ -745,4 +745,56 @@ class ItemRepository implements ItemRepositoryInterface
         
         return ItemData::from($model);
     }
+    
+    /**
+     * Get item details by ID (simplified data for cross-module use)
+     */
+    public function getItemDetails(int $itemId): ?ItemData
+    {
+        return $this->find($itemId);
+    }
+    
+    /**
+     * Get multiple item details by IDs (batch loading for performance)
+     */
+    public function getMultipleItemDetails(array $itemIds): array
+    {
+        if (empty($itemIds)) {
+            return [];
+        }
+        
+        $items = Item::whereIn('id', $itemIds)
+            ->get()
+            ->map(fn($item) => ItemData::from($item))
+            ->keyBy('id')
+            ->toArray();
+        
+        return $items;
+    }
+    
+    /**
+     * Check if an item exists
+     */
+    public function itemExists(int $itemId): bool
+    {
+        return Item::where('id', $itemId)->exists();
+    }
+    
+    /**
+     * Get item price
+     */
+    public function getItemPrice(int $itemId): ?float
+    {
+        $item = Item::find($itemId);
+        return $item ? $item->base_price : null;
+    }
+    
+    /**
+     * Get item name
+     */
+    public function getItemName(int $itemId): ?string
+    {
+        $item = Item::find($itemId);
+        return $item ? $item->name : null;
+    }
 }

@@ -33,7 +33,7 @@ class MenuServiceProvider extends ServiceProvider
             'features'
         );
         
-        // Bind repositories
+        // Bind internal repositories
         $this->app->bind(MenuRepositoryInterface::class, MenuRepository::class);
         $this->app->bind(MenuSectionRepositoryInterface::class, MenuSectionRepository::class);
         $this->app->bind(MenuItemRepositoryInterface::class, MenuItemRepository::class);

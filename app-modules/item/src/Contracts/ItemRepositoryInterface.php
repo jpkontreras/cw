@@ -113,4 +113,44 @@ interface ItemRepositoryInterface extends FilterableRepositoryInterface
      * Get filter options for a specific field
      */
     public function getFilterOptions(string $field): array;
+    
+    /**
+     * Get item details by ID (simplified data for cross-module use)
+     * 
+     * @param int $itemId
+     * @return ItemData|null
+     */
+    public function getItemDetails(int $itemId): ?ItemData;
+    
+    /**
+     * Get multiple item details by IDs (batch loading for performance)
+     * 
+     * @param array<int> $itemIds
+     * @return array<int, ItemData> Keyed by item ID
+     */
+    public function getMultipleItemDetails(array $itemIds): array;
+    
+    /**
+     * Check if an item exists
+     * 
+     * @param int $itemId
+     * @return bool
+     */
+    public function itemExists(int $itemId): bool;
+    
+    /**
+     * Get item price
+     * 
+     * @param int $itemId
+     * @return float|null
+     */
+    public function getItemPrice(int $itemId): ?float;
+    
+    /**
+     * Get item name
+     * 
+     * @param int $itemId
+     * @return string|null
+     */
+    public function getItemName(int $itemId): ?string;
 }

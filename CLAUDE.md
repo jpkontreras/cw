@@ -60,7 +60,10 @@ sail artisan db:seed              # Run seeders only
 ### Key Directories
 ```
 app/
-├── Core/           # Infrastructure (interfaces, traits, base classes)
+├── Core/           # Infrastructure only (base classes, traits, utilities)
+│   ├── Data/      # BaseData class, PaginatedResourceData, etc.
+│   ├── Traits/    # Shared traits (ValidatesPagination, etc.)
+│   └── Contracts/ # Base interfaces (FilterableRepositoryInterface, etc.)
 ├── Services/       # Business logic (shared by web/API)
 ├── Http/Controllers/
 │   ├── Web/       # Inertia responses
@@ -68,7 +71,7 @@ app/
 app-modules/        # Feature modules
 ├── {module}/
 │   ├── src/
-│   │   ├── Contracts/    # Public interfaces
+│   │   ├── Contracts/    # Public interfaces (exposed to other modules)
 │   │   ├── Data/         # DTOs
 │   │   ├── Repositories/ # Interface implementations
 │   │   └── Services/     # Module services
@@ -79,6 +82,8 @@ resources/js/
 │   ├── ui/       # Base UI (shadcn/ui pattern)
 │   └── modules/  # Module-specific components
 ```
+
+**Important**: The `app/Core` directory should NOT contain business interfaces. Each module exposes its own contracts that other modules can depend on directly.
 
 ## Core Architecture Principles
 
@@ -91,6 +96,12 @@ Modules communicate through interfaces, never direct model imports. This ensures
 3. **Repository Pattern** - Single domain focus, return DTOs
 4. **Service Layer** - Orchestrate cross-module operations
 5. **Strict Boundaries** - Models store foreign keys only
+
+**Cross-Module Dependencies:**
+- Modules MAY depend on interfaces from other modules directly
+- Each module registers its own interfaces in its ServiceProvider
+- Dependent modules use optional injection: `?ItemRepositoryInterface $repo = null`
+- No "Core" intermediary interfaces needed - use module interfaces directly
 
 ### Laravel-Data Usage Requirements
 
@@ -310,6 +321,16 @@ $this->app->bind(ItemRepositoryInterface::class, ItemRepository::class);
 class OrderService {
     public function __construct(
         private ItemRepositoryInterface $items
+    ) {}
+}
+
+// 6. Cross-Module Dependencies (Optional)
+use Colame\Item\Contracts\ItemRepositoryInterface;
+
+class MenuService {
+    public function __construct(
+        private MenuRepositoryInterface $menuRepo,
+        private ?ItemRepositoryInterface $itemRepo = null // Optional cross-module
     ) {}
 }
 ```

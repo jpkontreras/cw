@@ -21,9 +21,8 @@ use Colame\Menu\Data\SaveMenuItemData;
 use Colame\Menu\Data\CreateMenuItemData;
 use Colame\Menu\Data\UpdateMenuItemData;
 use Colame\Menu\Data\MenuItemData;
-use Colame\Menu\Models\MenuItem;
 use Colame\Menu\Contracts\MenuLocationRepositoryInterface;
-use App\Core\Contracts\ItemRepositoryInterface;
+use Colame\Item\Contracts\ItemRepositoryInterface;
 use Spatie\LaravelData\DataCollection;
 use Illuminate\Support\Facades\DB;
 
@@ -119,6 +118,11 @@ class MenuService implements MenuServiceInterface
         $sections = $menuWithRelations->sections instanceof \Spatie\LaravelData\Lazy
             ? $menuWithRelations->sections->resolve()
             : $menuWithRelations->sections;
+
+        // Enrich menu items with base item details if item repository is available
+        if ($this->itemDetailsRepository && $sections) {
+            $sections = $this->enrichSectionsWithItemDetails($sections);
+        }
 
         // Check availability using the service
         $isAvailable = $this->checkMenuAvailability($id);
@@ -702,5 +706,143 @@ class MenuService implements MenuServiceInterface
         }
         
         return $menuItem;
+    }
+    
+    /**
+     * Enrich sections with item details from the item module
+     */
+    private function enrichSectionsWithItemDetails(DataCollection $sections): DataCollection
+    {
+        // Collect all unique item IDs from all sections and their children
+        $itemIds = $this->collectItemIdsFromSections($sections);
+        
+        if (empty($itemIds)) {
+            return $sections;
+        }
+        
+        // Batch fetch item details
+        $itemDetailsMap = $this->itemDetailsRepository->getMultipleItemDetails($itemIds);
+        
+        if (empty($itemDetailsMap)) {
+            return $sections;
+        }
+        
+        // Enrich sections with item details
+        return DataCollection::make($sections)->map(function ($section) use ($itemDetailsMap) {
+            return $this->enrichSectionWithItemDetails($section, $itemDetailsMap);
+        });
+    }
+    
+    /**
+     * Collect all item IDs from sections and their children recursively
+     */
+    private function collectItemIdsFromSections(DataCollection $sections): array
+    {
+        $itemIds = [];
+        
+        foreach ($sections as $section) {
+            // Collect from section items
+            if ($section->items && !($section->items instanceof \Spatie\LaravelData\Lazy)) {
+                foreach ($section->items as $item) {
+                    $itemIds[] = $item->itemId;
+                }
+            }
+            
+            // Collect from child sections recursively
+            if ($section->children && !($section->children instanceof \Spatie\LaravelData\Lazy)) {
+                $childItemIds = $this->collectItemIdsFromSections($section->children);
+                $itemIds = array_merge($itemIds, $childItemIds);
+            }
+        }
+        
+        return array_unique($itemIds);
+    }
+    
+    /**
+     * Enrich a single section with item details
+     */
+    private function enrichSectionWithItemDetails(object $section, array $itemDetailsMap): object
+    {
+        // Enrich items
+        $enrichedItems = null;
+        if ($section->items && !($section->items instanceof \Spatie\LaravelData\Lazy)) {
+            $enrichedItems = DataCollection::make($section->items)->map(function ($item) use ($itemDetailsMap) {
+                return $this->enrichMenuItemWithDetails($item, $itemDetailsMap);
+            });
+        }
+        
+        // Enrich child sections recursively
+        $enrichedChildren = null;
+        if ($section->children && !($section->children instanceof \Spatie\LaravelData\Lazy)) {
+            $enrichedChildren = DataCollection::make($section->children)->map(function ($childSection) use ($itemDetailsMap) {
+                return $this->enrichSectionWithItemDetails($childSection, $itemDetailsMap);
+            });
+        }
+        
+        // Return new section with enriched items and children
+        return new \Colame\Menu\Data\MenuSectionWithItemsData(
+            id: $section->id,
+            menuId: $section->menuId,
+            parentId: $section->parentId,
+            name: $section->name,
+            slug: $section->slug,
+            description: $section->description,
+            displayName: $section->displayName,
+            isActive: $section->isActive,
+            isFeatured: $section->isFeatured,
+            sortOrder: $section->sortOrder,
+            isAvailable: $section->isAvailable,
+            items: $enrichedItems ?? $section->items,
+            children: $enrichedChildren ?? $section->children,
+            metadata: $section->metadata,
+        );
+    }
+    
+    /**
+     * Enrich a single menu item with base item details
+     */
+    private function enrichMenuItemWithDetails(object $item, array $itemDetailsMap): MenuItemData
+    {
+        // If we have details for this item, create enriched version
+        if (isset($itemDetailsMap[$item->itemId])) {
+            $itemDetails = $itemDetailsMap[$item->itemId];
+            
+            return new MenuItemData(
+                id: $item->id,
+                menuId: $item->menuId,
+                menuSectionId: $item->menuSectionId,
+                itemId: $item->itemId,
+                displayName: $item->displayName,
+                displayDescription: $item->displayDescription,
+                priceOverride: $item->priceOverride,
+                isActive: $item->isActive,
+                isFeatured: $item->isFeatured,
+                isRecommended: $item->isRecommended,
+                isNew: $item->isNew,
+                isSeasonal: $item->isSeasonal,
+                sortOrder: $item->sortOrder,
+                preparationTimeOverride: $item->preparationTimeOverride,
+                availableModifiers: $item->availableModifiers,
+                dietaryLabels: $item->dietaryLabels,
+                allergenInfo: $item->allergenInfo,
+                calorieCount: $item->calorieCount,
+                nutritionalInfo: $item->nutritionalInfo,
+                imageUrl: $item->imageUrl,
+                metadata: $item->metadata,
+                createdAt: $item->createdAt,
+                updatedAt: $item->updatedAt,
+                baseItem: (object) [
+                    'name' => $itemDetails->name,
+                    'description' => $itemDetails->description,
+                    'basePrice' => $itemDetails->basePrice,
+                    'preparationTime' => $itemDetails->preparationTime,
+                    'category' => null, // Category would need to be loaded separately
+                    'imageUrl' => null, // Image would need to be loaded separately
+                ],
+            );
+        }
+        
+        // Return original item if no details available
+        return $item;
     }
 }

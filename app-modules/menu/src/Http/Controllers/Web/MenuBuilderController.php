@@ -10,6 +10,7 @@ use Colame\Menu\Contracts\MenuRepositoryInterface;
 use Colame\Menu\Contracts\MenuSectionRepositoryInterface;
 use Colame\Menu\Contracts\MenuItemRepositoryInterface;
 use Colame\Menu\Data\SaveMenuStructureData;
+use Colame\Item\Contracts\ItemRepositoryInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,20 +18,13 @@ use Illuminate\Support\Facades\Log;
 
 class MenuBuilderController extends Controller
 {
-    private ?object $itemRepository = null;
-    
     public function __construct(
         private MenuServiceInterface $menuService,
         private MenuRepositoryInterface $menuRepository,
         private MenuSectionRepositoryInterface $sectionRepository,
         private MenuItemRepositoryInterface $menuItemRepository,
-    ) {
-        // Optional dependency - inject item repository if available
-        $itemRepositoryClass = 'Colame\\Item\\Contracts\\ItemRepositoryInterface';
-        if (app()->bound($itemRepositoryClass)) {
-            $this->itemRepository = app($itemRepositoryClass);
-        }
-    }
+        private ?ItemRepositoryInterface $itemRepository = null,
+    ) {}
     
     public function index(int $menuId): Response
     {

@@ -181,9 +181,9 @@ class MenuRepository implements MenuRepositoryInterface
                         'children' => function ($q) {
                             $q->where('is_active', true)
                               ->orderBy('sort_order')
-                              ->with('activeItems.item');
+                              ->with('activeItems');
                         }, 
-                        'activeItems.item'
+                        'activeItems'
                     ]);
             }
         ])->find($id);
