@@ -66,11 +66,12 @@ class SaveMenuSectionData extends BaseData
                     
                     $itemIds = [];
                     foreach ($value as $item) {
-                        if (!isset($item['itemId'])) {
+                        // Use snake_case as the SnakeCaseMapper will convert frontend's camelCase to snake_case
+                        if (!isset($item['item_id'])) {
                             continue;
                         }
                         
-                        $itemId = $item['itemId'];
+                        $itemId = $item['item_id'];
                         if (in_array($itemId, $itemIds)) {
                             $fail("Section contains duplicate item with ID {$itemId}. Each item can only appear once per section.");
                             return;
@@ -99,11 +100,12 @@ class SaveMenuSectionData extends BaseData
                     
                     $childItemIds = [];
                     foreach ($child['items'] as $item) {
-                        if (!isset($item['itemId'])) {
+                        // Use snake_case as the SnakeCaseMapper will convert frontend's camelCase to snake_case
+                        if (!isset($item['item_id'])) {
                             continue;
                         }
                         
-                        $itemId = $item['itemId'];
+                        $itemId = $item['item_id'];
                         if (in_array($itemId, $childItemIds)) {
                             $validator->errors()->add(
                                 "children.{$childIndex}.items",

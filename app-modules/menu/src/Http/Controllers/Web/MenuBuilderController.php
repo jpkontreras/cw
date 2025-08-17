@@ -25,26 +25,26 @@ class MenuBuilderController extends Controller
         private MenuItemRepositoryInterface $menuItemRepository,
         private ?ItemRepositoryInterface $itemRepository = null,
     ) {}
-    
+
     public function index(int $menuId): Response
     {
         $menu = $this->menuRepository->findWithRelations($menuId);
-        
+
         if (!$menu) {
             abort(404, 'Menu not found');
         }
-        
+
         $structure = $this->menuService->getMenuStructure($menuId);
-        
+
         // Get available items from item module if available
         $availableItems = [];
         if ($this->itemRepository) {
             $availableItems = $this->itemRepository->getActiveItems();
         }
-        
+
         // Get all menus for dropdown
         $allMenus = $this->menuRepository->all();
-        
+
         return Inertia::render('menu/builder', [
             'menu' => $menu,
             'allMenus' => $allMenus,
@@ -62,21 +62,21 @@ class MenuBuilderController extends Controller
             ],
         ]);
     }
-    
+
     public function globalIndex(): Response
     {
         // Get all menus
         $allMenus = $this->menuRepository->all();
-        
+
         // Get the default menu or the first available menu
         $defaultMenu = null;
         $structure = ['sections' => []];
         $availableItems = [];
-        
+
         if ($allMenus->count() > 0) {
             // Convert to array to work with the data
             $menusArray = $allMenus->toArray();
-            
+
             // Try to find default menu, otherwise use first
             $defaultMenu = null;
             foreach ($menusArray as $menu) {
@@ -85,12 +85,12 @@ class MenuBuilderController extends Controller
                     break;
                 }
             }
-            
+
             // If no default found, use the first menu
             if (!$defaultMenu && count($menusArray) > 0) {
                 $defaultMenu = $menusArray[0];
             }
-            
+
             if ($defaultMenu) {
                 $structure = $this->menuService->getMenuStructure($defaultMenu['id']);
                 // Get available items from item module if available
@@ -99,7 +99,7 @@ class MenuBuilderController extends Controller
                 }
             }
         }
-        
+
         return Inertia::render('menu/builder', [
             'menu' => $defaultMenu,
             'allMenus' => $allMenus,
@@ -117,7 +117,7 @@ class MenuBuilderController extends Controller
             ],
         ]);
     }
-    
+
     public function save(Request $request, int $menuId)
     {
         try {
@@ -127,16 +127,16 @@ class MenuBuilderController extends Controller
                 // For Inertia, we should use back() with errors
                 return back()->withErrors(['menu' => 'Menu not found']);
             }
-            
+
             // TODO: Add proper authorization policy check when implemented
             // $this->authorize('update', $menu);
-            
+
             // Create data object from request using validation
             $data = SaveMenuStructureData::validateAndCreate($request);
-            
+
             // Save menu structure using service layer
             $structure = $this->menuService->saveMenuStructure($menuId, $data);
-            
+
             // For successful AJAX requests, return JSON
             if ($request->wantsJson()) {
                 return response()->json([
@@ -145,12 +145,11 @@ class MenuBuilderController extends Controller
                     'structure' => $structure->toArray(),
                 ]);
             }
-            
+
             // For Inertia requests, redirect to the builder page with fresh data
             // This ensures the menu structure is properly loaded after save
             // Don't send flash message since frontend uses Sonner toast
             return redirect()->route('menu.builder', ['menu' => $menuId]);
-            
         } catch (\Illuminate\Validation\ValidationException $e) {
             // For AJAX requests, return validation errors as JSON
             if ($request->wantsJson()) {
@@ -160,10 +159,9 @@ class MenuBuilderController extends Controller
                     'errors' => $e->errors(),
                 ], 422);
             }
-            
+
             // For Inertia requests, let Laravel handle it naturally
             throw $e;
-            
         } catch (\Exception $e) {
             Log::error('Menu save failed', [
                 'menu_id' => $menuId,
@@ -171,7 +169,7 @@ class MenuBuilderController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'input' => $request->all(),
             ]);
-            
+
             // For AJAX requests
             if ($request->wantsJson()) {
                 return response()->json([
@@ -180,7 +178,7 @@ class MenuBuilderController extends Controller
                     'error' => $e->getMessage(),
                 ], 500);
             }
-            
+
             // For Inertia requests
             return back()->withErrors(['error' => 'Failed to save menu structure: ' . $e->getMessage()]);
         }

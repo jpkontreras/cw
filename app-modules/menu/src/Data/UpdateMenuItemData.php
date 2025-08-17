@@ -24,7 +24,7 @@ class UpdateMenuItemData extends BaseData
         public readonly int|Optional $itemId = new Optional(),
         
         #[StringType, Max(255)]
-        public readonly string|Optional $displayName = new Optional(),
+        public readonly string|null|Optional $displayName = new Optional(),
         
         #[StringType, Max(1000)]
         public readonly string|null|Optional $displayDescription = new Optional(),

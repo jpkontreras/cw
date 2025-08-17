@@ -174,7 +174,7 @@ class MenuService implements MenuServiceInterface
                     $this->processSaveSection(
                         $menuId,
                         $sectionDataObject,
-                        (int) $sectionIndex,
+                        $sectionDataObject->sortOrder,
                         null,
                         $existingSectionIds,
                         $existingItemIds
@@ -232,7 +232,7 @@ class MenuService implements MenuServiceInterface
                 'icon' => $sectionData->icon,
                 'isActive' => $sectionData->isActive,
                 'isFeatured' => $sectionData->isFeatured,
-                'sortOrder' => $sortOrder,
+                'sortOrder' => $sectionData->sortOrder,
             ]);
             $sectionDto = $this->sectionRepository->create($createSectionData);
             $sectionId = $sectionDto->id;
@@ -246,7 +246,7 @@ class MenuService implements MenuServiceInterface
                 'icon' => $sectionData->icon,
                 'isActive' => $sectionData->isActive,
                 'isFeatured' => $sectionData->isFeatured,
-                'sortOrder' => $sortOrder,
+                'sortOrder' => $sectionData->sortOrder,
             ]);
             $sectionDto = $this->sectionRepository->update($sectionId, $updateSectionData);
             $existingSectionIds[] = $sectionId;
@@ -264,7 +264,7 @@ class MenuService implements MenuServiceInterface
                 $menuId,
                 $sectionId,
                 $itemDataObject,
-                (int) $itemIndex,
+                $itemDataObject->sortOrder,
                 $existingItemIds
             );
         }
@@ -281,7 +281,7 @@ class MenuService implements MenuServiceInterface
                 $this->processSaveSection(
                     $menuId,
                     $childDataObject,
-                    (int) $childIndex,
+                    $childDataObject->sortOrder,
                     $sectionId,
                     $existingSectionIds,
                     $existingItemIds
@@ -324,19 +324,21 @@ class MenuService implements MenuServiceInterface
             }
         }
 
+        // Use camelCase keys since SnakeCaseMapper will convert them to snake_case for validation
+        // and then back to camelCase for the DTO properties
         $itemValues = [
-            'menu_id' => $menuId,
-            'menu_section_id' => $sectionId,
-            'item_id' => $itemData->itemId,
-            'display_name' => $itemData->displayName,
-            'display_description' => $itemData->displayDescription,
-            'price_override' => $itemData->priceOverride,
-            'is_active' => true,
-            'is_featured' => $itemData->isFeatured,
-            'is_recommended' => $itemData->isRecommended,
-            'is_new' => $itemData->isNew,
-            'is_seasonal' => $itemData->isSeasonal,
-            'sort_order' => $sortOrder,
+            'menuId' => $menuId,
+            'menuSectionId' => $sectionId,
+            'itemId' => $itemData->itemId,
+            'displayName' => $itemData->displayName,
+            'displayDescription' => $itemData->displayDescription,
+            'priceOverride' => $itemData->priceOverride,
+            'isActive' => true,
+            'isFeatured' => $itemData->isFeatured,
+            'isRecommended' => $itemData->isRecommended,
+            'isNew' => $itemData->isNew,
+            'isSeasonal' => $itemData->isSeasonal,
+            'sortOrder' => $itemData->sortOrder,
         ];
 
         if ($isNewItem) {
@@ -727,8 +729,8 @@ class MenuService implements MenuServiceInterface
             return $sections;
         }
         
-        // Enrich sections with item details
-        return DataCollection::make($sections)->map(function ($section) use ($itemDetailsMap) {
+        // Enrich sections with item details - sections is already a DataCollection
+        return $sections->map(function ($section) use ($itemDetailsMap) {
             return $this->enrichSectionWithItemDetails($section, $itemDetailsMap);
         });
     }
@@ -741,16 +743,32 @@ class MenuService implements MenuServiceInterface
         $itemIds = [];
         
         foreach ($sections as $section) {
+            // Resolve lazy-loaded items if needed
+            $items = null;
+            if (isset($section->items)) {
+                $items = $section->items instanceof \Spatie\LaravelData\Lazy 
+                    ? $section->items->resolve() 
+                    : $section->items;
+            }
+            
             // Collect from section items
-            if ($section->items && !($section->items instanceof \Spatie\LaravelData\Lazy)) {
-                foreach ($section->items as $item) {
+            if ($items) {
+                foreach ($items as $item) {
                     $itemIds[] = $item->itemId;
                 }
             }
             
+            // Resolve lazy-loaded children if needed
+            $children = null;
+            if (isset($section->children)) {
+                $children = $section->children instanceof \Spatie\LaravelData\Lazy 
+                    ? $section->children->resolve() 
+                    : $section->children;
+            }
+            
             // Collect from child sections recursively
-            if ($section->children && !($section->children instanceof \Spatie\LaravelData\Lazy)) {
-                $childItemIds = $this->collectItemIdsFromSections($section->children);
+            if ($children) {
+                $childItemIds = $this->collectItemIdsFromSections($children);
                 $itemIds = array_merge($itemIds, $childItemIds);
             }
         }
@@ -763,20 +781,34 @@ class MenuService implements MenuServiceInterface
      */
     private function enrichSectionWithItemDetails(object $section, array $itemDetailsMap): object
     {
-        // Enrich items
-        $enrichedItems = null;
-        if ($section->items && !($section->items instanceof \Spatie\LaravelData\Lazy)) {
-            $enrichedItems = DataCollection::make($section->items)->map(function ($item) use ($itemDetailsMap) {
-                return $this->enrichMenuItemWithDetails($item, $itemDetailsMap);
-            });
+        // Resolve and enrich items
+        $enrichedItems = $section->items;
+        if (isset($section->items)) {
+            $items = $section->items instanceof \Spatie\LaravelData\Lazy 
+                ? $section->items->resolve() 
+                : $section->items;
+                
+            if ($items) {
+                // items is already a DataCollection, just use map directly
+                $enrichedItems = $items->map(function ($item) use ($itemDetailsMap) {
+                    return $this->enrichMenuItemWithDetails($item, $itemDetailsMap);
+                });
+            }
         }
         
-        // Enrich child sections recursively
-        $enrichedChildren = null;
-        if ($section->children && !($section->children instanceof \Spatie\LaravelData\Lazy)) {
-            $enrichedChildren = DataCollection::make($section->children)->map(function ($childSection) use ($itemDetailsMap) {
-                return $this->enrichSectionWithItemDetails($childSection, $itemDetailsMap);
-            });
+        // Resolve and enrich child sections recursively
+        $enrichedChildren = $section->children;
+        if (isset($section->children)) {
+            $children = $section->children instanceof \Spatie\LaravelData\Lazy 
+                ? $section->children->resolve() 
+                : $section->children;
+                
+            if ($children) {
+                // children is already a DataCollection, just use map directly
+                $enrichedChildren = $children->map(function ($childSection) use ($itemDetailsMap) {
+                    return $this->enrichSectionWithItemDetails($childSection, $itemDetailsMap);
+                });
+            }
         }
         
         // Return new section with enriched items and children
@@ -792,8 +824,8 @@ class MenuService implements MenuServiceInterface
             isFeatured: $section->isFeatured,
             sortOrder: $section->sortOrder,
             isAvailable: $section->isAvailable,
-            items: $enrichedItems ?? $section->items,
-            children: $enrichedChildren ?? $section->children,
+            items: $enrichedItems,
+            children: $enrichedChildren,
             metadata: $section->metadata,
         );
     }
@@ -806,6 +838,11 @@ class MenuService implements MenuServiceInterface
         // If we have details for this item, create enriched version
         if (isset($itemDetailsMap[$item->itemId])) {
             $itemDetails = $itemDetailsMap[$item->itemId];
+            
+            // Handle both object and array formats
+            if (is_array($itemDetails)) {
+                $itemDetails = (object) $itemDetails;
+            }
             
             return new MenuItemData(
                 id: $item->id,
@@ -832,12 +869,12 @@ class MenuService implements MenuServiceInterface
                 createdAt: $item->createdAt,
                 updatedAt: $item->updatedAt,
                 baseItem: (object) [
-                    'name' => $itemDetails->name,
-                    'description' => $itemDetails->description,
-                    'basePrice' => $itemDetails->basePrice,
-                    'preparationTime' => $itemDetails->preparationTime,
-                    'category' => null, // Category would need to be loaded separately
-                    'imageUrl' => null, // Image would need to be loaded separately
+                    'name' => $itemDetails->name ?? null,
+                    'description' => $itemDetails->description ?? null,
+                    'basePrice' => $itemDetails->basePrice ?? $itemDetails->base_price ?? null,
+                    'preparationTime' => $itemDetails->preparationTime ?? $itemDetails->preparation_time ?? null,
+                    'category' => $itemDetails->category ?? null,
+                    'imageUrl' => $itemDetails->imageUrl ?? $itemDetails->image_url ?? null
                 ],
             );
         }

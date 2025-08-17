@@ -94,7 +94,66 @@ class MenuItemRepository implements MenuItemRepositoryInterface
     public function update(int $id, UpdateMenuItemData $data): MenuItemData
     {
         $item = MenuItem::findOrFail($id);
-        $item->update($data->toArray());
+        
+        // Only update fields that are not Optional (i.e., were actually provided)
+        $updateData = [];
+        
+        if (!($data->itemId instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['item_id'] = $data->itemId;
+        }
+        if (!($data->displayName instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['display_name'] = $data->displayName;
+        }
+        if (!($data->displayDescription instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['display_description'] = $data->displayDescription;
+        }
+        if (!($data->priceOverride instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['price_override'] = $data->priceOverride;
+        }
+        if (!($data->isActive instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['is_active'] = $data->isActive;
+        }
+        if (!($data->isFeatured instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['is_featured'] = $data->isFeatured;
+        }
+        if (!($data->isRecommended instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['is_recommended'] = $data->isRecommended;
+        }
+        if (!($data->isNew instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['is_new'] = $data->isNew;
+        }
+        if (!($data->isSeasonal instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['is_seasonal'] = $data->isSeasonal;
+        }
+        if (!($data->sortOrder instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['sort_order'] = $data->sortOrder;
+        }
+        if (!($data->preparationTimeOverride instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['preparation_time_override'] = $data->preparationTimeOverride;
+        }
+        if (!($data->availableModifiers instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['available_modifiers'] = $data->availableModifiers;
+        }
+        if (!($data->dietaryLabels instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['dietary_labels'] = $data->dietaryLabels;
+        }
+        if (!($data->allergenInfo instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['allergen_info'] = $data->allergenInfo;
+        }
+        if (!($data->calorieCount instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['calorie_count'] = $data->calorieCount;
+        }
+        if (!($data->nutritionalInfo instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['nutritional_info'] = $data->nutritionalInfo;
+        }
+        if (!($data->imageUrl instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['image_url'] = $data->imageUrl;
+        }
+        if (!($data->metadata instanceof \Spatie\LaravelData\Optional)) {
+            $updateData['metadata'] = $data->metadata;
+        }
+        
+        $item->update($updateData);
         return MenuItemData::fromModel($item, null);
     }
     
@@ -172,7 +231,29 @@ class MenuItemRepository implements MenuItemRepositoryInterface
     
     public function create(CreateMenuItemData $data): MenuItemData
     {
-        $item = MenuItem::create($data->toArray());
+        // Map camelCase DTO properties to snake_case database columns
+        $item = MenuItem::create([
+            'menu_id' => $data->menuId,
+            'menu_section_id' => $data->menuSectionId,
+            'item_id' => $data->itemId,
+            'display_name' => $data->displayName,
+            'display_description' => $data->displayDescription,
+            'price_override' => $data->priceOverride,
+            'is_active' => $data->isActive,
+            'is_featured' => $data->isFeatured,
+            'is_recommended' => $data->isRecommended,
+            'is_new' => $data->isNew,
+            'is_seasonal' => $data->isSeasonal,
+            'sort_order' => $data->sortOrder,
+            'preparation_time_override' => $data->preparationTimeOverride,
+            'available_modifiers' => $data->availableModifiers,
+            'dietary_labels' => $data->dietaryLabels,
+            'allergen_info' => $data->allergenInfo,
+            'calorie_count' => $data->calorieCount,
+            'nutritional_info' => $data->nutritionalInfo,
+            'image_url' => $data->imageUrl,
+            'metadata' => $data->metadata,
+        ]);
         return MenuItemData::fromModel($item, null);
     }
     

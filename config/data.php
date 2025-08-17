@@ -1,7 +1,5 @@
 <?php
 
-use Spatie\LaravelData\Mappers\SnakeCaseMapper;
-
 return [
     /*
      * The package will use this format when working with dates. If this option
@@ -138,7 +136,7 @@ return [
      * global strategy here, or override it on a specific data object.
      */
     'name_mapping_strategy' => [
-        'input' => null,  // Frontend sends camelCase, DTOs use camelCase
+        'input' => null,  // Accept camelCase input as-is from frontend
         'output' => null, // Output as camelCase to match frontend expectations
     ],
 

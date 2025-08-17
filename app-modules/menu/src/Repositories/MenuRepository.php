@@ -30,7 +30,7 @@ class MenuRepository implements MenuRepositoryInterface
             'sections' => function ($query) {
                 $query->whereNull('parent_id')
                     ->orderBy('sort_order')
-                    ->with(['activeItems.item']);
+                    ->with(['activeItems']); // Removed .item as the relationship doesn't exist
             },
             'availabilityRules', 
             'locations'
