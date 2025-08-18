@@ -25,4 +25,24 @@ class EmergencyContactData extends BaseData
         #[Max(255)]
         public readonly ?string $address = null,
     ) {}
+    
+    public static function fromModel($contact): self
+    {
+        return new self(
+            name: $contact->name ?? $contact['name'],
+            phone: $contact->phone ?? $contact['phone'],
+            relationship: $contact->relationship ?? $contact['relationship'],
+            email: $contact->email ?? $contact['email'] ?? null,
+            address: $contact->address ?? $contact['address'] ?? null,
+        );
+    }
+    
+    public static function collection($items): \Spatie\LaravelData\DataCollection
+    {
+        $collection = [];
+        foreach ($items as $item) {
+            $collection[] = self::fromModel($item);
+        }
+        return new \Spatie\LaravelData\DataCollection(self::class, $collection);
+    }
 }

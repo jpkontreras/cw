@@ -101,6 +101,40 @@ class StaffMember extends Model
     }
 
     /**
+     * Alias for rolesWithLocations for consistency
+     */
+    public function locationRoles(): BelongsToMany
+    {
+        return $this->rolesWithLocations();
+    }
+
+    /**
+     * Simpler roles relationship without location data
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'staff_location_roles',
+            'staff_member_id',
+            'role_id'
+        );
+    }
+
+    /**
+     * Get locations through roles pivot
+     */
+    public function locations(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Colame\Location\Models\Location::class,
+            'staff_location_roles',
+            'staff_member_id',
+            'location_id'
+        );
+    }
+
+    /**
      * Get roles for a specific location.
      */
     public function rolesAtLocation($locationId): BelongsToMany

@@ -45,21 +45,25 @@ class ScheduleService
 
     public function getSwapRequests(int $shiftId): DataCollection
     {
-        return DataCollection::empty();
+        // Return empty DataCollection for now
+        return new DataCollection(\Colame\Staff\Data\ShiftSwapRequestData::class, []);
     }
 
     public function getAvailableStaff(): DataCollection
     {
-        return DataCollection::empty();
+        // Return empty DataCollection for now
+        return new DataCollection(\Colame\Staff\Data\StaffMemberData::class, []);
     }
 
     public function getLocations(): DataCollection
     {
-        return DataCollection::empty();
+        // Return empty DataCollection for now
+        return new DataCollection(\Colame\Location\Data\LocationData::class, []);
     }
 
     public function getShiftTemplates(): DataCollection
     {
-        return DataCollection::empty();
+        // Return empty DataCollection for now
+        return new DataCollection(\Colame\Staff\Data\ShiftTemplateData::class, []);
     }
 }

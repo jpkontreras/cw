@@ -22,11 +22,19 @@ class AttendanceController extends Controller
         $data = $this->attendanceService->getPaginatedAttendance($filters, $perPage);
         
         return Inertia::render('staff/attendance/index', [
-            'attendance' => $data['data'],
-            'pagination' => $data['pagination'],
+            'attendance' => $data['data'] ?? [],
+            'pagination' => $data['pagination'] ?? null,
+            'metadata' => $data['metadata'] ?? null,
             'filters' => $filters,
-            'currentClockIns' => $this->attendanceService->getCurrentClockIns(),
+            'activeStaff' => [], // TODO: Get active staff from service
+            'locations' => [], // TODO: Get locations from location service
+            'currentClockIns' => $this->attendanceService->getCurrentClockIns()->toArray(),
             'stats' => $this->attendanceService->getDailyStats(),
+            'features' => [
+                'biometric_clock' => false,
+                'mobile_clock' => true,
+                'facial_recognition' => false,
+            ],
         ]);
     }
 

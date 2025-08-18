@@ -39,21 +39,56 @@ class RoleData extends BaseData
 
     public static function fromModel($role): self
     {
-        // Ensure metadata is loaded if it exists
-        $role->loadMissing('metadata');
+        // Handle both Eloquent models and stdClass objects from DB queries
+        $id = is_array($role) ? $role['id'] : $role->id;
+        $name = is_array($role) ? $role['name'] : $role->name;
+        
+        // Handle optional fields
+        $slug = is_array($role) 
+            ? ($role['slug'] ?? $name) 
+            : (property_exists($role, 'slug') ? $role->slug : $name);
+            
+        $description = is_array($role) 
+            ? ($role['description'] ?? null) 
+            : (property_exists($role, 'description') ? $role->description : null);
+            
+        $hierarchyLevel = is_array($role) 
+            ? ($role['hierarchy_level'] ?? $role['hierarchyLevel'] ?? 10) 
+            : (property_exists($role, 'hierarchy_level') ? $role->hierarchy_level : 
+               (property_exists($role, 'hierarchyLevel') ? $role->hierarchyLevel : 10));
+               
+        $isSystem = is_array($role) 
+            ? ($role['is_system'] ?? false) 
+            : (property_exists($role, 'is_system') ? $role->is_system : false);
+            
+        // Handle timestamps - they might not exist on DB query results
+        $createdAt = is_array($role) 
+            ? ($role['created_at'] ?? now()) 
+            : (property_exists($role, 'created_at') ? $role->created_at : now());
+            
+        $updatedAt = is_array($role) 
+            ? ($role['updated_at'] ?? now()) 
+            : (property_exists($role, 'updated_at') ? $role->updated_at : now());
         
         return new self(
-            id: $role->id,
-            name: $role->name,
-            slug: $role->slug ?? $role->name, // Spatie roles don't have slug by default
-            description: $role->metadata?->description,
-            hierarchyLevel: $role->metadata?->hierarchy_level ?? 10,
-            isSystem: $role->metadata?->is_system ?? false,
-            permissions: Lazy::whenLoaded('permissions', $role,
-                fn() => PermissionData::collection($role->permissions)
-            ),
-            createdAt: Carbon::parse($role->created_at),
-            updatedAt: Carbon::parse($role->updated_at),
+            id: $id,
+            name: $name,
+            slug: $slug,
+            description: $description,
+            hierarchyLevel: $hierarchyLevel,
+            isSystem: $isSystem,
+            permissions: Lazy::create(fn() => new DataCollection(\Colame\Staff\Data\PermissionData::class, [])),
+            createdAt: Carbon::parse($createdAt),
+            updatedAt: Carbon::parse($updatedAt),
         );
+    }
+    
+    public static function collection($items): DataCollection
+    {
+        $collection = [];
+        foreach ($items as $item) {
+            $collection[] = self::fromModel($item);
+        }
+        return new DataCollection(self::class, $collection);
     }
 }

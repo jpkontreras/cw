@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Colame\Staff\Enums\AttendanceStatus;
 use Colame\Staff\Enums\ClockMethod;
 use Spatie\LaravelData\Attributes\Computed;
+use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Lazy;
 
 class AttendanceRecordData extends BaseData
@@ -110,5 +111,14 @@ class AttendanceRecordData extends BaseData
             createdAt: Carbon::parse($attendance->created_at),
             updatedAt: Carbon::parse($attendance->updated_at),
         );
+    }
+    
+    public static function collection($items): DataCollection
+    {
+        $collection = [];
+        foreach ($items as $item) {
+            $collection[] = self::fromModel($item);
+        }
+        return new DataCollection(self::class, $collection);
     }
 }

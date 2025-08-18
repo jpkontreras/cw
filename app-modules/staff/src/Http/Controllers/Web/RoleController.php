@@ -16,9 +16,21 @@ class RoleController extends Controller
 
     public function index(): Response
     {
+        $roles = $this->roleService->getAllRoles();
+        $permissions = $this->roleService->getAllPermissions();
+        
+        // Calculate stats
+        $stats = [
+            'totalRoles' => count($roles),
+            'totalPermissions' => count($permissions),
+            'customRoles' => collect($roles)->filter(fn($role) => !($role['isSystem'] ?? false))->count(),
+            'systemRoles' => collect($roles)->filter(fn($role) => $role['isSystem'] ?? false)->count(),
+        ];
+        
         return Inertia::render('staff/roles/index', [
-            'roles' => $this->roleService->getAllRoles(),
-            'permissions' => $this->roleService->getAllPermissions(),
+            'roles' => $roles,
+            'permissions' => $permissions,
+            'stats' => $stats,
         ]);
     }
 

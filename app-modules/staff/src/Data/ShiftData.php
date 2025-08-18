@@ -6,6 +6,7 @@ use App\Core\Data\BaseData;
 use Carbon\Carbon;
 use Colame\Staff\Enums\ShiftStatus;
 use Spatie\LaravelData\Attributes\Computed;
+use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Lazy;
 
 class ShiftData extends BaseData
@@ -95,5 +96,14 @@ class ShiftData extends BaseData
             createdAt: Carbon::parse($shift->created_at),
             updatedAt: Carbon::parse($shift->updated_at),
         );
+    }
+    
+    public static function collection($items): DataCollection
+    {
+        $collection = [];
+        foreach ($items as $item) {
+            $collection[] = self::fromModel($item);
+        }
+        return new DataCollection(self::class, $collection);
     }
 }

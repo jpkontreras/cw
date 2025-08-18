@@ -35,4 +35,6 @@ interface StaffRepositoryInterface
     public function removeRole(int $staffId, int $roleId, ?int $locationId = null): void;
     
     public function getRoles(int $staffId): DataCollection;
+    
+    public function getAllRoles(): DataCollection;
 }

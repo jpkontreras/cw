@@ -8,11 +8,13 @@ use Colame\Staff\Data\UpdateStaffMemberData;
 use Colame\Staff\Data\StaffMemberData;
 use App\Core\Data\PaginatedResourceData;
 use Spatie\LaravelData\DataCollection;
+use Colame\Location\Contracts\LocationRepositoryInterface;
 
 class StaffService
 {
     public function __construct(
-        private StaffRepositoryInterface $staffRepository
+        private StaffRepositoryInterface $staffRepository,
+        private ?LocationRepositoryInterface $locationRepository = null
     ) {}
 
     public function getPaginatedStaff(array $filters, int $perPage = 15): array
@@ -28,12 +30,12 @@ class StaffService
 
     public function createStaffMember(CreateStaffMemberData $data): StaffMemberData
     {
-        return $this->staffRepository->create($data->toArray());
+        return $this->staffRepository->create($data);
     }
 
-    public function updateStaffMember(int $id, UpdateStaffMemberData $data): ?StaffMemberData
+    public function updateStaffMember(int $id, UpdateStaffMemberData $data): StaffMemberData
     {
-        return $this->staffRepository->update($id, $data->toArray());
+        return $this->staffRepository->update($id, $data);
     }
 
     public function deleteStaffMember(int $id): bool
@@ -41,57 +43,92 @@ class StaffService
         return $this->staffRepository->delete($id);
     }
 
-    public function assignRole(int $staffId, int $roleId, ?int $locationId = null): bool
+    public function assignRole(int $staffId, int $roleId, ?int $locationId = null): void
     {
-        return $this->staffRepository->assignRole($staffId, $roleId, $locationId);
+        $this->staffRepository->assignRole($staffId, $roleId, $locationId);
     }
 
-    public function removeRole(int $staffId, int $roleId, ?int $locationId = null): bool
+    public function removeRole(int $staffId, int $roleId, ?int $locationId = null): void
     {
-        return $this->staffRepository->removeRole($staffId, $roleId, $locationId);
+        $this->staffRepository->removeRole($staffId, $roleId, $locationId);
     }
 
-    public function activateStaffMember(int $id): bool
+    public function activateStaffMember(int $id): StaffMemberData
     {
-        return $this->staffRepository->update($id, ['status' => 'active']) !== null;
+        $updateData = new UpdateStaffMemberData(
+            email: new \Spatie\LaravelData\Optional(),
+            firstName: new \Spatie\LaravelData\Optional(),
+            lastName: new \Spatie\LaravelData\Optional(),
+            employeeCode: new \Spatie\LaravelData\Optional(),
+            nationalId: new \Spatie\LaravelData\Optional(),
+            phone: new \Spatie\LaravelData\Optional(),
+            dateOfBirth: new \Spatie\LaravelData\Optional(),
+            hireDate: new \Spatie\LaravelData\Optional(),
+            status: \Colame\Staff\Enums\StaffStatus::ACTIVE,
+            address: new \Spatie\LaravelData\Optional(),
+            emergencyContacts: new \Spatie\LaravelData\Optional(),
+            profilePhotoUrl: new \Spatie\LaravelData\Optional(),
+            metadata: new \Spatie\LaravelData\Optional(),
+        );
+        return $this->staffRepository->update($id, $updateData);
     }
 
-    public function deactivateStaffMember(int $id): bool
+    public function deactivateStaffMember(int $id): StaffMemberData
     {
-        return $this->staffRepository->update($id, ['status' => 'inactive']) !== null;
+        $updateData = new UpdateStaffMemberData(
+            email: new \Spatie\LaravelData\Optional(),
+            firstName: new \Spatie\LaravelData\Optional(),
+            lastName: new \Spatie\LaravelData\Optional(),
+            employeeCode: new \Spatie\LaravelData\Optional(),
+            nationalId: new \Spatie\LaravelData\Optional(),
+            phone: new \Spatie\LaravelData\Optional(),
+            dateOfBirth: new \Spatie\LaravelData\Optional(),
+            hireDate: new \Spatie\LaravelData\Optional(),
+            status: \Colame\Staff\Enums\StaffStatus::INACTIVE,
+            address: new \Spatie\LaravelData\Optional(),
+            emergencyContacts: new \Spatie\LaravelData\Optional(),
+            profilePhotoUrl: new \Spatie\LaravelData\Optional(),
+            metadata: new \Spatie\LaravelData\Optional(),
+        );
+        return $this->staffRepository->update($id, $updateData);
     }
 
     public function getStaffStats(): array
     {
         return [
-            'total' => $this->staffRepository->count(),
-            'active' => $this->staffRepository->countByStatus('active'),
-            'on_leave' => $this->staffRepository->countByStatus('on_leave'),
-            'inactive' => $this->staffRepository->countByStatus('inactive'),
+            'totalStaff' => $this->staffRepository->count(),
+            'activeStaff' => $this->staffRepository->countByStatus(\Colame\Staff\Enums\StaffStatus::ACTIVE->value),
+            'onLeave' => $this->staffRepository->countByStatus(\Colame\Staff\Enums\StaffStatus::ON_LEAVE->value),
+            'presentToday' => 0, // TODO: Implement attendance tracking
+            'scheduledToday' => 0, // TODO: Implement shift scheduling
+            'averageAttendance' => 95.5, // TODO: Calculate from actual attendance data
         ];
     }
 
-    public function getAvailableRoles(): DataCollection
+    public function getAvailableRoles(): array
     {
-        // This would be injected from RoleRepositoryInterface
-        return DataCollection::empty();
+        // Get all available roles from the repository
+        return $this->staffRepository->getAllRoles()->toArray();
     }
 
-    public function getAvailableLocations(): DataCollection
+    public function getAvailableLocations(): array
     {
-        // This would be injected from Location module
-        return DataCollection::empty();
+        // Return locations from the Location module if available
+        if ($this->locationRepository) {
+            return $this->locationRepository->getActive()->toArray();
+        }
+        return [];
     }
 
-    public function getRecentAttendance(int $staffId, int $days = 7): DataCollection
+    public function getRecentAttendance(int $staffId, int $days = 7): array
     {
         // This would be injected from AttendanceRepositoryInterface
-        return DataCollection::empty();
+        return [];
     }
 
-    public function getUpcomingShifts(int $staffId, int $days = 7): DataCollection
+    public function getUpcomingShifts(int $staffId, int $days = 7): array
     {
         // This would be injected from ShiftRepositoryInterface
-        return DataCollection::empty();
+        return [];
     }
 }

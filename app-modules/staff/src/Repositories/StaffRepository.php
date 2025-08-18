@@ -5,9 +5,13 @@ namespace Colame\Staff\Repositories;
 use Colame\Staff\Contracts\StaffRepositoryInterface;
 use Colame\Staff\Models\StaffMember;
 use Colame\Staff\Data\StaffMemberData;
+use Colame\Staff\Data\CreateStaffMemberData;
+use Colame\Staff\Data\UpdateStaffMemberData;
+use Colame\Staff\Data\RoleData;
 use App\Core\Data\PaginatedResourceData;
 use Spatie\LaravelData\DataCollection;
 use App\Core\Traits\ValidatesPagination;
+use Colame\Staff\Enums\StaffStatus;
 
 class StaffRepository implements StaffRepositoryInterface
 {
@@ -24,20 +28,22 @@ class StaffRepository implements StaffRepositoryInterface
         return StaffMemberData::collection(StaffMember::all());
     }
 
-    public function create(array $data): StaffMemberData
+    public function create(CreateStaffMemberData $data): StaffMemberData
     {
-        $staff = StaffMember::create($data);
+        $staff = StaffMember::create($data->toArray());
         return StaffMemberData::from($staff);
     }
 
-    public function update(int $id, array $data): ?StaffMemberData
+    public function update(int $id, UpdateStaffMemberData $data): StaffMemberData
     {
-        $staff = StaffMember::find($id);
-        if (!$staff) {
-            return null;
-        }
+        $staff = StaffMember::findOrFail($id);
         
-        $staff->update($data);
+        // Convert to array and filter out Optional values
+        $updateData = collect($data->toArray())
+            ->filter(fn($value) => !$value instanceof \Spatie\LaravelData\Optional)
+            ->toArray();
+        
+        $staff->update($updateData);
         return StaffMemberData::from($staff);
     }
 
@@ -50,7 +56,7 @@ class StaffRepository implements StaffRepositoryInterface
     {
         $perPage = $this->validatePerPage($perPage);
         
-        $query = StaffMember::query();
+        $query = StaffMember::with(['roles', 'locations']);
         
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -95,12 +101,9 @@ class StaffRepository implements StaffRepositoryInterface
         return $staff ? StaffMemberData::from($staff) : null;
     }
 
-    public function assignRole(int $staffId, int $roleId, ?int $locationId = null): bool
+    public function assignRole(int $staffId, int $roleId, ?int $locationId = null): void
     {
-        $staff = StaffMember::find($staffId);
-        if (!$staff) {
-            return false;
-        }
+        $staff = StaffMember::findOrFail($staffId);
         
         // Using the custom pivot table for location-based roles
         $staff->locationRoles()->attach($roleId, [
@@ -108,16 +111,11 @@ class StaffRepository implements StaffRepositoryInterface
             'assigned_at' => now(),
             'assigned_by' => auth()->id(),
         ]);
-        
-        return true;
     }
 
-    public function removeRole(int $staffId, int $roleId, ?int $locationId = null): bool
+    public function removeRole(int $staffId, int $roleId, ?int $locationId = null): void
     {
-        $staff = StaffMember::find($staffId);
-        if (!$staff) {
-            return false;
-        }
+        $staff = StaffMember::findOrFail($staffId);
         
         $query = $staff->locationRoles();
         
@@ -126,23 +124,18 @@ class StaffRepository implements StaffRepositoryInterface
         }
         
         $query->detach($roleId);
-        
-        return true;
     }
 
-    public function getStaffByRole(int $roleId, ?int $locationId = null): DataCollection
+    public function getByRole(int $roleId): DataCollection
     {
-        $query = StaffMember::whereHas('locationRoles', function ($q) use ($roleId, $locationId) {
+        $query = StaffMember::whereHas('locationRoles', function ($q) use ($roleId) {
             $q->where('role_id', $roleId);
-            if ($locationId) {
-                $q->where('location_id', $locationId);
-            }
         });
         
         return StaffMemberData::collection($query->get());
     }
 
-    public function getStaffByLocation(int $locationId): DataCollection
+    public function getByLocation(int $locationId): DataCollection
     {
         $query = StaffMember::whereHas('locationRoles', function ($q) use ($locationId) {
             $q->where('location_id', $locationId);
@@ -159,5 +152,40 @@ class StaffRepository implements StaffRepositoryInterface
     public function countByStatus(string $status): int
     {
         return StaffMember::where('status', $status)->count();
+    }
+
+    public function getActiveStaff(): DataCollection
+    {
+        $query = StaffMember::where('status', StaffStatus::ACTIVE->value);
+        return StaffMemberData::collection($query->get());
+    }
+
+    public function getRoles(int $staffId): DataCollection
+    {
+        $staff = StaffMember::with('locationRoles')->findOrFail($staffId);
+        return RoleData::collection($staff->locationRoles);
+    }
+    
+    public function getAllRoles(): DataCollection
+    {
+        // Get all unique roles that have been assigned or are available
+        // Join with roles table to get role names and metadata for hierarchy
+        $roles = \DB::table('roles')
+            ->leftJoin('staff_role_metadata', 'roles.id', '=', 'staff_role_metadata.role_id')
+            ->select(
+                'roles.id',
+                'roles.name',
+                \DB::raw('COALESCE(staff_role_metadata.hierarchy_level, 10) as hierarchy_level'),
+                'staff_role_metadata.description',
+                'staff_role_metadata.is_system',
+                'roles.created_at',
+                'roles.updated_at'
+            )
+            ->orderBy(\DB::raw('COALESCE(staff_role_metadata.hierarchy_level, 10)'))
+            ->orderBy('roles.name')
+            ->get();
+        
+        // RoleData::collection expects objects, not arrays
+        return RoleData::collection($roles);
     }
 }

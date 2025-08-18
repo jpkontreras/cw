@@ -24,9 +24,20 @@ class StaffController extends Controller
         $data = $this->staffService->getPaginatedStaff($filters, $perPage);
         
         return Inertia::render('staff/index', [
-            'staffMembers' => $data['data'],
+            'staff' => $data['data'],
             'pagination' => $data['pagination'],
-            'filters' => $filters,
+            'metadata' => [
+                'filters' => $filters,
+                'per_page' => $perPage,
+            ],
+            'features' => [
+                'biometric_clock' => false,
+                'mobile_clock' => true,
+                'shift_swapping' => false,
+                'performance_tracking' => false,
+                'training_modules' => false,
+                'payroll_integration' => false,
+            ],
             'stats' => $this->staffService->getStaffStats(),
         ]);
     }

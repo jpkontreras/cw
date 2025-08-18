@@ -164,13 +164,24 @@ const getStatusColor = (status: string) => {
 };
 
 function AttendanceIndexContent({
-  attendance,
-  activeStaff,
-  locations,
+  attendance = [],
+  activeStaff = [],
+  locations = [],
   pagination,
   metadata,
-  stats,
-  features,
+  stats = {
+    presentToday: 0,
+    lateToday: 0,
+    absentToday: 0,
+    averageWorkHours: 0,
+    overtimeHours: 0,
+    onTimeRate: 0,
+  },
+  features = {
+    biometric_clock: false,
+    mobile_clock: false,
+    facial_recognition: false,
+  },
 }: PageProps) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
@@ -385,10 +396,20 @@ function AttendanceIndexContent({
   ];
 
   const handleClockIn = (staffId: number, method: string) => {
+    // Get location ID - use first location if "all" is selected and locations exist
+    const locationId = selectedLocation === 'all' 
+      ? (locations.length > 0 ? locations[0].id : null)
+      : parseInt(selectedLocation);
+    
+    if (!locationId) {
+      console.error('No location available for clock in');
+      return;
+    }
+    
     router.post('/staff/attendance/clock-in', {
       staff_member_id: staffId,
       method: method,
-      location_id: selectedLocation === 'all' ? locations[0].id : selectedLocation,
+      location_id: locationId,
     });
     setClockInDialogOpen(false);
   };
@@ -429,7 +450,7 @@ function AttendanceIndexContent({
               <UserCheck className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.presentToday}</div>
+              <div className="text-2xl font-bold">{stats.presentToday || 0}</div>
               <Progress value={75} className="h-2 mt-2" />
             </CardContent>
           </Card>
@@ -440,9 +461,12 @@ function AttendanceIndexContent({
               <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.lateToday}</div>
+              <div className="text-2xl font-bold">{stats.lateToday || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {((stats.lateToday / stats.presentToday) * 100).toFixed(1)}% of present
+                {stats.presentToday > 0 
+                  ? `${((stats.lateToday / stats.presentToday) * 100).toFixed(1)}% of present`
+                  : 'No attendance yet'
+                }
               </p>
             </CardContent>
           </Card>
@@ -453,7 +477,7 @@ function AttendanceIndexContent({
               <UserX className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.absentToday}</div>
+              <div className="text-2xl font-bold">{stats.absentToday || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Unexcused absences
               </p>
@@ -466,7 +490,12 @@ function AttendanceIndexContent({
               <Timer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.averageWorkHours.toFixed(1)}h</div>
+              <div className="text-2xl font-bold">
+                {stats.averageWorkHours !== undefined 
+                  ? `${stats.averageWorkHours.toFixed(1)}h`
+                  : '0.0h'
+                }
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Per employee today
               </p>
@@ -479,7 +508,7 @@ function AttendanceIndexContent({
               <TrendingUp className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.overtimeHours}h</div>
+              <div className="text-2xl font-bold">{stats.overtimeHours || 0}h</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Total today
               </p>
@@ -492,7 +521,7 @@ function AttendanceIndexContent({
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.onTimeRate}%</div>
+              <div className="text-2xl font-bold">{stats.onTimeRate || 0}%</div>
               <div className="flex items-center text-xs text-green-600 mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" />
                 +2.5% from yesterday

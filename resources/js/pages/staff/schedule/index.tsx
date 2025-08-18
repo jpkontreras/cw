@@ -140,15 +140,23 @@ const getShiftColor = (status: string) => {
 };
 
 function StaffScheduleContent({ 
-  shifts, 
-  staff, 
-  locations, 
-  currentWeek,
-  stats 
+  shifts = [], 
+  staff = [], 
+  locations = [], 
+  currentWeek = {
+    start: new Date().toISOString(),
+    end: new Date().toISOString()
+  },
+  stats = {
+    totalShifts: 0,
+    totalHours: 0,
+    staffScheduled: 0,
+    openShifts: 0
+  }
 }: PageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [viewType, setViewType] = useState<'week' | 'day' | 'month'>('week');
-  const [currentDate, setCurrentDate] = useState(new Date(currentWeek.start));
+  const [currentDate, setCurrentDate] = useState(new Date(currentWeek?.start || new Date().toISOString()));
   const [createShiftOpen, setCreateShiftOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 

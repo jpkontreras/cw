@@ -83,7 +83,9 @@ class StaffMemberData extends BaseData
             dateOfBirth: $staffMember->date_of_birth ? Carbon::parse($staffMember->date_of_birth) : null,
             hireDate: Carbon::parse($staffMember->hire_date),
             nationalId: $staffMember->national_id,
-            status: StaffStatus::from($staffMember->status),
+            status: $staffMember->status instanceof StaffStatus 
+                ? $staffMember->status 
+                : StaffStatus::from($staffMember->status),
             metadata: $staffMember->metadata ?? [],
             terminatedAt: $staffMember->terminated_at ? Carbon::parse($staffMember->terminated_at) : null,
             profilePhotoUrl: $staffMember->profile_photo_url,

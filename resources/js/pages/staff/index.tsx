@@ -13,13 +13,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -37,47 +30,45 @@ import {
   UserX,
   Clock,
   Calendar,
+  CalendarCheck,
   Shield,
   Mail,
   Phone,
   Edit,
   Eye,
   Trash2,
-  ChevronDown,
-  AlertCircle,
-  CalendarCheck
+  ChevronDown
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/format';
 import { ColumnDef } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { type BreadcrumbItem } from '@/types';
 import { EmptyState } from '@/components/empty-state';
 
 interface StaffMember {
   id: number;
-  employee_code: string;
-  first_name: string;
-  last_name: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string | null;
   status: 'active' | 'inactive' | 'suspended' | 'terminated' | 'on_leave';
-  hire_date: string;
-  profile_photo_url: string | null;
-  roles: Array<{
+  hireDate: string;
+  profilePhotoUrl: string | null;
+  fullName: string;
+  yearsOfService: number;
+  isActive: boolean;
+  roles?: Array<{
     id: number;
     name: string;
-    hierarchy_level: number;
+    hierarchyLevel: number;
   }>;
-  current_location?: {
+  currentLocation?: {
     id: number;
     name: string;
   };
-  years_of_service: number;
-  attendance_rate?: number;
-  last_clock_in?: string;
+  attendanceRate?: number;
+  lastClockIn?: string;
 }
 
 interface PageProps {
@@ -102,12 +93,6 @@ interface PageProps {
   };
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Staff',
-    href: '/staff',
-  },
-];
 
 const getStatusVariant = (status: string) => {
   switch (status) {
@@ -144,9 +129,7 @@ const getStatusIcon = (status: string) => {
 function StaffIndexContent({ 
   staff, 
   pagination, 
-  metadata, 
-  features,
-  stats 
+  metadata
 }: PageProps) {
   const [selectedStaff, setSelectedStaff] = useState<number[]>([]);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -176,23 +159,25 @@ function StaffIndexContent({
       header: 'Employee',
       cell: ({ row }) => {
         const staff = row.original;
-        const initials = `${staff.first_name[0]}${staff.last_name[0]}`.toUpperCase();
+        const initials = `${staff.firstName[0]}${staff.lastName[0]}`.toUpperCase();
         
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 py-2">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={staff.profile_photo_url || undefined} />
-              <AvatarFallback>{initials}</AvatarFallback>
+              <AvatarImage src={staff.profilePhotoUrl || undefined} />
+              <AvatarFallback className="text-sm">
+                {initials}
+              </AvatarFallback>
             </Avatar>
             <div>
               <Link 
                 href={`/staff/${staff.id}`}
                 className="font-medium hover:underline"
               >
-                {staff.first_name} {staff.last_name}
+                {staff.firstName} {staff.lastName}
               </Link>
               <div className="text-xs text-muted-foreground">
-                {staff.employee_code}
+                {staff.employeeCode}
               </div>
             </div>
           </div>
@@ -205,7 +190,7 @@ function StaffIndexContent({
       cell: ({ row }) => {
         const staff = row.original;
         return (
-          <div className="space-y-1">
+          <div className="space-y-1 py-2">
             <div className="flex items-center gap-1 text-sm">
               <Mail className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">{staff.email}</span>
@@ -230,13 +215,15 @@ function StaffIndexContent({
         }
         
         const primaryRole = roles.reduce((prev, current) => 
-          (prev.hierarchy_level > current.hierarchy_level) ? prev : current
+          (prev.hierarchyLevel > current.hierarchyLevel) ? prev : current
         );
         
         return (
-          <div className="flex items-center gap-2">
-            <Shield className="h-3 w-3 text-muted-foreground" />
-            <span className="text-sm">{primaryRole.name}</span>
+          <div className="flex items-center gap-2 py-2">
+            <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm">
+              {primaryRole.name}
+            </span>
             {roles.length > 1 && (
               <Badge variant="secondary" className="text-xs">
                 +{roles.length - 1}
@@ -250,11 +237,16 @@ function StaffIndexContent({
       accessorKey: 'location',
       header: 'Location',
       cell: ({ row }) => {
-        const location = row.original.current_location;
-        return location ? (
-          <span className="text-sm">{location.name}</span>
-        ) : (
-          <span className="text-sm text-muted-foreground">Not assigned</span>
+        const location = row.original.currentLocation;
+        
+        return (
+          <div className="py-2">
+            {location ? (
+              <span className="text-sm">{location.name}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">Not assigned</span>
+            )}
+          </div>
         );
       },
     },
@@ -264,10 +256,12 @@ function StaffIndexContent({
       cell: ({ row }) => {
         const status = row.original.status;
         return (
-          <Badge variant={getStatusVariant(status)} className="gap-1">
-            {getStatusIcon(status)}
-            {status.replace('_', ' ')}
-          </Badge>
+          <div className="py-2">
+            <Badge variant={getStatusVariant(status)} className="gap-1">
+              {getStatusIcon(status)}
+              {status.replace('_', ' ')}
+            </Badge>
+          </div>
         );
       },
     },
@@ -276,24 +270,20 @@ function StaffIndexContent({
       header: 'Attendance',
       cell: ({ row }) => {
         const staff = row.original;
-        const rate = staff.attendance_rate;
+        const rate = staff.attendanceRate;
         
         if (rate === undefined) {
-          return <span className="text-sm text-muted-foreground">N/A</span>;
+          return <div className="py-2"><span className="text-sm text-muted-foreground">N/A</span></div>;
         }
         
-        const color = rate >= 95 ? 'text-green-600' : 
-                     rate >= 85 ? 'text-yellow-600' : 
-                     'text-red-600';
-        
         return (
-          <div className="space-y-1">
-            <span className={cn("text-sm font-medium", color)}>
+          <div className="space-y-1 py-2">
+            <span className="text-sm">
               {rate.toFixed(1)}%
             </span>
-            {staff.last_clock_in && (
+            {staff.lastClockIn && (
               <div className="text-xs text-muted-foreground">
-                Last: {new Date(staff.last_clock_in).toLocaleDateString()}
+                Last: {new Date(staff.lastClockIn).toLocaleDateString()}
               </div>
             )}
           </div>
@@ -302,16 +292,16 @@ function StaffIndexContent({
     },
     {
       accessorKey: 'hire_date',
-      header: 'Service',
+      header: 'Years of Service',
       cell: ({ row }) => {
         const staff = row.original;
         return (
-          <div className="space-y-1">
+          <div className="space-y-1 py-2">
             <span className="text-sm">
-              {staff.years_of_service} {staff.years_of_service === 1 ? 'year' : 'years'}
+              {staff.yearsOfService} {staff.yearsOfService === 1 ? 'year' : 'years'}
             </span>
             <div className="text-xs text-muted-foreground">
-              Since {new Date(staff.hire_date).toLocaleDateString()}
+              Since {new Date(staff.hireDate).toLocaleDateString()}
             </div>
           </div>
         );
@@ -325,7 +315,10 @@ function StaffIndexContent({
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button 
+                variant="ghost" 
+                className="h-8 w-8 p-0"
+              >
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -360,7 +353,7 @@ function StaffIndexContent({
               <DropdownMenuItem 
                 className="text-red-600"
                 onClick={() => {
-                  if (confirm(`Are you sure you want to delete ${staff.first_name} ${staff.last_name}?`)) {
+                  if (confirm(`Are you sure you want to delete ${staff.firstName} ${staff.lastName}?`)) {
                     router.delete(`/staff/${staff.id}`);
                   }
                 }}
@@ -400,178 +393,113 @@ function StaffIndexContent({
 
   return (
     <>
-      <Head title="Staff Management" />
-
-      <Page 
+      <Page.Header
         title="Staff Management"
-        description="Manage your team members, roles, and schedules"
-        breadcrumbs={breadcrumbs}
+        subtitle="Manage your team members, roles, and schedules"
         actions={
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'csv' })}>
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'xlsx' })}>
-                  Export as Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'pdf' })}>
-                  Export as PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setImportDialogOpen(true)}
-            >
-              <FileUp className="mr-2 h-4 w-4" />
-              Import
-            </Button>
-            
-            <Button asChild>
+          staff.length > 0 && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'csv' })}>
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'xlsx' })}>
+                    Export as Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.post('/staff/export', { format: 'pdf' })}>
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <FileUp className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+              
               <Link href="/staff/create">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Staff Member
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Staff Member
+                </Button>
               </Link>
-            </Button>
-          </div>
+            </>
+          )
         }
-      >
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalStaff}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.activeStaff} active, {stats.onLeave} on leave
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Present Today</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.presentToday}</div>
-                <p className="text-xs text-muted-foreground">
-                  Out of {stats.scheduledToday} scheduled
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.averageAttendance.toFixed(1)}%</div>
-                <p className="text-xs text-muted-foreground">
-                  Last 30 days
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start" asChild>
-                  <Link href="/staff/schedule">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Schedule
-                  </Link>
+      />
+
+      <Page.Content>
+        {staff.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No staff members yet"
+            description="Start building your team by adding staff members"
+            actions={
+              <Link href="/staff/create">
+                <Button size="lg">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add First Staff Member
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start" asChild>
-                  <Link href="/staff/attendance">
-                    <Clock className="mr-2 h-4 w-4" />
-                    Attendance
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+              </Link>
+            }
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* Bulk Actions Alert */}
+            {selectedStaff.length > 0 && (
+              <Alert>
+                <AlertDescription className="flex items-center justify-between">
+                  <span>{selectedStaff.length} staff member(s) selected</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleBulkAction('export')}
+                    >
+                      Export Selected
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleBulkAction('deactivate')}
+                    >
+                      Deactivate
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="text-destructive"
+                      onClick={() => handleBulkAction('delete')}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Data Table */}
+            <InertiaDataTable
+              columns={columns}
+              data={staff}
+              pagination={pagination}
+              metadata={metadata}
+              rowClickRoute="/staff/:id"
+            />
           </div>
         )}
-
-        {/* Bulk Actions Alert */}
-        {selectedStaff.length > 0 && (
-          <Alert className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>{selectedStaff.length} staff member(s) selected</span>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleBulkAction('export')}
-                >
-                  Export Selected
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleBulkAction('deactivate')}
-                >
-                  Deactivate
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  onClick={() => handleBulkAction('delete')}
-                >
-                  Delete
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Data Table */}
-        <Card>
-          <CardContent className="p-0">
-            {staff.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title="No staff members yet"
-                description="Start building your team by adding staff members"
-                action={{
-                  label: 'Add Staff Member',
-                  href: '/staff/create',
-                }}
-              />
-            ) : (
-              <InertiaDataTable
-                columns={columns}
-                data={staff}
-                pagination={pagination}
-                metadata={metadata}
-                routeName="staff.index"
-                onRowSelectionChange={(rows) => {
-                  setSelectedStaff(rows.map(r => r.id));
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
 
         {/* Import Dialog */}
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
@@ -598,13 +526,18 @@ function StaffIndexContent({
             </div>
           </DialogContent>
         </Dialog>
-      </Page>
+      </Page.Content>
     </>
   );
 }
 
-StaffIndexContent.layout = (page: React.ReactNode) => (
-  <AppLayout>{page}</AppLayout>
-);
-
-export default StaffIndexContent;
+export default function StaffIndex(props: PageProps) {
+  return (
+    <AppLayout>
+      <Head title="Staff Management" />
+      <Page>
+        <StaffIndexContent {...props} />
+      </Page>
+    </AppLayout>
+  );
+}

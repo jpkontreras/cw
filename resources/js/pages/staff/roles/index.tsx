@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { type BreadcrumbItem } from '@/types';
 import { EmptyState } from '@/components/empty-state';
 import {
@@ -136,7 +137,16 @@ const getHierarchyLabel = (level: number) => {
   return 'Staff';
 };
 
-function RolesIndexContent({ roles, permissions, stats }: PageProps) {
+function RolesIndexContent({ 
+  roles = [], 
+  permissions = [], 
+  stats = {
+    totalRoles: 0,
+    totalPermissions: 0,
+    customRoles: 0,
+    systemRoles: 0,
+  }
+}: PageProps) {
   const [selectedRole, setSelectedRole] = useState<Role | null>(roles[0] || null);
   const [createRoleOpen, setCreateRoleOpen] = useState(false);
   const [editRoleOpen, setEditRoleOpen] = useState(false);
@@ -209,7 +219,7 @@ function RolesIndexContent({ roles, permissions, stats }: PageProps) {
           : [...prev.permissions, permissionId],
       }));
     } else if (selectedRole) {
-      const hasPermission = selectedRole.permissions.some(p => p.id === permissionId);
+      const hasPermission = selectedRole?.permissions?.some(p => p.id === permissionId) || false;
       if (hasPermission) {
         router.delete(`/staff/roles/${selectedRole.id}/permissions/${permissionId}`);
       } else {
@@ -340,11 +350,11 @@ function RolesIndexContent({ roles, permissions, stats }: PageProps) {
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Users className="h-3 w-3" />
-                                {role.staff_count} staff
+                                {role.staff_count || 0} staff
                               </span>
                               <span className="flex items-center gap-1">
                                 <Key className="h-3 w-3" />
-                                {role.permissions.length} permissions
+                                {role.permissions?.length || 0} permissions
                               </span>
                             </div>
                           </div>
@@ -368,7 +378,7 @@ function RolesIndexContent({ roles, permissions, stats }: PageProps) {
                   </CardTitle>
                   <CardDescription>
                     {selectedRole 
-                      ? `${selectedRole.permissions.length} permissions assigned`
+                      ? `${selectedRole?.permissions?.length || 0} permissions assigned`
                       : 'Choose a role to manage its permissions'
                     }
                   </CardDescription>
@@ -410,15 +420,15 @@ function RolesIndexContent({ roles, permissions, stats }: PageProps) {
                           {group.icon}
                           <span className="capitalize">{group.module}</span>
                           <Badge variant="secondary" className="ml-auto">
-                            {selectedRole.permissions.filter(p => p.module === group.module).length}/
+                            {selectedRole?.permissions?.filter(p => p.module === group.module).length || 0}/
                             {group.permissions.length}
                           </Badge>
                         </div>
                         <div className="grid gap-2 pl-6">
                           {group.permissions.map((permission) => {
-                            const hasPermission = selectedRole.permissions.some(
+                            const hasPermission = selectedRole?.permissions?.some(
                               p => p.id === permission.id
-                            );
+                            ) || false;
                             
                             return (
                               <div

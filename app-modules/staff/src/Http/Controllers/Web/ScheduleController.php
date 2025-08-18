@@ -18,10 +18,24 @@ class ScheduleController extends Controller
     {
         $filters = $request->only(['location', 'date_from', 'date_to', 'staff_member']);
         
+        // Get current week dates
+        $startOfWeek = now()->startOfWeek();
+        $endOfWeek = now()->endOfWeek();
+        
         return Inertia::render('staff/schedule/index', [
-            'shifts' => $this->scheduleService->getShifts($filters),
-            'staffMembers' => $this->scheduleService->getAvailableStaff(),
-            'locations' => $this->scheduleService->getLocations(),
+            'shifts' => $this->scheduleService->getShifts($filters)->toArray(),
+            'staff' => $this->scheduleService->getAvailableStaff()->toArray(),
+            'locations' => $this->scheduleService->getLocations()->toArray(),
+            'currentWeek' => [
+                'start' => $startOfWeek->toISOString(),
+                'end' => $endOfWeek->toISOString(),
+            ],
+            'stats' => [
+                'totalShifts' => 0, // TODO: Calculate from actual data
+                'totalHours' => 0,
+                'staffScheduled' => 0,
+                'openShifts' => 0,
+            ],
             'filters' => $filters,
         ]);
     }
