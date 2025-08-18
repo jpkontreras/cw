@@ -7,6 +7,7 @@ import { Link } from '@inertiajs/react';
 import {
   BookOpen,
   Building2,
+  Calendar,
   ChefHat,
   DollarSign,
   FileText,
@@ -20,6 +21,7 @@ import {
   PackageCheck,
   Plus,
   Settings,
+  Shield,
   ShoppingCart,
   SlidersHorizontal,
   Tag,
@@ -124,6 +126,38 @@ const mainNavItems: NavItem[] = [
     title: 'Staff',
     href: '/staff',
     icon: Users,
+    items: [
+      {
+        title: 'All Staff',
+        href: '/staff',
+        icon: List,
+      },
+      {
+        title: 'Add Staff Member',
+        href: '/staff/create',
+        icon: Plus,
+      },
+      {
+        title: 'Schedule',
+        href: '/staff/schedule',
+        icon: Calendar,
+      },
+      {
+        title: 'Attendance',
+        href: '/staff/attendance',
+        icon: Monitor,
+      },
+      {
+        title: 'Roles & Permissions',
+        href: '/staff/roles',
+        icon: Shield,
+      },
+      {
+        title: 'Reports',
+        href: '/staff/reports',
+        icon: FileText,
+      },
+    ],
   },
   {
     title: 'Locations',

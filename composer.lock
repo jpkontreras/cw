@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80d29db02154588bfd9bac69cb762491",
+    "content-hash": "1de2bfa6487d153039e3a7482fd54350",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1062,6 +1062,38 @@
                     "Colame\\Order\\Tests\\": "tests/",
                     "Colame\\Order\\Database\\Factories\\": "database/factories/",
                     "Colame\\Order\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "colame/staff",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/staff",
+                "reference": "bb19f2f61311e6e3e0e6726ae8bdee4e67e6a8b9"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Colame\\Staff\\Providers\\StaffServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Colame\\Staff\\": "src/",
+                    "Colame\\Staff\\Tests\\": "tests/",
+                    "Colame\\Staff\\Database\\Factories\\": "database/factories/",
+                    "Colame\\Staff\\Database\\Seeders\\": "database/seeders/"
                 }
             },
             "license": [

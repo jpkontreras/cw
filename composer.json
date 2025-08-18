@@ -14,6 +14,7 @@
         "colame/location": "*",
         "colame/menu": "*",
         "colame/order": "*",
+        "colame/staff": "*",
         "diglactic/laravel-breadcrumbs": "^10.0",
         "inertiajs/inertia-laravel": "^2.0",
         "internachi/modular": "^2.3",

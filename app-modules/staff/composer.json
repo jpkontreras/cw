@@ -1,0 +1,24 @@
+{
+	"name": "colame/staff",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Staff\\": "src/",
+			"Colame\\Staff\\Tests\\": "tests/",
+			"Colame\\Staff\\Database\\Factories\\": "database/factories/",
+			"Colame\\Staff\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Staff\\Providers\\StaffServiceProvider"
+			]
+		}
+	}
+}
