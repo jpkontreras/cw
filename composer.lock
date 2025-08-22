@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "320bcb0458613c3bb50a3f81a317c08d",
+    "content-hash": "cf0f240176758ceb683ed9ee33e3c2bb",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1094,6 +1094,38 @@
                     "Colame\\Order\\Tests\\": "tests/",
                     "Colame\\Order\\Database\\Factories\\": "database/factories/",
                     "Colame\\Order\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "colame/settings",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/settings",
+                "reference": "f0decdf41dc923a8a095a1ddd43bf47733c83f9c"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Colame\\Settings\\Providers\\SettingsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Colame\\Settings\\": "src/",
+                    "Colame\\Settings\\Tests\\": "tests/",
+                    "Colame\\Settings\\Database\\Factories\\": "database/factories/",
+                    "Colame\\Settings\\Database\\Seeders\\": "database/seeders/"
                 }
             },
             "license": [

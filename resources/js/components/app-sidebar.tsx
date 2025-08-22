@@ -31,6 +31,7 @@ import {
   Tag,
   Users,
   Utensils,
+  Wrench,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -218,9 +219,9 @@ const mainNavItems: NavItem[] = [
     ],
   },
   {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
+    title: 'System Settings',
+    href: '/system-settings',
+    icon: Wrench,
   },
 ];
 

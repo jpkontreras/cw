@@ -15,6 +15,7 @@
         "colame/menu": "*",
         "colame/offer": "*",
         "colame/order": "*",
+        "colame/settings": "*",
         "colame/staff": "*",
         "diglactic/laravel-breadcrumbs": "^10.0",
         "inertiajs/inertia-laravel": "^2.0",
