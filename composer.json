@@ -13,6 +13,7 @@
         "colame/item": "*",
         "colame/location": "*",
         "colame/menu": "*",
+        "colame/offer": "*",
         "colame/order": "*",
         "colame/staff": "*",
         "diglactic/laravel-breadcrumbs": "^10.0",

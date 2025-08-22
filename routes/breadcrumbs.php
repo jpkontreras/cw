@@ -339,6 +339,39 @@ Breadcrumbs::for('menu.preview', function (BreadcrumbTrail $trail, $menuId) {
 });
 
 // ====================
+// Offers Module
+// ====================
+
+// Offers
+Breadcrumbs::for('offers.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Offers', route('offers.index'));
+});
+
+// Offers > Create
+Breadcrumbs::for('offers.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('offers.index');
+    $trail->push('Create Offer', route('offers.create'));
+});
+
+// Offers > Offer Details
+Breadcrumbs::for('offers.show', function (BreadcrumbTrail $trail, $offerId) {
+    $trail->parent('offers.index');
+    $trail->push('Offer Details', route('offers.show', $offerId));
+});
+
+// Offers > Offer Details > Edit
+Breadcrumbs::for('offers.edit', function (BreadcrumbTrail $trail, $offerId) {
+    $trail->parent('offers.show', $offerId);
+    $trail->push('Edit', route('offers.edit', $offerId));
+});
+
+// Offers > Offer Details > Analytics
+Breadcrumbs::for('offers.analytics', function (BreadcrumbTrail $trail, $offerId) {
+    $trail->parent('offers.show', $offerId);
+    $trail->push('Analytics', route('offers.analytics', $offerId));
+});
+
+// ====================
 // Settings Module
 // ====================
 

@@ -21,24 +21,28 @@ To empower restaurant operators with a modern, efficient management system that 
 Colame is a web-based management platform that can be consumed by various client applications. The system focuses on:
 
 ### Restaurant Operations
+
 - Order lifecycle management from creation to completion
 - Dynamic menu management with flexible pricing and modifiers
 - Kitchen coordination and order tracking
 - Staff management and role-based access control
 
 ### Business Management
+
 - Multi-location support with centralized control
 - Business entity management and categorization
 - Location-specific configurations and menus
 - Feature management for gradual rollout
 
 ### Menu & Inventory
+
 - Product catalog with variants and modifiers
 - Recipe and ingredient management
 - Dynamic pricing by location
 - Menu scheduling and templates
 
 ### Reporting & Analytics
+
 - Sales tracking and reporting
 - Operational metrics and insights
 - Order statistics and trends
@@ -47,12 +51,14 @@ Colame is a web-based management platform that can be consumed by various client
 ## Target Users
 
 ### Primary Users
+
 - Restaurant owners and managers
 - Kitchen staff and chefs
 - Waitstaff and cashiers
 - Multi-location franchise operators
 
 ### Use Cases
+
 - Managing daily restaurant operations
 - Processing and tracking customer orders
 - Coordinating kitchen activities
@@ -62,6 +68,7 @@ Colame is a web-based management platform that can be consumed by various client
 ## Current Features
 
 ### Business Management
+
 - Business entity creation and profiles
 - Business type categorization and tagging
 - Multi-business support per user
@@ -69,6 +76,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Media upload capabilities
 
 ### Currency Management
+
 - Multi-currency support and conversion
 - Currency settings per business/location
 - Money handling with precision
@@ -76,6 +84,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Exchange rate management
 
 ### Item & Product Catalog
+
 - Comprehensive item management with variants
 - Compound items and recipe management
 - Modifier groups and item modifiers
@@ -85,6 +94,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Product images and media
 
 ### Kitchen Operations
+
 - Kitchen display system
 - Order queue management
 - Kitchen metrics and statistics
@@ -92,12 +102,14 @@ Colame is a web-based management platform that can be consumed by various client
 - Kitchen-specific views and workflows
 
 ### Location Management
+
 - Multi-location support
 - Location-specific settings
 - Location context management
 - Independent configuration per location
 
 ### Menu Management
+
 - Dynamic menu creation with sections
 - Menu scheduling and time-based availability
 - Menu templates and customization
@@ -106,6 +118,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Export capabilities
 
 ### Offer & Promotion System
+
 - Promotional offer creation and rules
 - Coupon code generation and validation
 - Offer templates for quick setup
@@ -114,6 +127,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Time-based promotions
 
 ### Onboarding Process
+
 - Guided business setup workflow
 - Business information collection
 - Location setup assistance
@@ -122,6 +136,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Team setup guidance
 
 ### Order Management
+
 - Complete order lifecycle (Draft → Placed → Confirmed → Preparing → Ready → Completed)
 - Order item management with modifiers
 - Order status history tracking
@@ -131,6 +146,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Event-driven order processing
 
 ### Payment Processing
+
 - Payment transaction recording
 - Multiple payment method support
 - Payment status tracking
@@ -138,6 +154,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Payment summaries and reporting
 
 ### Settings & Configuration
+
 - Application-wide settings management
 - User-specific preferences
 - Setting categories and groups
@@ -147,6 +164,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Public settings API
 
 ### Staff Management
+
 - Employee profiles and management
 - Role-based permissions system
 - Shift scheduling and management
@@ -159,21 +177,25 @@ Colame is a web-based management platform that can be consumed by various client
 ## Non-Functional Requirements
 
 ### Performance
+
 - Fast response times for critical operations
 - Support for concurrent users
 - Scalable architecture for growth
 
 ### Security
+
 - Secure authentication and authorization
 - Data protection and privacy
 - Role-based access control
 
 ### Reliability
+
 - High availability during business hours
 - Data integrity and consistency
 - Error recovery mechanisms
 
 ### Usability
+
 - Intuitive user interface
 - Mobile-friendly design
 - Minimal training requirements
@@ -189,6 +211,7 @@ Colame is a web-based management platform that can be consumed by various client
 ## Planned Features
 
 ### Advanced Kitchen Management
+
 - Full kitchen display system with station routing
 - Recipe step-by-step guidance
 - Preparation time tracking and optimization
@@ -197,6 +220,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Multi-station coordination
 
 ### Enhanced Inventory Management
+
 - Real-time stock tracking and alerts
 - Automatic reordering based on thresholds
 - Supplier management and purchase orders
@@ -206,6 +230,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Cost analysis and margin optimization
 
 ### Customer Relationship Management
+
 - Customer profiles and preferences
 - Order history and favorites
 - Loyalty programs and rewards
@@ -214,6 +239,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Birthday and special occasion tracking
 
 ### Advanced Analytics & Reporting
+
 - Real-time business intelligence dashboards
 - Predictive analytics for demand forecasting
 - Custom report builder
@@ -223,6 +249,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Peak hour predictions
 
 ### Table Management
+
 - Interactive floor plan designer
 - Table reservation system
 - Waitlist management
@@ -231,6 +258,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Table status tracking
 
 ### Delivery & Takeout Integration
+
 - Third-party delivery platform integration
 - In-house delivery management
 - Route optimization
@@ -239,6 +267,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Driver assignment and tracking
 
 ### Financial Management
+
 - Comprehensive financial reporting
 - Budget planning and tracking
 - Tax compliance and reporting
@@ -248,6 +277,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Integration with accounting software
 
 ### Marketing Automation
+
 - Email campaign management
 - SMS marketing capabilities
 - Social media integration
@@ -257,6 +287,7 @@ Colame is a web-based management platform that can be consumed by various client
 - ROI analysis
 
 ### Advanced Staff Features
+
 - Performance tracking and reviews
 - Training management system
 - Scheduling optimization
@@ -266,6 +297,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Hiring and onboarding workflows
 
 ### Integration Capabilities
+
 - POS system integration
 - Accounting software connectivity
 - Payment gateway integration
@@ -275,12 +307,14 @@ Colame is a web-based management platform that can be consumed by various client
 - Supply chain systems
 
 ### Multi-language Support
+
 - Interface translations
 - Multi-language menu support
 - Regional formatting preferences
 - Cultural customization options
 
 ### Real-time Features
+
 - WebSocket-based live updates
 - Real-time order notifications
 - Live dashboard updates
@@ -289,6 +323,7 @@ Colame is a web-based management platform that can be consumed by various client
 - Live chat support
 
 ### Mobile Enhancements
+
 - Dedicated mobile apps for different roles
 - Offline-first architecture
 - Voice order taking
@@ -296,6 +331,7 @@ Colame is a web-based management platform that can be consumed by various client
 - QR code ordering
 
 ### AI-Powered Features
+
 - Demand forecasting
 - Dynamic pricing suggestions
 - Menu optimization recommendations

@@ -1,0 +1,24 @@
+{
+	"name": "colame/offer",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Offer\\": "src/",
+			"Colame\\Offer\\Tests\\": "tests/",
+			"Colame\\Offer\\Database\\Factories\\": "database/factories/",
+			"Colame\\Offer\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Offer\\Providers\\OfferServiceProvider"
+			]
+		}
+	}
+}

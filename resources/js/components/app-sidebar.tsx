@@ -5,13 +5,16 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import {
+  BarChart3,
   BookOpen,
   Building2,
   Calendar,
   ChefHat,
+  Copy,
   DollarSign,
   FileText,
   Folder,
+  Gift,
   GitBranch,
   LayoutGrid,
   List,
@@ -19,6 +22,7 @@ import {
   Monitor,
   Package,
   PackageCheck,
+  Percent,
   Plus,
   Settings,
   Shield,
@@ -194,7 +198,24 @@ const mainNavItems: NavItem[] = [
   {
     title: 'Offers',
     href: '/offers',
-    icon: Tag,
+    icon: Gift,
+    items: [
+      {
+        title: 'All Offers',
+        href: '/offers',
+        icon: List,
+      },
+      {
+        title: 'Create Offer',
+        href: '/offers/create',
+        icon: Plus,
+      },
+      {
+        title: 'Analytics',
+        href: '/offers/analytics',
+        icon: BarChart3,
+      },
+    ],
   },
   {
     title: 'Settings',
