@@ -14,6 +14,7 @@
         "colame/location": "*",
         "colame/menu": "*",
         "colame/offer": "*",
+        "colame/onboarding": "*",
         "colame/order": "*",
         "colame/settings": "*",
         "colame/staff": "*",
@@ -30,6 +31,7 @@
         "spatie/laravel-data": "^4.17",
         "spatie/laravel-event-sourcing": "^7.12",
         "spatie/laravel-model-states": "^2.11",
+        "spatie/laravel-onboard": "^2.6",
         "spatie/laravel-permission": "^6.20",
         "spatie/laravel-tags": "^4.10",
         "tightenco/ziggy": "^2.4"

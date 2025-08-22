@@ -3,7 +3,7 @@
 use Colame\Settings\Http\Controllers\Web\SettingController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['web', 'auth'])->prefix('system-settings')->name('system-settings.')->group(function () {
+Route::middleware(['web', 'auth', 'onboarding.completed'])->prefix('system-settings')->name('system-settings.')->group(function () {
     // Main settings dashboard
     Route::get('/', [SettingController::class, 'index'])->name('index');
 

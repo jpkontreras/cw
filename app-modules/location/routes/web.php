@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Colame\Location\Http\Controllers\Web\LocationController;
 
-Route::middleware(['web', 'auth'])->group(function () {
+Route::middleware(['web', 'auth', 'onboarding.completed'])->group(function () {
     // Static routes MUST be defined before resource routes to avoid route conflicts
     // Location filtering and viewing routes
     Route::get('locations/types', [LocationController::class, 'types'])->name('locations.types');

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Colame\Offer\Http\Controllers\Web\OfferController as WebOfferController;
 
 // Web Routes (Inertia)
-Route::middleware(['web', 'auth'])->prefix('offers')->name('offers.')->group(function () {
+Route::middleware(['web', 'auth', 'onboarding.completed'])->prefix('offers')->name('offers.')->group(function () {
     Route::get('/', [WebOfferController::class, 'index'])->name('index');
     Route::get('/create', [WebOfferController::class, 'create'])->name('create');
     Route::post('/', [WebOfferController::class, 'store'])->name('store');

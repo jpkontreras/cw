@@ -7,7 +7,7 @@ use Colame\Item\Http\Controllers\Web\InventoryController;
 use Colame\Item\Http\Controllers\Web\PricingController;
 use Colame\Item\Http\Controllers\Web\RecipeController;
 
-Route::middleware(['web', 'auth'])->group(function () {
+Route::middleware(['web', 'auth', 'onboarding.completed'])->group(function () {
     // Item management routes
     Route::prefix('items')->name('item.')->group(function () {
         Route::get('/', [ItemController::class, 'index'])->name('index');

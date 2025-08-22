@@ -1,0 +1,24 @@
+{
+	"name": "colame/onboarding",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Onboarding\\": "src/",
+			"Colame\\Onboarding\\Tests\\": "tests/",
+			"Colame\\Onboarding\\Database\\Factories\\": "database/factories/",
+			"Colame\\Onboarding\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Onboarding\\Providers\\OnboardingServiceProvider"
+			]
+		}
+	}
+}
