@@ -18,6 +18,7 @@
         "colame/order": "*",
         "colame/settings": "*",
         "colame/staff": "*",
+        "colame/taxonomy": "*",
         "diglactic/laravel-breadcrumbs": "^10.0",
         "inertiajs/inertia-laravel": "^2.0",
         "internachi/modular": "^2.3",

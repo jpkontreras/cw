@@ -222,6 +222,18 @@ const mainNavItems: NavItem[] = [
     title: 'System Settings',
     href: '/system-settings',
     icon: Wrench,
+    items: [
+      {
+        title: 'General Settings',
+        href: '/system-settings',
+        icon: Settings,
+      },
+      {
+        title: 'Categories & Tags',
+        href: '/taxonomies',
+        icon: Tag,
+      },
+    ],
   },
 ];
 

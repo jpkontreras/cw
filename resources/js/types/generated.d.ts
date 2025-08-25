@@ -688,3 +688,94 @@ declare namespace Colame.Staff.Enums {
   export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   export type StaffStatus = 'active' | 'inactive' | 'suspended' | 'terminated' | 'on_leave';
 }
+declare namespace Colame.Taxonomy.Data {
+  export interface TaxonomyType {
+    value: string;
+    label: string;
+    description: string;
+    isHierarchical: boolean;
+    allowsMultiple: boolean;
+    requiresLocation: boolean;
+  }
+
+  export interface TaxonomyMetadata {
+    description?: string;
+    icon?: string;
+    color?: string;
+    image?: string;
+    featured?: boolean;
+    translations?: Record<string, any>;
+    customFields?: Record<string, any>;
+  }
+
+  export interface TaxonomyAttribute {
+    id: number;
+    taxonomyId: number;
+    key: string;
+    value: string;
+    type: 'string' | 'number' | 'boolean' | 'json';
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
+  export interface Taxonomy {
+    id: number;
+    name: string;
+    slug: string;
+    type: string;
+    parentId?: number | null;
+    locationId?: number | null;
+    metadata?: TaxonomyMetadata;
+    sortOrder: number;
+    isActive: boolean;
+    children?: Taxonomy[];
+    parent?: Taxonomy;
+    attributes?: TaxonomyAttribute[];
+    createdAt?: string;
+    updatedAt?: string;
+    fullPath?: string;
+    isHierarchical?: boolean;
+    allowsMultiple?: boolean;
+  }
+
+  export interface CreateTaxonomy {
+    name: string;
+    slug: string;
+    type: string;
+    parentId?: number | null;
+    locationId?: number | null;
+    metadata?: TaxonomyMetadata;
+    sortOrder?: number;
+    isActive?: boolean;
+    attributes?: Record<string, any>;
+  }
+
+  export interface UpdateTaxonomy {
+    name?: string;
+    slug?: string;
+    parentId?: number | null;
+    locationId?: number | null;
+    metadata?: TaxonomyMetadata;
+    sortOrder?: number;
+    isActive?: boolean;
+    attributes?: Record<string, any>;
+  }
+}
+declare namespace Colame.Taxonomy.Enums {
+  export type TaxonomyType = 
+    | 'item_category'
+    | 'menu_section'
+    | 'ingredient_type'
+    | 'dietary_label'
+    | 'allergen'
+    | 'cuisine_type'
+    | 'preparation_method'
+    | 'spice_level'
+    | 'customer_segment'
+    | 'price_range'
+    | 'location_zone'
+    | 'promotion_type'
+    | 'general_tag'
+    | 'seasonal_tag'
+    | 'feature_tag';
+}
