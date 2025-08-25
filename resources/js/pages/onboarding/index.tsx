@@ -80,8 +80,8 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
       <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900 flex flex-col">
         {/* Minimal Header */}
         <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="space-y-4">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h1 className="text-xl font-medium text-neutral-900 dark:text-neutral-100">Colame Setup</h1>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -94,20 +94,20 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
         </div>
 
         {/* Main Content - Centered and Focused */}
-        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6">
           <div className="w-full max-w-2xl">
             {/* Current Action Card - Single Focus */}
             {!progress?.isCompleted && currentStepDetails && (
-              <div className="space-y-8">
+              <div className="space-y-4">
                 {/* Step Counter */}
                 <div className="text-center">
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
                     Step {currentStepIndex} of {availableSteps.length}
                   </p>
                   <h2 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">
                     {currentStepDetails.title}
                   </h2>
-                  <p className="text-lg text-neutral-600 dark:text-neutral-400 mt-2">
+                  <p className="text-lg text-neutral-600 dark:text-neutral-400 mt-1">
                     {currentStepDetails.description}
                   </p>
                 </div>
@@ -122,30 +122,30 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                     </Badge>
                   </div>
                   
-                  <CardContent className="p-8">
-                    <div className="space-y-6">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
                       {/* Icon and Required Fields Section */}
-                      <div className="flex gap-8">
+                      <div className="flex gap-6">
                         {/* Icon */}
                         <div className="shrink-0">
-                          <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900">
-                            {React.createElement(currentStepDetails.icon, { className: 'h-10 w-10 text-neutral-700 dark:text-neutral-300' })}
+                          <div className="p-3 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900">
+                            {React.createElement(currentStepDetails.icon, { className: 'h-8 w-8 text-neutral-700 dark:text-neutral-300' })}
                           </div>
                         </div>
 
                         {/* Required Fields */}
-                        <div className="flex-1 space-y-4">
+                        <div className="flex-1 space-y-3">
                           <div>
-                            <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+                            <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
                               What we'll need from you:
                             </p>
                             <p className="text-sm text-neutral-500 dark:text-neutral-400">
                               Have this information ready to complete this step quickly
                             </p>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-2">
                             {currentStepDetails.requiredFields.map((field) => (
-                              <div key={field} className="flex items-center gap-2 p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800/50">
+                              <div key={field} className="flex items-center gap-2 p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800/50">
                                 <CheckCircle className="h-4 w-4 text-neutral-400 shrink-0" />
                                 <span className="text-sm text-neutral-700 dark:text-neutral-300">{field}</span>
                               </div>
@@ -155,7 +155,7 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                       </div>
 
                       {/* Additional Info */}
-                      <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                      <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800">
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                           This information will be saved securely and you can update it anytime
                         </p>
@@ -173,7 +173,7 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                 </Card>
 
                 {/* Progress Indicator */}
-                <div className="flex justify-center">
+                <div className="flex justify-center pt-2">
                   <div className="flex items-center gap-2">
                     {availableSteps.map((step, index) => {
                       const isCompleted = progress?.completedSteps.includes(step)

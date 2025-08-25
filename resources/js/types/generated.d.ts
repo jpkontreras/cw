@@ -243,6 +243,235 @@ declare namespace Colame.Item.Data {
     suggestedReorderQuantity: number | null;
   };
 }
+declare namespace Colame.Location.Data {
+  export type CreateLocationData = {
+    code: string | null;
+    name: string;
+    type: string;
+    status: string;
+    address: string;
+    city: string;
+    state: string | null;
+    country: string;
+    postalCode: string | null;
+    phone: string | null;
+    email: string | null;
+    timezone: string;
+    currency: string;
+    openingHours: Array<any> | null;
+    deliveryRadius: number | null;
+    capabilities: Array<any>;
+    parentLocationId: number | null;
+    managerId: number | null;
+    metadata: Array<any> | null;
+    isDefault: boolean;
+  };
+  export type LocationData = {
+    id: number;
+    code: string;
+    name: string;
+    type: string;
+    status: string;
+    address: string;
+    city: string;
+    state: string | null;
+    country: string;
+    postalCode: string | null;
+    phone: string | null;
+    email: string | null;
+    timezone: string;
+    currency: string;
+    openingHours: Array<any> | null;
+    deliveryRadius: number | null;
+    capabilities: Array<any>;
+    parentLocationId: number | null;
+    managerId: number | null;
+    metadata: Array<any> | null;
+    isDefault: boolean;
+    parentLocation: Colame.Location.Data.LocationData | null;
+    childLocations: any | any | null;
+    managerName: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  export type LocationOperatingHoursData = {
+    open: string;
+    close: string;
+    isClosed: boolean;
+  };
+  export type LocationSettingsData = {
+    id: number;
+    locationId: number;
+    key: string;
+    value: string | null;
+    type: string;
+    description: string | null;
+    isEncrypted: boolean;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  export type LocationUserData = {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    isPrimary: boolean;
+    assignedAt: string | null;
+  };
+  export type LocationWithRelationsData = {
+    id: number;
+    code: string;
+    name: string;
+    type: string;
+    status: string;
+    address: string;
+    city: string;
+    state: string | null;
+    country: string;
+    postalCode: string | null;
+    phone: string | null;
+    email: string | null;
+    timezone: string;
+    currency: string;
+    openingHours: Array<any> | null;
+    deliveryRadius: number | null;
+    capabilities: Array<any>;
+    parentLocationId: number | null;
+    managerId: number | null;
+    metadata: Array<any> | null;
+    isDefault: boolean;
+    parentLocation: Colame.Location.Data.LocationData | null;
+    childLocations: any | any | null;
+    managerName: string | null;
+    users: any | any | null;
+    settings: any | any | null;
+    totalUsers: number | null;
+    activeOrders: number | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  export type UpdateLocationData = {
+    code: any | string;
+    name: any | string;
+    type: any | string;
+    status: any | string;
+    address: any | string;
+    city: any | string;
+    state: any | string | null;
+    country: any | string;
+    postalCode: any | string | null;
+    phone: any | string | null;
+    email: any | string | null;
+    timezone: any | string;
+    currency: any | string;
+    openingHours: any | Array<any> | null;
+    deliveryRadius: any | number | null;
+    capabilities: any | Array<any>;
+    parentLocationId: any | number | null;
+    managerId: any | number | null;
+    metadata: any | Array<any> | null;
+    isDefault: any | boolean;
+  };
+}
+declare namespace Colame.Location.Enums {
+  export type LocationType = 'restaurant' | 'kiosk' | 'food_truck' | 'cloud_kitchen' | 'delivery_only' | 'franchise' | 'headquarters' | 'warehouse';
+}
+declare namespace Colame.Onboarding.Data {
+  export type AccountSetupData = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    nationalId: string;
+    password: string | null;
+    passwordConfirmation: string | null;
+    primaryRole: string;
+    employeeCode: string | null;
+  };
+  export type BusinessSetupData = {
+    businessName: string;
+    legalName: string | null;
+    taxId: string | null;
+    businessType: string;
+    businessEmail: string | null;
+    businessPhone: string | null;
+    website: string | null;
+    description: string | null;
+    fax: string | null;
+    establishedDate: string | null;
+    numberOfEmployees: number | null;
+  };
+  export type CompleteOnboardingData = {
+    account: Colame.Onboarding.Data.AccountSetupData;
+    business: Colame.Onboarding.Data.BusinessSetupData;
+    location: Colame.Onboarding.Data.LocationSetupData;
+    configuration: Colame.Onboarding.Data.ConfigurationSetupData;
+  };
+  export type ConfigurationSetupData = {
+    dateFormat: string;
+    timeFormat: string;
+    language: string;
+    currency: string;
+    timezone: string;
+    decimalSeparator: string;
+    thousandsSeparator: string;
+    firstDayOfWeek: number;
+    orderPrefix: string | null;
+    requireCustomerPhone: boolean;
+    printAutomatically: boolean;
+    autoConfirmOrders: boolean;
+    enableTips: boolean;
+    tipOptions: Array<any>;
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+    pushNotifications: boolean;
+    logoUrl: string | null;
+    primaryColor: string | null;
+    secondaryColor: string | null;
+    useTemplate: boolean;
+    templateType: string | null;
+    createSampleMenu: boolean;
+    createSampleCategories: boolean;
+  };
+  export type LocationSetupData = {
+    name: string;
+    code: string | null;
+    type: string | null;
+    address: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    state: string | null;
+    country: string;
+    postalCode: string | null;
+    phone: string;
+    email: string | null;
+    timezone: string;
+    currency: string;
+    capabilities: Array<any>;
+    openingHours: Array<any> | null;
+    paymentMethods: Array<any> | null;
+    deliveryRadius: number | null;
+    seatingCapacity: number | null;
+    kitchenCapabilities: Array<any>;
+    taxRate: number | null;
+    taxIncluded: boolean;
+    serviceCharge: number | null;
+    isDefault: boolean;
+    status: string;
+  };
+  export type OnboardingProgressData = {
+    id: number | null;
+    userId: number;
+    step: string;
+    completedSteps: Array<any>;
+    data: Array<any> | null;
+    isCompleted: boolean;
+    completedAt: string | null;
+    skipReason: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+}
 declare namespace Colame.Order.Data {
   export type CreateOrderData = {
     locationId: number;
@@ -359,4 +588,103 @@ declare namespace Colame.Order.Data {
     metadata: any | Array<any>;
     items: any | Array<any>;
   };
+}
+declare namespace Colame.Settings.Data {
+  export type BulkUpdateSettingData = {
+    settings: Array<any>;
+    category: Colame.Settings.Enums.SettingCategory | null;
+    validateBeforeUpdate: boolean;
+  };
+  export type OrganizationSettingsData = {
+    businessName: string;
+    legalName: string | null;
+    taxId: string | null;
+    email: string;
+    phone: string;
+    fax: string | null;
+    website: string | null;
+    address: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    currency: string;
+    timezone: string;
+    dateFormat: string;
+    timeFormat: string;
+    logoUrl: string | null;
+  };
+  export type SettingData = {
+    id: number | null;
+    key: string;
+    value: any;
+    type: Colame.Settings.Enums.SettingType;
+    category: Colame.Settings.Enums.SettingCategory;
+    label: string;
+    description: string | null;
+    group: string | null;
+    options: Array<any> | null;
+    validation: Array<any> | null;
+    defaultValue: any;
+    isRequired: boolean;
+    isPublic: boolean;
+    isEncrypted: boolean;
+    sortOrder: number | null;
+    metadata: Array<any> | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  export type SettingGroupData = {
+    category: Colame.Settings.Enums.SettingCategory;
+    label: string;
+    description: string;
+    icon: string;
+    settings: any;
+    totalSettings: number;
+    configuredSettings: number;
+    isComplete: boolean;
+  };
+  export type SettingValidationResultData = {
+    isValid: boolean;
+    errors: Array<any>;
+    warnings: Array<any>;
+    validatedSettings: Array<any>;
+  };
+}
+declare namespace Colame.Settings.Enums {
+  export type SettingCategory =
+    | 'organization'
+    | 'order'
+    | 'receipt'
+    | 'inventory'
+    | 'notification'
+    | 'integration'
+    | 'payment'
+    | 'tax'
+    | 'localization'
+    | 'printing'
+    | 'security'
+    | 'appearance';
+  export type SettingType =
+    | 'string'
+    | 'integer'
+    | 'float'
+    | 'boolean'
+    | 'json'
+    | 'array'
+    | 'date'
+    | 'datetime'
+    | 'time'
+    | 'file'
+    | 'color'
+    | 'select'
+    | 'multiselect'
+    | 'encrypted';
+}
+declare namespace Colame.Staff.Enums {
+  export type AttendanceStatus = 'present' | 'late' | 'absent' | 'holiday' | 'leave' | 'half_day';
+  export type ClockMethod = 'biometric' | 'pin' | 'mobile' | 'manual' | 'card' | 'facial';
+  export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  export type StaffStatus = 'active' | 'inactive' | 'suspended' | 'terminated' | 'on_leave';
 }

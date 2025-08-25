@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Building2, Check, Clock, MapPin, Plus, Settings, Store, Users } from 'lucide-react';
+import { Building2, Check, MapPin, Phone, Plus, Settings, Store, Users, Eye, Cog } from 'lucide-react';
 import * as React from 'react';
 
 interface Location {
@@ -93,67 +93,6 @@ export function LocationBreadcrumb({ className }: { className?: string }) {
 
   const currentLocation = location.current || location.locations[0];
 
-  // Location info section (reusable)
-  const LocationInfo = () => (
-    <>
-      <div className="space-y-3">
-        <div>
-          <h3 className="font-semibold text-lg">{currentLocation.name}</h3>
-          <p className="text-sm text-muted-foreground">{currentLocation.code}</p>
-        </div>
-        
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div className="text-sm">
-              <p>{currentLocation.address}</p>
-              <p className="text-muted-foreground">{currentLocation.city}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm capitalize">{currentLocation.type}</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              {currentLocation.isOpen ? (
-                <span className="text-green-600">Open now</span>
-              ) : (
-                <span className="text-red-600">Closed</span>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div className="space-y-1">
-        <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
-          <Link href={`/locations/${currentLocation.id}`}>
-            <Store className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
-          <Link href={`/locations/${currentLocation.id}/users`}>
-            <Users className="mr-2 h-4 w-4" />
-            Manage Staff
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
-          <Link href={`/locations/${currentLocation.id}/settings`}>
-            <Settings className="mr-2 h-4 w-4" />
-            Location Settings
-          </Link>
-        </Button>
-      </div>
-    </>
-  );
-
   // Case 2: Single location
   if (location.locations.length === 1) {
     return (
@@ -162,19 +101,90 @@ export function LocationBreadcrumb({ className }: { className?: string }) {
           <Button 
             variant="ghost" 
             size="sm" 
-            className={cn("h-7 w-7 p-0 hover:bg-accent", className)}
+            className={cn("h-8 px-2 gap-1.5 hover:bg-accent", className)}
             aria-label="Location settings"
           >
-            <Store className="h-4 w-4 text-muted-foreground" />
+            <Store className="h-4 w-4" />
+            <span className="text-sm font-medium hidden sm:inline">{currentLocation.name}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-4">
-            <LocationInfo />
+        <PopoverContent className="w-[320px] p-0" align="start">
+          <div className="bg-gradient-to-br from-neutral-50 to-neutral-100/50 dark:from-neutral-900 dark:to-neutral-900/50 p-4 border-b">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="font-semibold text-base">{currentLocation.name}</h3>
+                <p className="text-xs text-muted-foreground font-mono">{currentLocation.code}</p>
+              </div>
+              <div className={cn(
+                "px-2 py-0.5 rounded-full text-xs font-medium",
+                currentLocation.isOpen 
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+              )}>
+                {currentLocation.isOpen ? 'Open' : 'Closed'}
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-3 space-y-3">
+            <div className="space-y-2.5">
+              <div className="flex gap-3 text-sm">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="space-y-0.5">
+                  {currentLocation.address ? (
+                    <>
+                      <p className="text-neutral-900 dark:text-neutral-100">{currentLocation.address}</p>
+                      {currentLocation.city && (
+                        <p className="text-xs text-muted-foreground">{currentLocation.city}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground italic">No fixed address</p>
+                  )}
+                </div>
+              </div>
+              
+              {currentLocation.phone && (
+                <div className="flex gap-3 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-neutral-900 dark:text-neutral-100">{currentLocation.phone}</span>
+                </div>
+              )}
+              
+              <div className="flex gap-3 text-sm">
+                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-neutral-900 dark:text-neutral-100 capitalize">{currentLocation.type.replace('_', ' ')}</span>
+              </div>
+            </div>
+            
             <Separator />
-            <Button variant="outline" size="sm" className="w-full" asChild>
+            
+            <div className="grid gap-1">
+              <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100" asChild>
+                <Link href={`/locations/${currentLocation.id}`}>
+                  <Eye className="mr-2 h-3.5 w-3.5" />
+                  View Details
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100" asChild>
+                <Link href={`/locations/${currentLocation.id}/users`}>
+                  <Users className="mr-2 h-3.5 w-3.5" />
+                  Manage Staff
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100" asChild>
+                <Link href={`/locations/${currentLocation.id}/settings`}>
+                  <Cog className="mr-2 h-3.5 w-3.5" />
+                  Location Settings
+                </Link>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <Button variant="outline" size="sm" className="w-full h-9" asChild>
               <Link href="/locations/create">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-3.5 w-3.5" />
                 Add Another Location
               </Link>
             </Button>

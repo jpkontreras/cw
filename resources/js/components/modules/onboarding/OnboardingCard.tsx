@@ -12,15 +12,15 @@ export default function OnboardingCard({ estimatedTime, children }: OnboardingCa
   return (
     <Card className="shadow-lg border-0 bg-white dark:bg-neutral-900 relative">
       {estimatedTime && (
-        <div className="absolute top-4 right-4">
-          <Badge variant="secondary" className="text-sm">
-            <Clock className="h-3 w-3" />
+        <div className="absolute top-3 right-3">
+          <Badge variant="secondary" className="text-xs">
+            <Clock className="h-3 w-3 mr-1" />
             {estimatedTime}
           </Badge>
         </div>
       )}
       
-      <CardContent className="p-8">
+      <CardContent className="p-5">
         {children}
       </CardContent>
     </Card>

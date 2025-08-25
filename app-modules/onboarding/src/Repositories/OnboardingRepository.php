@@ -35,6 +35,7 @@ class OnboardingRepository implements OnboardingRepositoryInterface
                 'step' => $stepIdentifier,
                 'completed_steps' => [],
                 'data' => [],
+                'is_completed' => false,
             ]
         );
         
@@ -52,6 +53,7 @@ class OnboardingRepository implements OnboardingRepositoryInterface
                 'step' => $stepIdentifier,
                 'completed_steps' => [],
                 'data' => [],
+                'is_completed' => false,
             ]
         );
         
@@ -69,6 +71,7 @@ class OnboardingRepository implements OnboardingRepositoryInterface
                 'step' => $stepIdentifier,
                 'completed_steps' => [],
                 'data' => [],
+                'is_completed' => false,
             ]
         );
         
@@ -95,6 +98,7 @@ class OnboardingRepository implements OnboardingRepositoryInterface
                 'step' => 'skipped',
                 'completed_steps' => [],
                 'data' => [],
+                'is_completed' => false,
             ]
         );
         

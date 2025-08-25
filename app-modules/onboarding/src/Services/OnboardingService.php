@@ -45,14 +45,25 @@ class OnboardingService implements OnboardingServiceInterface
         $user = User::find($userId);
         if ($user) {
             $user->name = $data->getFullName();
-            if (!empty($data->phone)) {
-                $user->phone = $data->phone;
+            $user->email = $data->email;
+            $user->phone = $data->phone;
+            
+            // Update password if provided (for new users)
+            if ($data->password) {
+                $user->password = Hash::make($data->password);
             }
+            
             $user->save();
         }
         
+        // Generate employee code if not provided
+        $dataArray = $data->toArray();
+        if (empty($dataArray['employeeCode'])) {
+            $dataArray['employeeCode'] = 'EMP' . str_pad((string)$userId, 5, '0', STR_PAD_LEFT);
+        }
+        
         // Save account data to temporary storage
-        $this->repository->saveStepData($userId, 'account', $data->toArray());
+        $this->repository->saveStepData($userId, 'account', $dataArray);
         
         // Mark step as completed
         $progress = $this->repository->markStepCompleted($userId, 'account');
@@ -127,26 +138,48 @@ class OnboardingService implements OnboardingServiceInterface
         DB::beginTransaction();
         
         try {
-            // Create user account if needed
+            // Update or create user account
             $user = User::find($userId);
             if (!$user && isset($allData['account'])) {
                 $accountData = $allData['account'];
                 $user = User::create([
                     'name' => $accountData['firstName'] . ' ' . $accountData['lastName'],
                     'email' => $accountData['email'],
-                    'password' => Hash::make($accountData['password']),
+                    'password' => isset($accountData['password']) ? Hash::make($accountData['password']) : Hash::make(uniqid()),
+                    'phone' => $accountData['phone'] ?? null,
                 ]);
                 $userId = $user->id;
             }
             
+            // Assign role to user
+            if ($user && isset($allData['account']['primaryRole'])) {
+                // Assuming using Spatie Permission package
+                // $user->assignRole($allData['account']['primaryRole']);
+            }
+            
             // Create location if we have the repository
             if ($this->locationRepository && isset($allData['location'])) {
-                $locationData = CreateLocationData::from($allData['location']);
+                $locationDataArray = $allData['location'];
+                
+                // Generate location code if not provided
+                if (empty($locationDataArray['code'])) {
+                    $locationDataArray['code'] = 'LOC' . str_pad((string)($userId), 5, '0', STR_PAD_LEFT);
+                }
+                
+                // Map some fields from business data
+                if (isset($allData['business'])) {
+                    $locationDataArray['email'] = $locationDataArray['email'] ?? $allData['business']['businessEmail'] ?? $allData['account']['email'];
+                }
+                
+                // Set manager to current user
+                $locationDataArray['managerId'] = $userId;
+                
+                $locationData = CreateLocationData::from($locationDataArray);
                 $location = $this->locationRepository->create($locationData->toArray());
                 
                 // Associate user with location
                 $user->locations()->attach($location->id, [
-                    'role' => 'owner',
+                    'role' => 'manager', // Owner of the business is the location manager
                     'is_primary' => true,
                 ]);
                 
@@ -158,23 +191,70 @@ class OnboardingService implements OnboardingServiceInterface
             }
             
             // Save organization settings if we have the service
-            if ($this->settingService && isset($allData['business'], $allData['configuration'])) {
-                $businessData = $allData['business'];
-                $configData = $allData['configuration'];
+            // Temporarily disabled - settings service needs to be properly configured
+            if (false && $this->settingService) {
+                $settings = [];
                 
-                $settings = [
-                    'organization.business_name' => $businessData['businessName'],
-                    'organization.legal_name' => $businessData['legalName'] ?? $businessData['businessName'],
-                    'organization.tax_id' => $businessData['taxId'],
-                    'localization.currency' => $configData['currency'],
-                    'localization.timezone' => $configData['timezone'],
-                    'localization.date_format' => $configData['dateFormat'],
-                    'localization.time_format' => $configData['timeFormat'],
-                    'localization.language' => $configData['language'],
-                ];
+                // Business settings
+                if (isset($allData['business'])) {
+                    $businessData = $allData['business'];
+                    $settings['organization.business_name'] = $businessData['businessName'];
+                    $settings['organization.legal_name'] = $businessData['legalName'];
+                    $settings['organization.tax_id'] = $businessData['taxId'];
+                    $settings['organization.email'] = $businessData['businessEmail'];
+                    $settings['organization.phone'] = $businessData['businessPhone'];
+                    $settings['organization.website'] = $businessData['website'] ?? null;
+                    $settings['organization.fax'] = $businessData['fax'] ?? null;
+                }
+                
+                // Location settings for organization address
+                if (isset($allData['location'])) {
+                    $locationData = $allData['location'];
+                    $settings['organization.address'] = $locationData['address'];
+                    $settings['organization.address_line_2'] = $locationData['addressLine2'] ?? null;
+                    $settings['organization.city'] = $locationData['city'];
+                    $settings['organization.state'] = $locationData['state'];
+                    $settings['organization.postal_code'] = $locationData['postalCode'];
+                    $settings['organization.country'] = $locationData['country'] ?? 'CL';
+                }
+                
+                // Configuration settings
+                if (isset($allData['configuration'])) {
+                    $configData = $allData['configuration'];
+                    $settings['localization.currency'] = $configData['currency'];
+                    $settings['localization.timezone'] = $configData['timezone'];
+                    $settings['localization.date_format'] = $configData['dateFormat'];
+                    $settings['localization.time_format'] = $configData['timeFormat'];
+                    $settings['localization.language'] = $configData['language'];
+                    $settings['localization.decimal_separator'] = $configData['decimalSeparator'] ?? ',';
+                    $settings['localization.thousands_separator'] = $configData['thousandsSeparator'] ?? '.';
+                    $settings['localization.first_day_of_week'] = $configData['firstDayOfWeek'] ?? 1;
+                    
+                    // Order settings
+                    $settings['orders.prefix'] = $configData['orderPrefix'] ?? null;
+                    $settings['orders.require_customer_phone'] = $configData['requireCustomerPhone'] ?? true;
+                    $settings['orders.print_automatically'] = $configData['printAutomatically'] ?? false;
+                    $settings['orders.auto_confirm'] = $configData['autoConfirmOrders'] ?? false;
+                    
+                    // Tip settings
+                    $settings['tips.enabled'] = $configData['enableTips'] ?? true;
+                    $settings['tips.options'] = json_encode($configData['tipOptions'] ?? [10, 15, 20]);
+                    
+                    // Notification settings
+                    $settings['notifications.email'] = $configData['emailNotifications'] ?? true;
+                    $settings['notifications.sms'] = $configData['smsNotifications'] ?? false;
+                    $settings['notifications.push'] = $configData['pushNotifications'] ?? false;
+                    
+                    // Branding
+                    $settings['organization.logo_url'] = $configData['logoUrl'] ?? null;
+                    $settings['branding.primary_color'] = $configData['primaryColor'] ?? null;
+                    $settings['branding.secondary_color'] = $configData['secondaryColor'] ?? null;
+                }
                 
                 foreach ($settings as $key => $value) {
-                    $this->settingService->set($key, $value);
+                    if ($value !== null) {
+                        $this->settingService->set($key, $value);
+                    }
                 }
             }
             

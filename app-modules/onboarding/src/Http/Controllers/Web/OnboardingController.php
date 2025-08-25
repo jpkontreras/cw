@@ -10,6 +10,7 @@ use Colame\Onboarding\Data\AccountSetupData;
 use Colame\Onboarding\Data\BusinessSetupData;
 use Colame\Onboarding\Data\ConfigurationSetupData;
 use Colame\Onboarding\Data\LocationSetupData;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,14 +24,15 @@ class OnboardingController extends Controller
     /**
      * Show the onboarding start page
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $userId = $request->user()->id;
         $progress = $this->onboardingService->getProgress($userId);
         $nextStep = $this->onboardingService->getNextStep($userId);
 
         if (!$nextStep) {
-            return redirect()->route('onboarding.complete');
+            // If onboarding is complete, redirect to dashboard
+            return redirect()->route('dashboard');
         }
 
         return Inertia::render('onboarding/index', [
@@ -49,17 +51,26 @@ class OnboardingController extends Controller
         $progress = $this->onboardingService->getProgress($userId);
         $user = $request->user();
 
-        // Pre-fill with existing user data
-        $defaultData = [
-            'firstName' => explode(' ', $user->name)[0] ?? '',
-            'lastName' => explode(' ', $user->name)[1] ?? '',
-            'email' => $user->email,
-            'phone' => $user->phone ?? '',
-        ];
+        // Pre-fill with existing user data only if no saved data
+        $savedData = $progress?->data['account'] ?? null;
+        
+        // Only use defaults if no saved data exists
+        if (!$savedData) {
+            $nameParts = explode(' ', $user->name ?: '');
+            $savedData = [
+                'firstName' => $nameParts[0] ?? '',
+                'lastName' => $nameParts[1] ?? '',
+                'phone' => '', // Don't pre-fill phone since we don't have it
+            ];
+        }
 
         return Inertia::render('onboarding/account-setup', [
             'progress' => $progress?->toArray(),
-            'savedData' => $progress?->data['account'] ?? $defaultData,
+            'savedData' => $savedData,
+            'user' => [
+                'email' => $user->email,
+                'name' => $user->name,
+            ],
         ]);
     }
 

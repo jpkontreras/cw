@@ -46,50 +46,17 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
       completedSteps={completedSteps.length}
     >
       <OnboardingCard estimatedTime="5 min">
-        <div className="space-y-6">
-          {/* Overview Section */}
-          <div className="flex gap-8">
-            {/* Icon */}
-            <div className="shrink-0">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900">
-                <Settings className="h-10 w-10 text-neutral-700 dark:text-neutral-300" />
-              </div>
-            </div>
-
-            {/* Required Fields Preview */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
-                  What we'll need from you:
-                </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Configure your system preferences
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {requiredFields.map((field) => (
-                  <div key={field.label} className="flex items-center gap-2 p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800/50">
-                    <CheckCircle className={`h-4 w-4 shrink-0 ${field.filled ? 'text-green-500' : 'text-neutral-400'}`} />
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{field.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-neutral-200 dark:border-neutral-800" />
-
+        <div className="space-y-3">
           {/* Form Section */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="dateFormat">Date Format</Label>
+          <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="dateFormat" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Date Format</Label>
                     <Select
                       value={data.dateFormat}
                       onValueChange={(value) => setData('dateFormat', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select date format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -99,17 +66,17 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
                       </SelectContent>
                     </Select>
                     {errors.dateFormat && (
-                      <p className="text-sm text-red-600">{errors.dateFormat}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.dateFormat}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="timeFormat">Time Format</Label>
+                  <div>
+                    <Label htmlFor="timeFormat" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Time Format</Label>
                     <Select
                       value={data.timeFormat}
                       onValueChange={(value) => setData('timeFormat', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select time format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -119,19 +86,19 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
                       </SelectContent>
                     </Select>
                     {errors.timeFormat && (
-                      <p className="text-sm text-red-600">{errors.timeFormat}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.timeFormat}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="language" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Language</Label>
                     <Select
                       value={data.language}
                       onValueChange={(value) => setData('language', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
                       <SelectContent>
@@ -140,17 +107,17 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
                       </SelectContent>
                     </Select>
                     {errors.language && (
-                      <p className="text-sm text-red-600">{errors.language}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.language}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
+                  <div>
+                    <Label htmlFor="currency" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Currency</Label>
                     <Select
                       value={data.currency}
                       onValueChange={(value) => setData('currency', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
                       <SelectContent>
@@ -163,18 +130,18 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
                       </SelectContent>
                     </Select>
                     {errors.currency && (
-                      <p className="text-sm text-red-600">{errors.currency}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.currency}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
+                <div>
+                  <Label htmlFor="timezone" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Timezone</Label>
                   <Select
                     value={data.timezone}
                     onValueChange={(value) => setData('timezone', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -187,39 +154,40 @@ export default function ConfigurationSetup({ progress, savedData, currentStep = 
                     </SelectContent>
                   </Select>
                   {errors.timezone && (
-                    <p className="text-sm text-red-600">{errors.timezone}</p>
+                    <p className="text-xs text-red-600 mt-1">{errors.timezone}</p>
                   )}
                 </div>
 
                 {savedData?.dateFormat && (
-                  <Alert>
-                    <AlertDescription>
+                  <Alert className="py-2">
+                    <AlertDescription className="text-xs">
                       You've already completed this step. You can update your information or continue to review.
                     </AlertDescription>
                   </Alert>
                 )}
 
             {/* Additional Info */}
-            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
               <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                 These settings can be changed at any time from your dashboard
               </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-4">
+            <div className="flex justify-between pt-2">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => window.history.back()}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-1 h-3 w-3" />
                 Back
               </Button>
               
-              <Button type="submit" disabled={processing} size="lg">
+              <Button type="submit" disabled={processing} size="sm">
                 Complete Setup
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </div>
           </form>

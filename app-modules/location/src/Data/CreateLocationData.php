@@ -22,23 +22,23 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class CreateLocationData extends BaseData
 {
     public function __construct(
-        #[Nullable, StringType, Max(20), Unique('locations', 'code')]
-        public readonly ?string $code = null,
-
         #[Required, StringType, Max(255)]
         public readonly string $name,
 
         #[Required, In(['restaurant', 'kitchen', 'warehouse', 'central_kitchen'])]
         public readonly string $type,
 
+        #[Nullable, StringType, Max(20), Unique('locations', 'code')]
+        public readonly ?string $code = null,
+
         #[In(['active', 'inactive', 'maintenance'])]
         public readonly string $status = 'active',
 
-        #[Required, StringType, Max(255)]
-        public readonly string $address,
+        #[Nullable, StringType, Max(255)]
+        public readonly ?string $address = null,
 
-        #[Required, StringType, Max(100)]
-        public readonly string $city,
+        #[Nullable, StringType, Max(100)]
+        public readonly ?string $city = null,
 
         #[Nullable, StringType, Max(100)]
         public readonly ?string $state = null,

@@ -1,8 +1,11 @@
-import { Head, useForm } from '@inertiajs/react'
+import { useForm, Link } from '@inertiajs/react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, CheckCircle2, Edit } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, CheckCircle, Edit2, User, Building2, MapPin, Settings } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import OnboardingLayout from '@/components/modules/onboarding/OnboardingLayout'
+import OnboardingCard from '@/components/modules/onboarding/OnboardingCard'
 
 interface ReviewProps {
   progress: any
@@ -12,250 +15,204 @@ interface ReviewProps {
     location?: any
     configuration?: any
   }
+  currentStep?: number
+  totalSteps?: number
+  completedSteps?: string[]
 }
 
-export default function Review({ progress, data }: ReviewProps) {
+export default function Review({ progress, data, currentStep = 4, totalSteps = 4, completedSteps = [] }: ReviewProps) {
   const { post, processing } = useForm({})
 
   const handleComplete = () => {
     post('/onboarding/complete')
   }
 
-  const formatValue = (value: any): string => {
-    if (Array.isArray(value)) {
-      return value.join(', ')
+  const sections = [
+    {
+      id: 'account',
+      title: 'Account Information',
+      icon: User,
+      editUrl: '/onboarding/account',
+      data: data.account,
+      items: [
+        { 
+          primary: data.account ? `${data.account.firstName} ${data.account.lastName}` : 'Not provided',
+          secondary: data.account?.email 
+        },
+        { 
+          primary: data.account?.phone || 'No phone',
+          secondary: data.account?.nationalId ? `RUT: ${data.account.nationalId}` : null
+        },
+      ]
+    },
+    {
+      id: 'business',
+      title: 'Business Information',
+      icon: Building2,
+      editUrl: '/onboarding/business',
+      data: data.business,
+      items: [
+        { 
+          primary: data.business?.businessName || 'Not provided',
+          secondary: data.business?.businessType?.replace('_', ' ') || null,
+          capitalize: true
+        },
+        { 
+          primary: data.business?.legalName && data.business?.legalName !== data.business?.businessName 
+            ? `Legal: ${data.business.legalName}` 
+            : null,
+          secondary: data.business?.taxId ? `Tax ID: ${data.business.taxId}` : null
+        },
+      ]
+    },
+    {
+      id: 'location',
+      title: 'Location Information',
+      icon: MapPin,
+      editUrl: '/onboarding/location',
+      data: data.location,
+      items: [
+        { 
+          primary: data.location?.name || 'Not provided',
+          secondary: data.location?.address || 'No fixed address'
+        },
+        { 
+          primary: data.location?.phone || 'No phone',
+          secondary: data.location?.capabilities?.map((c: string) => {
+            const formatted = c.replace('_', ' ')
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+          }).join(' • ') || 'No services'
+        },
+      ]
+    },
+    {
+      id: 'configuration',
+      title: 'System Configuration',
+      icon: Settings,
+      editUrl: '/onboarding/configuration',
+      data: data.configuration,
+      items: [
+        { 
+          primary: data.configuration?.language === 'es' ? 'Español' : 'English',
+          secondary: `${data.configuration?.currency || 'CLP'} • ${data.configuration?.timezone || 'America/Santiago'}`
+        },
+        { 
+          primary: `${data.configuration?.dateFormat || 'DD/MM/YYYY'} • ${data.configuration?.timeFormat || '24h'}`,
+          secondary: 'Date & Time formats'
+        },
+      ]
     }
-    if (typeof value === 'object' && value !== null) {
-      return JSON.stringify(value, null, 2)
-    }
-    return value?.toString() || 'Not set'
-  }
+  ]
 
   return (
-    <>
-      <Head title="Review - Onboarding" />
-      
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Review Your Information</h1>
-            <p className="text-gray-600">Please review all your information before completing the setup</p>
+    <OnboardingLayout
+      title="Review - Onboarding"
+      currentStep={currentStep}
+      totalSteps={totalSteps}
+      stepTitle="Review Your Information"
+      stepDescription="Please review all your information before completing the setup"
+      completedSteps={completedSteps.length}
+    >
+      <OnboardingCard estimatedTime="1 min">
+        <div className="space-y-4">
+          {/* Section Cards */}
+          <div className="space-y-3">
+            {sections.map((section) => {
+              const Icon = section.icon
+              const hasData = section.data && Object.keys(section.data).length > 0
+              
+              return (
+                <div 
+                  key={section.id}
+                  className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 bg-white dark:bg-neutral-900/50"
+                >
+                  {/* Section Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+                        <Icon className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                        {section.title}
+                      </h3>
+                    </div>
+                    <Link href={section.editUrl}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2">
+                        <Edit2 className="w-3.5 h-3.5 mr-1" />
+                        <span className="text-xs">Edit</span>
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Section Content - New Layout */}
+                  {hasData ? (
+                    <div className="ml-11 space-y-2">
+                      {section.items.map((item, idx) => {
+                        if (!item.primary) return null
+                        
+                        return (
+                          <div key={idx} className="space-y-0.5">
+                            <div className={cn(
+                              "text-sm font-medium text-neutral-900 dark:text-neutral-100",
+                              item.capitalize && "capitalize"
+                            )}>
+                              {item.primary}
+                            </div>
+                            {item.secondary && (
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                                {item.secondary}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="ml-11">
+                      <Badge variant="secondary" className="text-xs">
+                        Not configured
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
-          <div className="space-y-6">
-            {/* Account Information */}
-            {data.account && (
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Account Information</CardTitle>
-                      <CardDescription>Your personal details</CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.href = '/onboarding/account'}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-3">
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Name</dt>
-                      <dd className="col-span-2">{data.account.firstName} {data.account.lastName}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Email</dt>
-                      <dd className="col-span-2">{data.account.email}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Phone</dt>
-                      <dd className="col-span-2">{data.account.phone}</dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-            )}
+          {/* Terms Notice */}
+          <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900 py-3">
+            <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+              By completing the setup, you confirm that all the information provided is accurate and you agree to our terms of service.
+            </AlertDescription>
+          </Alert>
 
-            {/* Business Information */}
-            {data.business && (
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Business Information</CardTitle>
-                      <CardDescription>Your restaurant details</CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.href = '/onboarding/business'}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-3">
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Business Name</dt>
-                      <dd className="col-span-2">{data.business.businessName}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Legal Name</dt>
-                      <dd className="col-span-2">{data.business.legalName || data.business.businessName}</dd>
-                    </div>
-                    {data.business.taxId && (
-                      <div className="grid grid-cols-3 gap-4">
-                        <dt className="font-medium text-gray-500">Tax ID (RUT)</dt>
-                        <dd className="col-span-2">{data.business.taxId}</dd>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Business Type</dt>
-                      <dd className="col-span-2 capitalize">{data.business.businessType?.replace('_', ' ')}</dd>
-                    </div>
-                    {data.business.website && (
-                      <div className="grid grid-cols-3 gap-4">
-                        <dt className="font-medium text-gray-500">Website</dt>
-                        <dd className="col-span-2">{data.business.website}</dd>
-                      </div>
-                    )}
-                  </dl>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Location Information */}
-            {data.location && (
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Location Information</CardTitle>
-                      <CardDescription>Your primary location</CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.href = '/onboarding/location'}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-3">
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Location Name</dt>
-                      <dd className="col-span-2">{data.location.name}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Address</dt>
-                      <dd className="col-span-2">
-                        {data.location.address}, {data.location.city}
-                        {data.location.state && `, ${data.location.state}`}
-                        {data.location.postalCode && ` ${data.location.postalCode}`}
-                      </dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Phone</dt>
-                      <dd className="col-span-2">{data.location.phone}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Capabilities</dt>
-                      <dd className="col-span-2 capitalize">
-                        {data.location.capabilities?.map((c: string) => c.replace('_', ' ')).join(', ')}
-                      </dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Configuration */}
-            {data.configuration && (
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>System Configuration</CardTitle>
-                      <CardDescription>Your preferences</CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.href = '/onboarding/configuration'}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-3">
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Language</dt>
-                      <dd className="col-span-2">{data.configuration.language === 'es' ? 'Español' : 'English'}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Currency</dt>
-                      <dd className="col-span-2">{data.configuration.currency}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Timezone</dt>
-                      <dd className="col-span-2">{data.configuration.timezone}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Date Format</dt>
-                      <dd className="col-span-2">{data.configuration.dateFormat}</dd>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <dt className="font-medium text-gray-500">Time Format</dt>
-                      <dd className="col-span-2">{data.configuration.timeFormat}</dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-            )}
-
-            <Alert className="bg-blue-50">
-              <AlertDescription>
-                By completing the setup, you confirm that all the information provided is accurate and you agree to our terms of service.
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => window.history.back()}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
+          {/* Action Buttons */}
+          <div className="flex justify-between pt-2">
+            <Link href="/onboarding/configuration">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-1 h-3 w-3" />
                 Back
               </Button>
-              
-              <Button 
-                size="lg"
-                onClick={handleComplete}
-                disabled={processing}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Complete Setup
-              </Button>
-            </div>
+            </Link>
+            
+            <Button 
+              size="sm"
+              onClick={handleComplete}
+              disabled={processing}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {processing ? (
+                <span className="animate-pulse">Completing...</span>
+              ) : (
+                <>
+                  <CheckCircle className="mr-1 h-3 w-3" />
+                  Complete Setup
+                </>
+              )}
+            </Button>
           </div>
         </div>
-      </div>
-    </>
+      </OnboardingCard>
+    </OnboardingLayout>
   )
 }

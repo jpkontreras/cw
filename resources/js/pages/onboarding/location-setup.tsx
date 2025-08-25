@@ -46,12 +46,14 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
     setData('capabilities', newCapabilities)
   }
 
-  const requiredFields = [
-    { icon: CheckCircle, label: 'Address', filled: !!data.address },
-    { icon: CheckCircle, label: 'Contact info', filled: !!data.phone },
-    { icon: CheckCircle, label: 'Service areas', filled: data.capabilities.length > 0 },
-    { icon: CheckCircle, label: 'Capacity', filled: false },
-  ]
+  // Check if this step is completed
+  const isStepCompleted = progress?.completedSteps?.includes('location') || false
+  
+  // Form validation - only essential fields required
+  const isFormValid = data.name.trim() !== '' && 
+                      data.country !== '' && 
+                      data.phone.trim() !== '' &&
+                      data.capabilities.length > 0
 
   return (
     <OnboardingLayout
@@ -63,64 +65,36 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
       completedSteps={completedSteps.length}
     >
       <OnboardingCard estimatedTime="3 min">
-        <div className="space-y-6">
-          {/* Overview Section */}
-          <div className="flex gap-8">
-            {/* Icon */}
-            <div className="shrink-0">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900">
-                <MapPin className="h-10 w-10 text-neutral-700 dark:text-neutral-300" />
-              </div>
-            </div>
-
-            {/* Required Fields Preview */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
-                  What we'll need from you:
-                </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Configure your main restaurant location
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {requiredFields.map((field) => (
-                  <div key={field.label} className="flex items-center gap-2 p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800/50">
-                    <CheckCircle className={`h-4 w-4 shrink-0 ${field.filled ? 'text-green-500' : 'text-neutral-400'}`} />
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{field.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-neutral-200 dark:border-neutral-800" />
-
+        <div className="space-y-3">
           {/* Form Section */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Location Name</Label>
+          <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Location Name <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="name"
                       value={data.name}
                       onChange={(e) => setData('name', e.target.value)}
                       placeholder="Main Restaurant"
+                      className="h-9"
                       required
                     />
                     {errors.name && (
-                      <p className="text-sm text-red-600">{errors.name}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.name}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Location Type</Label>
+                  <div>
+                    <Label htmlFor="type" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Location Type
+                    </Label>
                     <Select
                       value={data.type}
                       onValueChange={(value) => setData('type', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -131,75 +105,87 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
                       </SelectContent>
                     </Select>
                     {errors.type && (
-                      <p className="text-sm text-red-600">{errors.type}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.type}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Street Address</Label>
+                <div>
+                  <Label htmlFor="address" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                    Street Address
+                  </Label>
                   <Input
                     id="address"
                     value={data.address}
                     onChange={(e) => setData('address', e.target.value)}
-                    placeholder="123 Main Street"
-                    required
+                    placeholder="123 Main Street (optional)"
+                    className="h-9"
                   />
                   {errors.address && (
-                    <p className="text-sm text-red-600">{errors.address}</p>
+                    <p className="text-xs text-red-600 mt-1">{errors.address}</p>
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="city" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      City
+                    </Label>
                     <Input
                       id="city"
                       value={data.city}
                       onChange={(e) => setData('city', e.target.value)}
-                      placeholder="Santiago"
-                      required
+                      placeholder="Santiago (optional)"
+                      className="h-9"
                     />
                     {errors.city && (
-                      <p className="text-sm text-red-600">{errors.city}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.city}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State/Region</Label>
+                  <div>
+                    <Label htmlFor="state" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      State/Region
+                    </Label>
                     <Input
                       id="state"
                       value={data.state}
                       onChange={(e) => setData('state', e.target.value)}
                       placeholder="RM"
+                      className="h-9"
                     />
                     {errors.state && (
-                      <p className="text-sm text-red-600">{errors.state}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.state}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="postalCode" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Postal Code
+                    </Label>
                     <Input
                       id="postalCode"
                       value={data.postalCode}
                       onChange={(e) => setData('postalCode', e.target.value)}
                       placeholder="7500000"
+                      className="h-9"
                     />
                     {errors.postalCode && (
-                      <p className="text-sm text-red-600">{errors.postalCode}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.postalCode}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
+                  <div>
+                    <Label htmlFor="country" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Country <span className="text-red-500">*</span>
+                    </Label>
                     <Select
                       value={data.country}
                       onValueChange={(value) => setData('country', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
@@ -210,51 +196,59 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
                       </SelectContent>
                     </Select>
                     {errors.country && (
-                      <p className="text-sm text-red-600">{errors.country}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.country}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="phone" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="phone"
                       value={data.phone}
                       onChange={(e) => setData('phone', e.target.value)}
                       placeholder="+56 2 1234 5678"
+                      className="h-9"
                       required
                     />
                     {errors.phone && (
-                      <p className="text-sm text-red-600">{errors.phone}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Location Email</Label>
+                  <div>
+                    <Label htmlFor="email" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Location Email
+                    </Label>
                     <Input
                       id="email"
                       type="email"
                       value={data.email}
                       onChange={(e) => setData('email', e.target.value)}
                       placeholder="info@restaurant.cl"
+                      className="h-9"
                     />
                     {errors.email && (
-                      <p className="text-sm text-red-600">{errors.email}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.email}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Service Capabilities</Label>
-                  <div className="space-y-2">
+                <div>
+                  <Label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                    Service Capabilities <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="dine_in"
                         checked={data.capabilities.includes('dine_in')}
                         onCheckedChange={(checked) => handleCapabilityChange('dine_in', !!checked)}
                       />
-                      <Label htmlFor="dine_in" className="font-normal">Dine-in Service</Label>
+                      <Label htmlFor="dine_in" className="text-sm font-normal">Dine-in Service</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -262,7 +256,7 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
                         checked={data.capabilities.includes('takeout')}
                         onCheckedChange={(checked) => handleCapabilityChange('takeout', !!checked)}
                       />
-                      <Label htmlFor="takeout" className="font-normal">Takeout/Pickup</Label>
+                      <Label htmlFor="takeout" className="text-sm font-normal">Takeout/Pickup</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -270,56 +264,70 @@ export default function LocationSetup({ progress, savedData, currentStep = 3, to
                         checked={data.capabilities.includes('delivery')}
                         onCheckedChange={(checked) => handleCapabilityChange('delivery', !!checked)}
                       />
-                      <Label htmlFor="delivery" className="font-normal">Delivery Service</Label>
+                      <Label htmlFor="delivery" className="text-sm font-normal">Delivery Service</Label>
                     </div>
                   </div>
                 </div>
 
                 {data.capabilities.includes('delivery') && (
-                  <div className="space-y-2">
-                    <Label htmlFor="deliveryRadius">Delivery Radius (km)</Label>
+                  <div>
+                    <Label htmlFor="deliveryRadius" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                      Delivery Radius (km)
+                    </Label>
                     <Input
                       id="deliveryRadius"
                       type="number"
                       value={data.deliveryRadius}
                       onChange={(e) => setData('deliveryRadius', e.target.value)}
                       placeholder="5"
+                      className="h-9"
                     />
                     {errors.deliveryRadius && (
-                      <p className="text-sm text-red-600">{errors.deliveryRadius}</p>
+                      <p className="text-xs text-red-600 mt-1">{errors.deliveryRadius}</p>
                     )}
                   </div>
                 )}
 
-                {savedData?.name && (
-                  <Alert>
-                    <AlertDescription>
+                {isStepCompleted && (
+                  <Alert className="py-2">
+                    <AlertDescription className="text-xs">
                       You've already completed this step. You can update your information or continue to the next step.
                     </AlertDescription>
                   </Alert>
                 )}
 
             {/* Additional Info */}
-            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
               <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                 You can add more locations later from your settings
               </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-4">
+            <div className="flex justify-between pt-2">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => window.history.back()}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-1 h-3 w-3" />
                 Back
               </Button>
               
-              <Button type="submit" disabled={processing} size="lg">
-                Continue Setup
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button 
+                type="submit" 
+                disabled={processing || !isFormValid} 
+                size="sm"
+              >
+                {processing ? (
+                  <span className="animate-pulse">Saving...</span>
+                ) : (
+                  <>
+                    Continue Setup
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </>
+                )}
               </Button>
             </div>
           </form>
