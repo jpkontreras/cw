@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Colame\Location\Http\Controllers\Api\LocationController;
+use Colame\Location\Http\Controllers\Api\UserLocationController;
 
 Route::middleware(['api'])->prefix('api')->group(function () {
     
@@ -22,5 +23,15 @@ Route::middleware(['api'])->prefix('api')->group(function () {
         // User location management
         Route::get('locations/current', [LocationController::class, 'current']);
         Route::post('locations/current', [LocationController::class, 'setCurrent']);
+        
+        // User-location relationship endpoints
+        Route::prefix('user/locations')->group(function () {
+            Route::get('/', [UserLocationController::class, 'index']);
+            Route::get('/current', [UserLocationController::class, 'current']);
+            Route::get('/effective', [UserLocationController::class, 'effective']);
+            Route::post('/current', [UserLocationController::class, 'setCurrent']);
+            Route::get('/with-roles', [UserLocationController::class, 'withRoles']);
+            Route::get('/is-manager', [UserLocationController::class, 'isManager']);
+        });
     });
 });

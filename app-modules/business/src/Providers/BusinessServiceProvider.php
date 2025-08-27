@@ -46,6 +46,8 @@ class BusinessServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register the Inertia share provider
+        $this->app->register(BusinessInertiaShareProvider::class);
 
         // Load migrations
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Colame\Business\Models;
 
 use App\Models\User;
-use Colame\Location\Models\Location;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Business extends Model
@@ -146,12 +146,12 @@ class Business extends Model
     }
 
     /**
-     * Get the locations for the business.
+     * Location relationships are handled through LocationRepositoryInterface
+     * to maintain module boundaries.
+     * 
+     * Use app(LocationRepositoryInterface::class) to access location data
+     * filtered by business_id.
      */
-    public function locations(): HasMany
-    {
-        return $this->hasMany(Location::class);
-    }
 
     /**
      * Get the current subscription for the business.
@@ -293,7 +293,7 @@ class Business extends Model
         }
 
         $current = match($resource) {
-            'locations' => $this->locations()->count(),
+            'locations' => DB::table('locations')->where('business_id', $this->id)->count(),
             'users' => $this->users()->count(),
             'items' => 0, // Will need to be implemented when items module is updated
             default => 0,

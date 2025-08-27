@@ -288,7 +288,7 @@ class BusinessService implements BusinessServiceInterface
 
         // Calculate metrics
         $totalUsers = $business->users()->where('status', 'active')->count();
-        $totalLocations = $business->locations()->count();
+        $totalLocations = DB::table('locations')->where('business_id', $business->id)->count();
         
         // These will be calculated when respective modules are updated
         $totalOrders = 0;
@@ -369,7 +369,7 @@ class BusinessService implements BusinessServiceInterface
         }
 
         $current = match($resource) {
-            'locations' => Business::find($businessId)->locations()->count(),
+            'locations' => DB::table('locations')->where('business_id', $businessId)->count(),
             'users' => $this->userRepository->countBusinessUsers($businessId),
             default => 0,
         };

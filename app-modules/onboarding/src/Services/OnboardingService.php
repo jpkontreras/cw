@@ -9,6 +9,7 @@ use Colame\Business\Contracts\BusinessServiceInterface;
 use Colame\Business\Data\CreateBusinessData;
 use Colame\Location\Contracts\LocationRepositoryInterface;
 use Colame\Location\Data\CreateLocationData;
+use Colame\Location\Services\UserLocationService;
 use Colame\Onboarding\Contracts\OnboardingRepositoryInterface;
 use Colame\Onboarding\Contracts\OnboardingServiceInterface;
 use Colame\Onboarding\Data\AccountSetupData;
@@ -247,17 +248,18 @@ class OnboardingService implements OnboardingServiceInterface
                 $locationData = CreateLocationData::from($locationDataArray);
                 $location = $this->locationRepository->create($locationData->toArray());
                 
-                // Associate user with location
-                $user->locations()->attach($location->id, [
-                    'role' => 'manager', // Owner of the business is the location manager
-                    'is_primary' => true,
-                ]);
+                // Associate user with location using UserLocationService
+                $userLocationService = app(UserLocationService::class);
+                $userLocationService->attachUserToLocation(
+                    $user,
+                    $location->id,
+                    'manager', // Owner of the business is the location manager
+                    true // is_primary
+                );
                 
                 // Set as default and current location
-                $user->update([
-                    'default_location_id' => $location->id,
-                    'current_location_id' => $location->id,
-                ]);
+                $userLocationService->setDefaultLocation($user, $location->id);
+                $userLocationService->setCurrentLocation($user, $location->id);
             }
             
             // Save organization settings if we have the service
