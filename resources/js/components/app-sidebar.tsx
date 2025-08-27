@@ -42,6 +42,33 @@ const mainNavItems: NavItem[] = [
     icon: LayoutGrid,
   },
   {
+    title: 'Businesses',
+    href: '/businesses',
+    icon: Building2,
+    items: [
+      {
+        title: 'All Businesses',
+        href: '/businesses',
+        icon: List,
+      },
+      {
+        title: 'Current Business',
+        href: '/businesses/current',
+        icon: Building2,
+      },
+      {
+        title: 'Business Settings',
+        href: '/businesses/settings',
+        icon: Settings,
+      },
+      {
+        title: 'Team Members',
+        href: '/businesses/users',
+        icon: Users,
+      },
+    ],
+  },
+  {
     title: 'Orders',
     href: '/orders',
     icon: ShoppingCart,

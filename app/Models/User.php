@@ -28,6 +28,7 @@ class User extends Authenticatable
         'phone',
         'current_location_id',
         'default_location_id',
+        'current_business_id',
     ];
 
     /**
@@ -132,4 +133,10 @@ class User extends Authenticatable
 
         return $this->locations()->first();
     }
+
+    /**
+     * NOTE: Business relationships are handled through BusinessService
+     * to maintain proper module boundaries. Use app(BusinessServiceInterface::class)
+     * to access business-related data for this user.
+     */
 }

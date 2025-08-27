@@ -31,7 +31,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
     businessName: savedData?.businessName || '',
     legalName: savedData?.legalName || '',
     taxId: savedData?.taxId || '',
-    businessType: savedData?.businessType || 'restaurant',
+    businessType: savedData?.businessType || 'independent',
     businessEmail: savedData?.businessEmail || '',
     businessPhone: savedData?.businessPhone || '',
     website: savedData?.website || '',
@@ -55,7 +55,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
       currentStep={currentStep}
       totalSteps={totalSteps}
       stepTitle="Business Information"
-      stepDescription="Tell us about your restaurant business"
+      stepDescription="Tell us about your business"
       completedSteps={completedSteps.length}
     >
       <OnboardingCard estimatedTime="5 min">
@@ -70,7 +70,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                     id="businessName"
                     value={data.businessName}
                     onChange={(e) => setData('businessName', e.target.value)}
-                    placeholder="My Restaurant"
+                    placeholder="My Business"
                     className="h-9"
                     required
                   />
@@ -87,7 +87,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                     id="legalName"
                     value={data.legalName}
                     onChange={(e) => setData('legalName', e.target.value)}
-                    placeholder="My Restaurant S.A. (leave empty if same as business name)"
+                    placeholder="My Business S.A. (leave empty if same as business name)"
                     className="h-9"
                   />
                   {errors.legalName && (
@@ -123,11 +123,9 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                       <SelectValue placeholder="Select business type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
+                      <SelectItem value="independent">Independent Business</SelectItem>
                       <SelectItem value="franchise">Franchise</SelectItem>
-                      <SelectItem value="chain">Restaurant Chain</SelectItem>
-                      <SelectItem value="food_truck">Food Truck</SelectItem>
-                      <SelectItem value="catering">Catering Service</SelectItem>
+                      <SelectItem value="corporate">Corporate/Chain</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.businessType && (
@@ -144,7 +142,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                     type="url"
                     value={data.website}
                     onChange={(e) => setData('website', e.target.value)}
-                    placeholder="https://myrestaurant.cl"
+                    placeholder="https://mybusiness.cl"
                     className="h-9"
                   />
                   {errors.website && (
@@ -160,7 +158,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                     id="description"
                     value={data.description}
                     onChange={(e) => setData('description', e.target.value)}
-                    placeholder="Tell us about your restaurant..."
+                    placeholder="Tell us about your business..."
                     rows={3}
                     className="resize-none"
                   />

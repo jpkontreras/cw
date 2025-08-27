@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Location\Models;
 
 use App\Models\User;
+use Colame\Business\Traits\BelongsToBusiness;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ class Location extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use BelongsToBusiness;
 
     /**
      * The attributes that are mass assignable.

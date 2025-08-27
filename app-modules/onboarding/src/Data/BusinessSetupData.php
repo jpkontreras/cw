@@ -28,7 +28,7 @@ class BusinessSetupData extends BaseData
         #[Nullable, StringType, Max(50)]
         public readonly ?string $taxId = null, // Optional - can be added later
         
-        #[Required, In(['restaurant', 'franchise', 'chain', 'food_truck', 'catering'])]
+        #[Required, In(['corporate', 'franchise', 'independent'])]
         public readonly string $businessType,
         
         // Contact information - optional during onboarding

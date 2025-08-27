@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Colame\Onboarding\Services;
 
 use App\Models\User;
+use Colame\Business\Contracts\BusinessServiceInterface;
+use Colame\Business\Data\CreateBusinessData;
 use Colame\Location\Contracts\LocationRepositoryInterface;
 use Colame\Location\Data\CreateLocationData;
 use Colame\Onboarding\Contracts\OnboardingRepositoryInterface;
@@ -18,6 +20,7 @@ use Colame\Onboarding\Data\OnboardingProgressData;
 use Colame\Settings\Contracts\SettingServiceInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class OnboardingService implements OnboardingServiceInterface
 {
@@ -30,6 +33,7 @@ class OnboardingService implements OnboardingServiceInterface
     
     public function __construct(
         private OnboardingRepositoryInterface $repository,
+        private ?BusinessServiceInterface $businessService = null,
         private ?LocationRepositoryInterface $locationRepository = null,
         private ?SettingServiceInterface $settingService = null,
     ) {}
@@ -151,6 +155,67 @@ class OnboardingService implements OnboardingServiceInterface
                 $userId = $user->id;
             }
             
+            // Create the business if we have the service
+            $businessId = null;
+            if ($this->businessService && isset($allData['business'])) {
+                $businessData = $allData['business'];
+                
+                // Generate a unique slug from the business name
+                $baseSlug = Str::slug($businessData['businessName']);
+                $slug = $baseSlug;
+                $counter = 1;
+                
+                // Ensure slug is unique (basic check - BusinessService will validate)
+                while ($counter < 100) {
+                    try {
+                        $createBusinessData = CreateBusinessData::from([
+                            'name' => $businessData['businessName'],
+                            'slug' => $slug,
+                            'type' => $businessData['businessType'],
+                            'legalName' => $businessData['legalName'] ?? $businessData['businessName'],
+                            'taxId' => $businessData['taxId'],
+                            'email' => $businessData['businessEmail'] ?? $allData['account']['email'] ?? $user->email,
+                            'phone' => $businessData['businessPhone'] ?? $allData['account']['phone'] ?? null,
+                            'website' => $businessData['website'],
+                            'description' => $businessData['description'],
+                            'ownerId' => $userId,
+                        ]);
+                        
+                        $business = $this->businessService->createBusiness($createBusinessData);
+                        $businessId = $business->id;
+                        
+                        // Add user as owner of the business
+                        $this->businessService->addUser(
+                            $businessId,
+                            $userId,
+                            'owner'
+                        );
+                        
+                        // Create default subscription for the business
+                        $this->businessService->createSubscription($businessId, [
+                            'tier' => 'starter', // Default to starter plan
+                            'status' => 'active',
+                            'startsAt' => now(),
+                            'trialEndsAt' => now()->addDays(30), // 30-day trial
+                        ]);
+                        
+                        // Set as current business for the user
+                        $user->current_business_id = $businessId;
+                        $user->save();
+                        
+                        break;
+                    } catch (\Exception $e) {
+                        // If slug exists, try again with a counter
+                        if (str_contains($e->getMessage(), 'slug')) {
+                            $counter++;
+                            $slug = $baseSlug . '-' . $counter;
+                        } else {
+                            throw $e;
+                        }
+                    }
+                }
+            }
+            
             // Assign role to user
             if ($user && isset($allData['account']['primaryRole'])) {
                 // Assuming using Spatie Permission package
@@ -173,6 +238,11 @@ class OnboardingService implements OnboardingServiceInterface
                 
                 // Set manager to current user
                 $locationDataArray['managerId'] = $userId;
+                
+                // Link to business if created
+                if ($businessId !== null) {
+                    $locationDataArray['businessId'] = $businessId;
+                }
                 
                 $locationData = CreateLocationData::from($locationDataArray);
                 $location = $this->locationRepository->create($locationData->toArray());

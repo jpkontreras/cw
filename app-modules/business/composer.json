@@ -1,0 +1,24 @@
+{
+	"name": "colame/business",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Colame\\Business\\": "src/",
+			"Colame\\Business\\Tests\\": "tests/",
+			"Colame\\Business\\Database\\Factories\\": "database/factories/",
+			"Colame\\Business\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Colame\\Business\\Providers\\BusinessServiceProvider"
+			]
+		}
+	}
+}
