@@ -9,6 +9,8 @@ use Colame\Taxonomy\Enums\TaxonomyType;
 use Colame\Taxonomy\Models\Taxonomy;
 use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\EnumCast;
 use Spatie\LaravelData\DataCollection;
@@ -22,18 +24,26 @@ class TaxonomyData extends BaseData
         public string $slug,
         #[WithCast(EnumCast::class)]
         public TaxonomyType $type,
-        public ?int $parentId,
-        public ?int $locationId,
+        #[MapInputName('parentId'), MapOutputName('parentId')]
+        public ?int $parent_id,
+        #[MapInputName('locationId'), MapOutputName('locationId')]
+        public ?int $location_id,
         public ?TaxonomyMetadataData $metadata,
-        public int $sortOrder = 0,
-        public bool $isActive = true,
+        #[MapInputName('sortOrder'), MapOutputName('sortOrder')]
+        public ?int $sort_order = 0,
+        #[MapInputName('isActive'), MapOutputName('isActive')]
+        public ?bool $is_active = true,
         #[DataCollectionOf(TaxonomyData::class)]
         public Lazy|DataCollection|null $children = null,
         public Lazy|TaxonomyData|null $parent = null,
         #[DataCollectionOf(TaxonomyAttributeData::class)]
         public Lazy|DataCollection|null $attributes = null,
-        public ?string $createdAt = null,
-        public ?string $updatedAt = null,
+        #[MapInputName('childrenCount'), MapOutputName('childrenCount')]
+        public ?int $children_count = null,
+        #[MapInputName('createdAt'), MapOutputName('createdAt')]
+        public ?string $created_at = null,
+        #[MapInputName('updatedAt'), MapOutputName('updatedAt')]
+        public ?string $updated_at = null,
     ) {}
     
     #[Computed]
@@ -64,22 +74,23 @@ class TaxonomyData extends BaseData
             name: $taxonomy->name,
             slug: $taxonomy->slug,
             type: TaxonomyType::from($taxonomy->type),
-            parentId: $taxonomy->parent_id,
-            locationId: $taxonomy->location_id,
+            parent_id: $taxonomy->parent_id,
+            location_id: $taxonomy->location_id,
             metadata: $taxonomy->metadata ? TaxonomyMetadataData::from($taxonomy->metadata) : null,
-            sortOrder: $taxonomy->sort_order,
-            isActive: $taxonomy->is_active,
+            sort_order: $taxonomy->sort_order ?? 0,
+            is_active: $taxonomy->is_active ?? true,
             children: Lazy::whenLoaded('children', $taxonomy, 
-                fn() => TaxonomyData::collection($taxonomy->children)
+                fn() => self::collect($taxonomy->children, DataCollection::class)
             ),
             parent: Lazy::whenLoaded('parent', $taxonomy,
-                fn() => $taxonomy->parent ? TaxonomyData::from($taxonomy->parent) : null
+                fn() => $taxonomy->parent ? self::from($taxonomy->parent) : null
             ),
             attributes: Lazy::whenLoaded('attributes', $taxonomy,
-                fn() => TaxonomyAttributeData::collection($taxonomy->attributes)
+                fn() => TaxonomyAttributeData::collect($taxonomy->attributes, DataCollection::class)
             ),
-            createdAt: $taxonomy->created_at?->toISOString(),
-            updatedAt: $taxonomy->updated_at?->toISOString(),
+            children_count: $taxonomy->children_count ?? null,
+            created_at: $taxonomy->created_at?->toISOString(),
+            updated_at: $taxonomy->updated_at?->toISOString(),
         );
     }
 }

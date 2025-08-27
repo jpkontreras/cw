@@ -7,11 +7,13 @@ namespace Colame\Taxonomy\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
 use Colame\Taxonomy\Data\CreateTaxonomyData;
+use Colame\Taxonomy\Data\TaxonomyData;
 use Colame\Taxonomy\Data\UpdateTaxonomyData;
 use Colame\Taxonomy\Enums\TaxonomyType;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\LaravelData\DataCollection;
 
 class TaxonomyController extends Controller
 {
@@ -21,33 +23,144 @@ class TaxonomyController extends Controller
     
     public function index(Request $request): Response
     {
-        $type = $request->query('type') ? TaxonomyType::from($request->query('type')) : null;
-        $locationId = $request->user()?->location_id;
+        $query = \Colame\Taxonomy\Models\Taxonomy::query()
+            ->with(['parent'])
+            ->withCount('children');
         
-        $taxonomies = $type 
-            ? $this->taxonomyService->getTaxonomiesByType($type, $locationId)
-            : collect();
+        // Apply filters
+        if ($request->filled('type')) {
+            $query->where('type', $request->query('type'));
+        }
         
-        $tree = $type && $type->isHierarchical()
-            ? $this->taxonomyService->getTaxonomyTree($type, $locationId)
-            : [];
+        if ($request->filled('search')) {
+            $searchTerm = $request->query('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('slug', 'like', "%{$searchTerm}%");
+            });
+        }
+        
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+        
+        // Apply sorting
+        $sortBy = $request->query('sort', 'name');
+        $sortDirection = 'asc';
+        
+        if (str_starts_with($sortBy, '-')) {
+            $sortBy = substr($sortBy, 1);
+            $sortDirection = 'desc';
+        }
+        
+        $query->orderBy($sortBy, $sortDirection);
+        
+        // Get all results without pagination for now
+        $perPage = $request->query('per_page', 1000);
+        $paginator = $query->paginate($perPage);
+        
+        // Transform to data objects
+        $taxonomies = TaxonomyData::collect($paginator->items(), DataCollection::class);
+        
+        // Build metadata for the data table
+        $metadata = [
+            'columns' => [
+                'name' => [
+                    'key' => 'name',
+                    'label' => 'Name',
+                    'sortable' => true,
+                    'visible' => true,
+                    'type' => 'string',
+                ],
+                'type' => [
+                    'key' => 'type',
+                    'label' => 'Type',
+                    'sortable' => true,
+                    'visible' => true,
+                    'type' => 'enum',
+                    'filter' => [
+                        'filterType' => 'select',
+                        'label' => 'Filter by Type',
+                        'placeholder' => 'All Types',
+                        'options' => array_map(fn($case) => [
+                            'value' => $case->value,
+                            'label' => $case->label(),
+                        ], TaxonomyType::cases()),
+                    ],
+                ],
+                'parent' => [
+                    'key' => 'parent',
+                    'label' => 'Parent',
+                    'sortable' => false,
+                    'visible' => true,
+                    'type' => 'string',
+                ],
+                'sortOrder' => [
+                    'key' => 'sortOrder',
+                    'label' => 'Order',
+                    'sortable' => true,
+                    'visible' => true,
+                    'type' => 'number',
+                ],
+                'isActive' => [
+                    'key' => 'isActive',
+                    'label' => 'Status',
+                    'sortable' => true,
+                    'visible' => true,
+                    'type' => 'boolean',
+                    'filter' => [
+                        'filterType' => 'select',
+                        'label' => 'Filter by Status',
+                        'placeholder' => 'All Status',
+                        'options' => [
+                            ['value' => '1', 'label' => 'Active'],
+                            ['value' => '0', 'label' => 'Inactive'],
+                        ],
+                    ],
+                ],
+            ],
+            'filters' => [
+                [
+                    'key' => 'search',
+                    'label' => 'Search',
+                    'placeholder' => 'Search taxonomies...',
+                    'filterType' => 'search',
+                ],
+            ],
+            'defaultFilters' => ['search'],
+            'perPageOptions' => [10, 20, 50, 100],
+        ];
         
         return Inertia::render('taxonomy/index', [
             'taxonomies' => $taxonomies->toArray(),
-            'tree' => $tree,
-            'types' => array_map(fn($case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-                'description' => $case->description(),
-                'isHierarchical' => $case->isHierarchical(),
-            ], TaxonomyType::cases()),
-            'selectedType' => $type?->value,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
+            'metadata' => $metadata,
+            'filters' => $request->only(['type', 'search', 'is_active', 'sort']),
         ]);
     }
     
     public function create(Request $request): Response
     {
         $type = $request->query('type') ? TaxonomyType::from($request->query('type')) : null;
+        $parentId = $request->query('parent');
+        
+        // If parent is specified, get its type
+        if ($parentId) {
+            $parent = $this->taxonomyService->getTaxonomy((int)$parentId);
+            if ($parent) {
+                // parent->type is already a TaxonomyType enum or a string
+                $type = is_string($parent->type) 
+                    ? TaxonomyType::from($parent->type) 
+                    : $parent->type;
+            }
+        }
         
         return Inertia::render('taxonomy/create', [
             'types' => array_map(fn($case) => [
@@ -57,6 +170,7 @@ class TaxonomyController extends Controller
                 'isHierarchical' => $case->isHierarchical(),
             ], TaxonomyType::cases()),
             'selectedType' => $type?->value,
+            'selectedParent' => $parentId ? (int)$parentId : null,
             'parentOptions' => $type && $type->isHierarchical() 
                 ? $this->taxonomyService->getTaxonomiesByType($type)->toArray()
                 : [],
@@ -69,7 +183,7 @@ class TaxonomyController extends Controller
         
         // Add location if type requires it
         if ($data->type->requiresLocation()) {
-            $data->locationId = $request->user()->location_id;
+            $data->location_id = $request->user()->location_id;
         }
         
         $taxonomy = $this->taxonomyService->createTaxonomy($data);
@@ -101,7 +215,13 @@ class TaxonomyController extends Controller
         
         return Inertia::render('taxonomy/edit', [
             'taxonomy' => $taxonomy->toArray(),
-            'parentOptions' => $taxonomy->type->isHierarchical()
+            'types' => array_map(fn($case) => [
+                'value' => $case->value,
+                'label' => $case->label(),
+                'description' => $case->description(),
+                'isHierarchical' => $case->isHierarchical(),
+            ], TaxonomyType::cases()),
+            'parentTaxonomies' => $taxonomy->type->isHierarchical()
                 ? $this->taxonomyService->getTaxonomiesByType($taxonomy->type)
                     ->filter(fn($t) => $t->id !== $id)
                     ->toArray()

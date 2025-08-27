@@ -372,6 +372,39 @@ Breadcrumbs::for('offers.analytics', function (BreadcrumbTrail $trail, $offerId)
 });
 
 // ====================
+// Taxonomy Module
+// ====================
+
+// Taxonomies
+Breadcrumbs::for('taxonomies.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Categories & Tags', route('taxonomies.index'));
+});
+
+// Taxonomies > Create
+Breadcrumbs::for('taxonomies.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('taxonomies.index');
+    $trail->push('Create Taxonomy', route('taxonomies.create'));
+});
+
+// Taxonomies > Taxonomy Details
+Breadcrumbs::for('taxonomies.show', function (BreadcrumbTrail $trail, $taxonomyId) {
+    $trail->parent('taxonomies.index');
+    $trail->push('Taxonomy Details', route('taxonomies.show', $taxonomyId));
+});
+
+// Taxonomies > Taxonomy Details > Edit
+Breadcrumbs::for('taxonomies.edit', function (BreadcrumbTrail $trail, $taxonomyId) {
+    $trail->parent('taxonomies.show', $taxonomyId);
+    $trail->push('Edit', route('taxonomies.edit', $taxonomyId));
+});
+
+// Taxonomies > Tree View
+Breadcrumbs::for('taxonomies.tree', function (BreadcrumbTrail $trail) {
+    $trail->parent('taxonomies.index');
+    $trail->push('Tree View', route('taxonomies.tree'));
+});
+
+// ====================
 // Settings Module
 // ====================
 

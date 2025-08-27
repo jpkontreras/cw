@@ -40,7 +40,7 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
             ->orderBy('name')
             ->get();
         
-        return TaxonomyData::collection($taxonomies);
+        return TaxonomyData::collect($taxonomies, DataCollection::class);
     }
     
     public function getHierarchy(TaxonomyType $type, ?int $locationId = null): array
@@ -85,7 +85,7 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
             ->orderBy('name')
             ->get();
         
-        return TaxonomyData::collection($children);
+        return TaxonomyData::collect($children, DataCollection::class);
     }
     
     public function getAncestors(int $taxonomyId): DataCollection
@@ -104,7 +104,7 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
             $current = $current->parent;
         }
         
-        return TaxonomyData::collection($ancestors);
+        return TaxonomyData::collect($ancestors, DataCollection::class);
     }
     
     public function create(array $data): TaxonomyData
@@ -120,6 +120,10 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
                 $data['slug'] = $baseSlug . '-' . $count++;
             }
         }
+        
+        // Ensure default values are set
+        $data['sort_order'] = $data['sort_order'] ?? 0;
+        $data['is_active'] = $data['is_active'] ?? true;
         
         $taxonomy = Taxonomy::create($data);
         
@@ -239,7 +243,7 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
         
         $taxonomies = $query->orderBy('sort_order')->get();
         
-        return TaxonomyData::collection($taxonomies);
+        return TaxonomyData::collect($taxonomies, DataCollection::class);
     }
     
     public function search(string $query, ?TaxonomyType $type = null): DataCollection
@@ -255,6 +259,6 @@ class TaxonomyRepository implements TaxonomyRepositoryInterface
             ->limit(50)
             ->get();
         
-        return TaxonomyData::collection($taxonomies);
+        return TaxonomyData::collect($taxonomies, DataCollection::class);
     }
 }

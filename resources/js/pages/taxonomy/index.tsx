@@ -1,62 +1,42 @@
 import React, { useState, useMemo } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Plus,
-  Search,
-  Edit,
-  Trash2,
+  Plus, 
+  Tag, 
+  Search, 
   ChevronRight,
   ChevronDown,
-  Tag,
-  Leaf,
-  AlertTriangle,
-  Globe,
-  Flame,
-  DollarSign,
-  Users,
   Hash,
-  MoreVertical,
-  Package,
-  ShoppingCart,
+  Layers,
+  Coffee,
+  Utensils,
+  MapPin,
+  Users,
   Calendar,
+  Percent,
+  Flame,
+  Apple,
+  AlertCircle,
+  Globe,
+  ChefHat,
+  DollarSign,
+  Star,
+  Circle,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { EmptyState } from '@/components/empty-state';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,633 +45,702 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface TaxonomyType {
-  value: string;
-  label: string;
-  description: string;
-  isHierarchical: boolean;
-  icon?: React.ComponentType<{ className?: string }>;
-  color?: string;
-}
-
 interface Taxonomy {
   id: number;
   name: string;
   slug: string;
   type: string;
   parentId: number | null;
+  parent?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   metadata?: {
     icon?: string;
     color?: string;
     description?: string;
+    level?: number;
+    priority?: number;
+    scoville?: string;
+    [key: string]: any;
   };
   sortOrder: number;
   isActive: boolean;
-  children?: Taxonomy[];
-  itemCount?: number;
+  childrenCount?: number;
 }
 
-interface Props {
+interface TaxonomyIndexProps {
   taxonomies: Taxonomy[];
-  types: TaxonomyType[];
-  selectedType?: string;
-  stats?: {
-    totalTaxonomies: number;
-    activeItems: number;
-    recentlyAdded: number;
+  pagination: any;
+  metadata?: any;
+  filters: {
+    type?: string;
+    search?: string;
+    is_active?: string;
+    sort?: string;
   };
+  types: Array<{ value: string; label: string }>;
 }
 
-const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  'item_category': Package,
-  'menu_section': ShoppingCart,
-  'dietary_label': Leaf,
-  'allergen': AlertTriangle,
-  'cuisine_type': Globe,
-  'preparation_method': Flame,
-  'spice_level': Flame,
-  'price_range': DollarSign,
-  'customer_segment': Users,
-  'general_tag': Tag,
-  'seasonal_tag': Calendar,
-  'feature_tag': Tag,
+// Type configuration with icons and descriptions
+const typeConfig: Record<string, { 
+  icon: React.ElementType; 
+  label: string; 
+  description: string; 
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  isHierarchical?: boolean;
+}> = {
+  item_category: { 
+    icon: Layers, 
+    label: 'Item Categories', 
+    description: 'Hierarchical categories for organizing menu items',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    isHierarchical: true
+  },
+  menu_section: { 
+    icon: Utensils, 
+    label: 'Menu Sections', 
+    description: 'Time-based and special menu sections',
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    isHierarchical: true
+  },
+  ingredient_type: { 
+    icon: Coffee, 
+    label: 'Ingredients', 
+    description: 'Raw materials and ingredient classifications',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    isHierarchical: true
+  },
+  location_zone: { 
+    icon: MapPin, 
+    label: 'Locations', 
+    description: 'Geographic zones and delivery areas',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    borderColor: 'border-cyan-200',
+    isHierarchical: true
+  },
+  dietary_label: { 
+    icon: Apple, 
+    label: 'Dietary Labels', 
+    description: 'Dietary restrictions and preferences',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200'
+  },
+  allergen: { 
+    icon: AlertCircle, 
+    label: 'Allergens', 
+    description: 'Food allergen information and warnings',
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200'
+  },
+  cuisine_type: { 
+    icon: Globe, 
+    label: 'Cuisines', 
+    description: 'Regional and international cuisine types',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200'
+  },
+  prep_method: { 
+    icon: ChefHat, 
+    label: 'Preparation', 
+    description: 'Cooking and preparation methods',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200'
+  },
+  spice_level: { 
+    icon: Flame, 
+    label: 'Spice Levels', 
+    description: 'Spiciness ratings with Scoville scale',
+    color: 'text-red-700',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200'
+  },
+  customer_segment: { 
+    icon: Users, 
+    label: 'Customer Segments', 
+    description: 'Customer categorization and loyalty tiers',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200'
+  },
+  price_range: { 
+    icon: DollarSign, 
+    label: 'Price Ranges', 
+    description: 'Price tier classifications',
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-200'
+  },
+  promotion_type: { 
+    icon: Percent, 
+    label: 'Promotions', 
+    description: 'Types of offers and discounts',
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+    borderColor: 'border-pink-200'
+  },
+  general_tag: { 
+    icon: Tag, 
+    label: 'General Tags', 
+    description: 'Feature and status tags',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200'
+  },
+  seasonal_tag: { 
+    icon: Calendar, 
+    label: 'Seasonal', 
+    description: 'Holiday and seasonal tags',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200'
+  },
+  feature_tag: { 
+    icon: Star, 
+    label: 'Features', 
+    description: 'Display and marketing features',
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-200'
+  }
 };
 
-// Color mapping for taxonomy types (currently unused but may be useful later)
-// const typeColors: Record<string, string> = {
-//   'item_category': 'bg-blue-100 text-blue-700 border-blue-200',
-//   'menu_section': 'bg-purple-100 text-purple-700 border-purple-200',
-//   'dietary_label': 'bg-green-100 text-green-700 border-green-200',
-//   'allergen': 'bg-red-100 text-red-700 border-red-200',
-//   'cuisine_type': 'bg-indigo-100 text-indigo-700 border-indigo-200',
-//   'preparation_method': 'bg-orange-100 text-orange-700 border-orange-200',
-//   'spice_level': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-//   'price_range': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-//   'customer_segment': 'bg-pink-100 text-pink-700 border-pink-200',
-//   'general_tag': 'bg-gray-100 text-gray-700 border-gray-200',
-// };
-
-function TaxonomyTree({ 
-  taxonomies, 
-  level = 0,
-  onEdit,
-  onDelete 
-}: { 
-  taxonomies: Taxonomy[]; 
-  level?: number;
-  onEdit: (taxonomy: Taxonomy) => void;
-  onDelete: (taxonomy: Taxonomy) => void;
-}) {
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-
-  const toggleExpand = (id: number) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  return (
-    <div className={cn("space-y-1", level > 0 && "ml-8")}>
-      {taxonomies.map((taxonomy) => (
-        <div key={taxonomy.id}>
-          <div className={cn(
-            "flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors",
-            level === 0 && "border"
-          )}>
-            <div className="flex items-center gap-2 flex-1">
-              {taxonomy.children && taxonomy.children.length > 0 && (
-                <button
-                  onClick={() => toggleExpand(taxonomy.id)}
-                  className="p-0.5 hover:bg-muted rounded"
-                >
-                  {expanded[taxonomy.id] ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </button>
-              )}
-              {!taxonomy.children?.length && <div className="w-5" />}
-              
-              <div className="flex items-center gap-3">
-                {taxonomy.metadata?.icon && (
-                  <div 
-                    className="w-8 h-8 rounded-md flex items-center justify-center"
-                    style={{ backgroundColor: taxonomy.metadata.color + '20' }}
-                  >
-                    <Hash className="h-4 w-4" style={{ color: taxonomy.metadata.color }} />
-                  </div>
-                )}
-                <div>
-                  <div className="font-medium">{taxonomy.name}</div>
-                  {taxonomy.metadata?.description && (
-                    <div className="text-xs text-muted-foreground">{taxonomy.metadata.description}</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="ml-auto flex items-center gap-2">
-                {taxonomy.itemCount !== undefined && (
-                  <Badge variant="secondary" className="text-xs">
-                    {taxonomy.itemCount} items
-                  </Badge>
-                )}
-                <Badge variant={taxonomy.isActive ? "default" : "secondary"}>
-                  {taxonomy.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-            </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="ml-2">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(taxonomy)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete(taxonomy)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          
-          {expanded[taxonomy.id] && taxonomy.children && taxonomy.children.length > 0 && (
-            <TaxonomyTree 
-              taxonomies={taxonomy.children} 
-              level={level + 1}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
+interface TaxonomyWithChildren extends Taxonomy {
+  children?: TaxonomyWithChildren[];
 }
 
-function TaxonomyList({ 
-  taxonomies,
-  onEdit,
-  onDelete 
-}: { 
-  taxonomies: Taxonomy[];
-  onEdit: (taxonomy: Taxonomy) => void;
-  onDelete: (taxonomy: Taxonomy) => void;
-}) {
-  return (
-    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      {taxonomies.map((taxonomy) => (
-        <Card key={taxonomy.id} className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                {taxonomy.metadata?.icon && (
-                  <div 
-                    className="w-8 h-8 rounded-md flex items-center justify-center"
-                    style={{ backgroundColor: taxonomy.metadata.color + '20' }}
-                  >
-                    <Hash className="h-4 w-4" style={{ color: taxonomy.metadata.color }} />
-                  </div>
-                )}
-                <div>
-                  <CardTitle className="text-base">{taxonomy.name}</CardTitle>
-                  <CardDescription className="text-xs mt-1">
-                    {taxonomy.slug}
-                  </CardDescription>
-                </div>
-              </div>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(taxonomy)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => onDelete(taxonomy)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardHeader>
-          {taxonomy.metadata?.description && (
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {taxonomy.metadata.description}
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <Badge variant={taxonomy.isActive ? "default" : "secondary"}>
-                  {taxonomy.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-                {taxonomy.itemCount !== undefined && (
-                  <Badge variant="outline" className="text-xs">
-                    {taxonomy.itemCount} items
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      ))}
-    </div>
-  );
-}
+function buildHierarchy(taxonomies: Taxonomy[]): TaxonomyWithChildren[] {
+  const itemMap = new Map<number, TaxonomyWithChildren>();
+  const rootItems: TaxonomyWithChildren[] = [];
 
-function CreateTaxonomyDialog({
-  open,
-  onOpenChange,
-  types,
-  selectedType,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  types: TaxonomyType[];
-  selectedType: string;
-  onSubmit: (data: {
-    name: string;
-    type: string;
-    description: string;
-    icon: string;
-    color: string;
-    isActive: boolean;
-  }) => void;
-}) {
-  const [formData, setFormData] = useState({
-    name: '',
-    type: selectedType,
-    description: '',
-    icon: '',
-    color: '#000000',
-    isActive: true,
+  // First pass: create all items
+  taxonomies.forEach(tax => {
+    itemMap.set(tax.id, { ...tax, children: [] });
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    onOpenChange(false);
-    setFormData({
-      name: '',
-      type: selectedType,
-      description: '',
-      icon: '',
-      color: '#000000',
-      isActive: true,
+  // Second pass: build hierarchy
+  taxonomies.forEach(tax => {
+    const item = itemMap.get(tax.id)!;
+    if (tax.parentId && itemMap.has(tax.parentId)) {
+      itemMap.get(tax.parentId)!.children!.push(item);
+    } else {
+      rootItems.push(item);
+    }
+  });
+
+  // Sort by sortOrder
+  const sortItems = (items: TaxonomyWithChildren[]) => {
+    items.sort((a, b) => a.sortOrder - b.sortOrder);
+    items.forEach(item => {
+      if (item.children?.length) sortItems(item.children);
     });
   };
 
+  sortItems(rootItems);
+  return rootItems;
+}
+
+function TaxonomyItem({ 
+  taxonomy, 
+  typeConfig: config,
+  level = 0,
+  isLast = false,
+  expandedItems,
+  onToggle,
+  showTree = false
+}: { 
+  taxonomy: TaxonomyWithChildren;
+  typeConfig: typeof typeConfig[keyof typeof typeConfig];
+  level?: number;
+  isLast?: boolean;
+  expandedItems: Set<number>;
+  onToggle: (id: number) => void;
+  showTree?: boolean;
+}) {
+  const hasChildren = taxonomy.children && taxonomy.children.length > 0;
+  const isExpanded = expandedItems.has(taxonomy.id);
+  const Icon = config.icon;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Taxonomy</DialogTitle>
-            <DialogDescription>
-              Add a new category, tag, or classification to your system.
-            </DialogDescription>
-          </DialogHeader>
+    <div className="relative">
+      {/* Tree lines for hierarchical display */}
+      {showTree && level > 0 && (
+        <>
+          {/* Vertical line from parent */}
+          {!isLast && (
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-px bg-gray-200"
+              style={{ left: `${(level - 1) * 24 + 20}px` }}
+            />
+          )}
+          {/* Horizontal connector */}
+          <div 
+            className="absolute top-4 h-px bg-gray-200"
+            style={{ 
+              left: `${(level - 1) * 24 + 20}px`,
+              width: '12px'
+            }}
+          />
+        </>
+      )}
+
+      <div 
+        className={cn(
+          "group relative flex items-center gap-2 py-1.5 px-2 rounded-md transition-all",
+          "hover:bg-gray-50 cursor-pointer",
+          level > 0 && "ml-6"
+        )}
+        style={{ paddingLeft: showTree && level > 0 ? `${level * 24 + 8}px` : undefined }}
+        onClick={() => router.visit(`/taxonomies/${taxonomy.id}`)}
+      >
+        {/* Expand/Collapse for hierarchical items */}
+        {hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(taxonomy.id);
+            }}
+            className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3 w-3 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-3 w-3 text-gray-400" />
+            )}
+          </button>
+        )}
+        
+        {/* Add spacer if no children to align icons */}
+        {!hasChildren && showTree && (
+          <div className="w-4" />
+        )}
+        
+        {/* Icon */}
+        <div className={cn(
+          "flex items-center justify-center w-7 h-7 rounded-md flex-shrink-0",
+          config.bgColor,
+          config.borderColor,
+          "border"
+        )}>
+          <Icon className={cn("h-3.5 w-3.5", config.color)} />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-900 truncate">
+            {taxonomy.name}
+          </span>
+          {taxonomy.metadata?.priority && (
+            <Badge variant="outline" className="text-xs h-5 px-1.5">
+              P{taxonomy.metadata.priority}
+            </Badge>
+          )}
+          {taxonomy.metadata?.level !== undefined && (
+            <Badge variant="outline" className="text-xs h-5 px-1.5">
+              L{taxonomy.metadata.level}
+            </Badge>
+          )}
+          {taxonomy.metadata?.scoville && (
+            <Badge variant="outline" className="text-xs h-5 px-1.5 text-orange-600 border-orange-300">
+              {taxonomy.metadata.scoville}
+            </Badge>
+          )}
+        </div>
+
+        {/* Status & Actions */}
+        <div className="flex items-center gap-1.5">
+          {hasChildren && (
+            <span className="text-xs text-gray-500 font-medium">
+              {taxonomy.children!.length}
+            </span>
+          )}
           
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Vegetarian, Breakfast, Spicy"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+          {taxonomy.isActive ? (
+            <Eye className="h-3.5 w-3.5 text-green-600" />
+          ) : (
+            <EyeOff className="h-3.5 w-3.5 text-gray-400" />
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      <div className="flex items-center gap-2">
-                        {React.createElement(typeIcons[type.value] || Tag, { className: "h-4 w-4" })}
-                        {type.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of this taxonomy"
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="icon">Icon (Optional)</Label>
-                <Input
-                  id="icon"
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                  placeholder="e.g., leaf, fire"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="color"
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-16 h-9 p-1"
-                  />
-                  <Input
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    placeholder="#000000"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <Label htmlFor="active" className="flex items-center gap-2">
-                Active Status
-              </Label>
-              <Switch
-                id="active"
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Create Taxonomy</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => router.visit(`/taxonomies/${taxonomy.id}`)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.visit(`/taxonomies/${taxonomy.id}/edit`)}>
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Children - recursively render with their own expand state */}
+      {hasChildren && isExpanded && (
+        <div className="relative">
+          {taxonomy.children!.map((child, idx) => (
+            <TaxonomyItem
+              key={child.id}
+              taxonomy={child}
+              typeConfig={config}
+              level={level + 1}
+              isLast={idx === taxonomy.children!.length - 1}
+              expandedItems={expandedItems}
+              onToggle={onToggle}
+              showTree={showTree}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-function TaxonomiesContent({ taxonomies, types, selectedType, stats }: Props) {
-  const [currentType, setCurrentType] = useState(selectedType || 'item_category');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'tree' | 'grid'>('tree');
-  
-  const currentTypeInfo = types.find(t => t.value === currentType) || types[0];
-  const isHierarchical = currentTypeInfo?.isHierarchical || false;
-  
-  const filteredTaxonomies = useMemo(() => {
-    let filtered = taxonomies.filter(t => t.type === currentType);
+function TaxonomiesIndexContent({ taxonomies, filters }: TaxonomyIndexProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+
+  // Group taxonomies by type
+  const groupedTaxonomies = useMemo(() => {
+    const groups: Record<string, Taxonomy[]> = {};
     
-    if (searchQuery) {
-      filtered = filtered.filter(t => 
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.slug.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    return filtered;
-  }, [taxonomies, currentType, searchQuery]);
-  
-  const handleCreateTaxonomy = (data: {
-    name: string;
-    type: string;
-    description: string;
-    icon: string;
-    color: string;
-    isActive: boolean;
-  }) => {
-    router.post('/taxonomies', {
-      ...data,
-      slug: data.name.toLowerCase().replace(/\s+/g, '-'),
-      metadata: {
-        description: data.description,
-        icon: data.icon,
-        color: data.color,
-      },
+    taxonomies.forEach(taxonomy => {
+      if (!groups[taxonomy.type]) {
+        groups[taxonomy.type] = [];
+      }
+      groups[taxonomy.type].push(taxonomy);
     });
-  };
-  
-  const handleEditTaxonomy = (taxonomy: Taxonomy) => {
-    router.get(`/taxonomies/${taxonomy.id}/edit`);
-  };
-  
-  const handleDeleteTaxonomy = (taxonomy: Taxonomy) => {
-    if (confirm(`Are you sure you want to delete "${taxonomy.name}"?`)) {
-      router.delete(`/taxonomies/${taxonomy.id}`);
+
+    return groups;
+  }, [taxonomies]);
+
+  // Build hierarchies for each type
+  const hierarchies = useMemo(() => {
+    const result: Record<string, TaxonomyWithChildren[]> = {};
+    
+    Object.entries(groupedTaxonomies).forEach(([type, items]) => {
+      result[type] = buildHierarchy(items);
+    });
+    
+    return result;
+  }, [groupedTaxonomies]);
+
+  // Filter taxonomies based on search
+  const filteredHierarchies = useMemo(() => {
+    if (!searchTerm) return hierarchies;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const filterItems = (items: TaxonomyWithChildren[]): TaxonomyWithChildren[] => {
+      return items.reduce((acc: TaxonomyWithChildren[], item) => {
+        const matches = 
+          item.name.toLowerCase().includes(searchLower) ||
+          item.metadata?.description?.toLowerCase().includes(searchLower);
+        
+        const filteredChildren = item.children ? filterItems(item.children) : [];
+        
+        if (matches || filteredChildren.length > 0) {
+          acc.push({
+            ...item,
+            children: filteredChildren
+          });
+        }
+        
+        return acc;
+      }, []);
+    };
+
+    const result: Record<string, TaxonomyWithChildren[]> = {};
+    Object.entries(hierarchies).forEach(([type, items]) => {
+      const filtered = filterItems(items);
+      if (filtered.length > 0) {
+        result[type] = filtered;
+      }
+    });
+    
+    return result;
+  }, [hierarchies, searchTerm]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: taxonomies.length };
+    Object.entries(groupedTaxonomies).forEach(([type, items]) => {
+      counts[type] = items.length;
+    });
+    return counts;
+  }, [groupedTaxonomies, taxonomies]);
+
+  const toggleSection = (type: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(type)) {
+      newExpanded.delete(type);
+    } else {
+      newExpanded.add(type);
     }
+    setExpandedSections(newExpanded);
   };
-  
-  const handleTypeChange = (type: string) => {
-    setCurrentType(type);
-    router.get('/taxonomies', { type }, { preserveState: true });
+
+  const toggleItem = (id: number) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedItems(newExpanded);
   };
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== undefined && value !== null && value !== '');
+
+  if (taxonomies.length === 0 && !hasActiveFilters) {
+    return (
+      <>
+        <Page.Header 
+          title="Categories & Tags"
+          subtitle="Manage taxonomies for items, menus, and other system entities"
+          actions={
+            <Link href="/taxonomies/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Taxonomy
+              </Button>
+            </Link>
+          }
+        />
+        <Page.Content>
+          <EmptyState
+            icon={Tag}
+            title="No taxonomies yet"
+            description="Create categories and tags to organize your items, menus, and other system entities"
+            actions={
+              <Link href="/taxonomies/create">
+                <Button size="lg">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Taxonomy
+                </Button>
+              </Link>
+            }
+            helpText={
+              <>
+                Learn more about <a href="#" className="text-primary hover:underline">organizing with taxonomies</a>
+              </>
+            }
+          />
+        </Page.Content>
+      </>
+    );
+  }
+
+  // Get types to display
+  const displayTypes = selectedType === 'all' 
+    ? Object.keys(typeConfig).filter(type => typeCounts[type] > 0)
+    : [selectedType];
 
   return (
     <>
-      <Page.Header
+      <Page.Header 
         title="Categories & Tags"
         subtitle="Manage taxonomies for items, menus, and other system entities"
         actions={
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Taxonomy
-          </Button>
+          <Link href="/taxonomies/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Taxonomy
+            </Button>
+          </Link>
         }
       />
 
       <Page.Content>
-        <div className="space-y-6">
-          {/* Stats Cards */}
-          {stats && (
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Taxonomies</CardTitle>
-                  <Tag className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalTaxonomies || 0}</div>
-                  <p className="text-xs text-muted-foreground">Across all types</p>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Items</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.activeItems || 0}</div>
-                  <p className="text-xs text-muted-foreground">Currently in use</p>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Recently Added</CardTitle>
-                  <Plus className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.recentlyAdded || 0}</div>
-                  <p className="text-xs text-muted-foreground">Last 7 days</p>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Current Type</CardTitle>
-                  {React.createElement(typeIcons[currentType] || Tag, { className: "h-4 w-4 text-muted-foreground" })}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredTaxonomies.length}</div>
-                  <p className="text-xs text-muted-foreground">{currentTypeInfo?.label}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
-          {/* Main Content Card */}
-          <Card className="flex-1 min-h-0">
-            <CardHeader className="border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Select value={currentType} onValueChange={handleTypeChange}>
-                    <SelectTrigger className="w-[250px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {types.map((type) => {
-                        const Icon = typeIcons[type.value] || Tag;
-                        return (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" />
-                              <span>{type.label}</span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search taxonomies..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 w-[300px]"
-                    />
-                  </div>
-                </div>
-                
-                {isHierarchical && (
-                  <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'tree' | 'grid')}>
-                    <TabsList>
-                      <TabsTrigger value="tree">Tree View</TabsTrigger>
-                      <TabsTrigger value="grid">Grid View</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                )}
-              </div>
-              
-              {currentTypeInfo && (
-                <CardDescription className="mt-2">
-                  {currentTypeInfo.description}
-                </CardDescription>
-              )}
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              {filteredTaxonomies.length === 0 ? (
-                <EmptyState
-                  icon={Tag}
-                  title="No taxonomies found"
-                  description={searchQuery 
-                    ? "Try adjusting your search query" 
-                    : `No ${currentTypeInfo?.label.toLowerCase()} have been created yet`}
-                  actions={
-                    <Button onClick={() => setCreateDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Taxonomy
-                    </Button>
-                  }
+        <div className="flex gap-4 h-[calc(100vh-200px)]">
+          {/* Sidebar Navigation */}
+          <div className="w-52 flex-shrink-0">
+            <div className="sticky top-0 h-full flex flex-col">
+              {/* Search */}
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-sm"
                 />
-              ) : (
-                <>
-                  {isHierarchical && viewMode === 'tree' ? (
-                    <TaxonomyTree
-                      taxonomies={filteredTaxonomies.filter(t => !t.parentId)}
-                      onEdit={handleEditTaxonomy}
-                      onDelete={handleDeleteTaxonomy}
-                    />
-                  ) : (
-                    <TaxonomyList
-                      taxonomies={filteredTaxonomies}
-                      onEdit={handleEditTaxonomy}
-                      onDelete={handleDeleteTaxonomy}
-                    />
+              </div>
+
+              {/* Type Navigation */}
+              <div className="space-y-0.5 overflow-y-auto">
+                <button
+                  onClick={() => setSelectedType('all')}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors",
+                    selectedType === 'all' 
+                      ? "bg-gray-100 text-gray-900 font-medium" 
+                      : "hover:bg-gray-50 text-gray-600"
                   )}
-                </>
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Hash className="h-3.5 w-3.5" />
+                    <span>All Categories</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {typeCounts.all}
+                  </span>
+                </button>
+
+                <div className="h-px bg-gray-200 my-1" />
+
+                {Object.entries(typeConfig).map(([type, config]) => {
+                  if (typeCounts[type] === 0) return null;
+                  
+                  const Icon = config.icon;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedType(type)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors",
+                        selectedType === type 
+                          ? "bg-gray-100 text-gray-900 font-medium" 
+                          : "hover:bg-gray-50 text-gray-600"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", config.color)} />
+                        <span className="truncate">{config.label}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 ml-1">
+                        {typeCounts[type]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content - Scrollable */}
+          <div className="flex-1 min-w-0 overflow-y-auto pr-2">
+            <div className="space-y-3 pb-4">
+              {displayTypes.map(type => {
+                const config = typeConfig[type];
+                if (!config || !filteredHierarchies[type]) return null;
+                
+                const Icon = config.icon;
+                const isExpanded = expandedSections.has(type);
+
+                return (
+                  <Card key={type} className="overflow-hidden">
+                    {/* Section Header */}
+                    <div 
+                      className={cn(
+                        "px-4 py-3 cursor-pointer transition-colors",
+                        "hover:bg-gray-50",
+                        selectedType === 'all' && "cursor-pointer",
+                        (selectedType !== 'all' || isExpanded) && "border-b"
+                      )}
+                      onClick={() => selectedType === 'all' && toggleSection(type)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {selectedType === 'all' && (
+                            <button className="p-0.5 hover:bg-gray-200 rounded transition-colors">
+                              {isExpanded ? (
+                                <ChevronDown className="h-3 w-3 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 text-gray-400" />
+                              )}
+                            </button>
+                          )}
+                          <div className={cn(
+                            "flex items-center justify-center w-8 h-8 rounded-md",
+                            config.bgColor,
+                            config.borderColor,
+                            "border"
+                          )}>
+                            <Icon className={cn("h-4 w-4", config.color)} />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900">{config.label}</h3>
+                            <p className="text-xs text-gray-500">{config.description}</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {typeCounts[type]} items
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Section Content */}
+                    {(selectedType !== 'all' || isExpanded) && (
+                      <div className="py-1">
+                        {filteredHierarchies[type].map((item, idx) => (
+                          <TaxonomyItem
+                            key={item.id}
+                            taxonomy={item}
+                            typeConfig={config}
+                            expandedItems={expandedItems}
+                            onToggle={toggleItem}
+                            showTree={config.isHierarchical}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+
+              {displayTypes.length === 0 && searchTerm && (
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description={`No taxonomies match "${searchTerm}"`}
+                  compact
+                />
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-        
-        <CreateTaxonomyDialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          types={types}
-          selectedType={currentType}
-          onSubmit={handleCreateTaxonomy}
-        />
       </Page.Content>
     </>
   );
 }
 
-export default function Taxonomies(props: Props) {
+export default function TaxonomiesIndex(props: TaxonomyIndexProps) {
   return (
     <AppLayout>
       <Head title="Categories & Tags" />
       <Page>
-        <TaxonomiesContent {...props} />
+        <TaxonomiesIndexContent {...props} />
       </Page>
     </AppLayout>
   );

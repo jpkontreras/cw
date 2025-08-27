@@ -171,7 +171,7 @@ class TaxonomyService implements TaxonomyServiceInterface
                 ->limit($limit)
                 ->get();
             
-            return TaxonomyData::collection($taxonomies);
+            return TaxonomyData::collect($taxonomies, DataCollection::class);
         });
     }
     

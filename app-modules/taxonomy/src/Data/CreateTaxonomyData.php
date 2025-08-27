@@ -6,6 +6,7 @@ namespace Colame\Taxonomy\Data;
 
 use App\Core\Data\BaseData;
 use Colame\Taxonomy\Enums\TaxonomyType;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Unique;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -23,11 +24,15 @@ class CreateTaxonomyData extends BaseData
         #[Required, WithCast(EnumCast::class)]
         public TaxonomyType $type,
         
-        public ?int $parentId = null,
-        public ?int $locationId = null,
+        #[MapInputName('parentId')]
+        public ?int $parent_id = null,
+        #[MapInputName('locationId')]
+        public ?int $location_id = null,
         public ?TaxonomyMetadataData $metadata = null,
-        public int $sortOrder = 0,
-        public bool $isActive = true,
+        #[MapInputName('sortOrder')]
+        public int $sort_order = 0,
+        #[MapInputName('isActive')]
+        public bool $is_active = true,
         public array $attributes = [],
     ) {}
 }

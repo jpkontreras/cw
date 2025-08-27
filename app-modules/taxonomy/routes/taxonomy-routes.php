@@ -22,6 +22,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 Route::middleware(['api', 'auth:sanctum'])->prefix('api')->group(function () {
     Route::prefix('taxonomies')->name('api.taxonomies.')->group(function () {
         Route::get('/', [ApiTaxonomyController::class, 'index'])->name('index');
+        Route::get('/by-type', [ApiTaxonomyController::class, 'index'])->name('by-type');
         Route::post('/', [ApiTaxonomyController::class, 'store'])->name('store');
         Route::post('/bulk', [ApiTaxonomyController::class, 'bulkCreate'])->name('bulk-create');
         Route::get('/search', [ApiTaxonomyController::class, 'search'])->name('search');
