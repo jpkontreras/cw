@@ -25,9 +25,17 @@ class DatabaseSeeder extends Seeder
             $defaultLocation = \Colame\Location\Models\Location::where('is_default', true)->first();
             if ($defaultLocation) {
                 $user->locations()->attach($defaultLocation->id, ['role' => 'manager', 'is_primary' => true]);
-                $user->current_location_id = $defaultLocation->id;
-                $user->default_location_id = $defaultLocation->id;
-                $user->save();
+                
+                // Use module-specific preferences table
+                \Illuminate\Support\Facades\DB::table('user_location_preferences')->updateOrInsert(
+                    ['user_id' => $user->id],
+                    [
+                        'current_location_id' => $defaultLocation->id,
+                        'default_location_id' => $defaultLocation->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]
+                );
             }
         }
     }

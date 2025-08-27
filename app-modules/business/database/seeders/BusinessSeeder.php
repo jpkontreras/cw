@@ -61,9 +61,15 @@ class BusinessSeeder extends Seeder
             'joined_at' => now(),
         ]);
 
-        // Set as current business for the user
-        $user->current_business_id = $business->id;
-        $user->save();
+        // Set as current business for the user in preferences table
+        \Illuminate\Support\Facades\DB::table('user_business_preferences')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'current_business_id' => $business->id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
 
         // Create additional demo businesses if needed
         if (config('app.env') === 'local') {

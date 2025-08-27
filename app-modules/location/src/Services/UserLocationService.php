@@ -50,11 +50,19 @@ class UserLocationService
      */
     public function getCurrentLocation(User $user): ?LocationData
     {
-        if (!$this->locationRepository || !$user->current_location_id) {
+        if (!$this->locationRepository) {
             return null;
         }
 
-        return $this->locationRepository->find($user->current_location_id);
+        $currentLocationId = DB::table('user_location_preferences')
+            ->where('user_id', $user->id)
+            ->value('current_location_id');
+
+        if (!$currentLocationId) {
+            return null;
+        }
+
+        return $this->locationRepository->find($currentLocationId);
     }
 
     /**
@@ -62,11 +70,19 @@ class UserLocationService
      */
     public function getDefaultLocation(User $user): ?LocationData
     {
-        if (!$this->locationRepository || !$user->default_location_id) {
+        if (!$this->locationRepository) {
             return null;
         }
 
-        return $this->locationRepository->find($user->default_location_id);
+        $defaultLocationId = DB::table('user_location_preferences')
+            ->where('user_id', $user->id)
+            ->value('default_location_id');
+
+        if (!$defaultLocationId) {
+            return null;
+        }
+
+        return $this->locationRepository->find($defaultLocationId);
     }
 
     /**
@@ -157,8 +173,15 @@ class UserLocationService
             return false;
         }
 
-        $user->current_location_id = $locationId;
-        return $user->save();
+        DB::table('user_location_preferences')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'current_location_id' => $locationId,
+                'updated_at' => now()
+            ]
+        );
+
+        return true;
     }
 
     /**
@@ -170,8 +193,15 @@ class UserLocationService
             return false;
         }
 
-        $user->default_location_id = $locationId;
-        return $user->save();
+        DB::table('user_location_preferences')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'default_location_id' => $locationId,
+                'updated_at' => now()
+            ]
+        );
+
+        return true;
     }
 
     /**
@@ -204,13 +234,26 @@ class UserLocationService
             ->delete();
 
         // Clear current/default if they were this location
-        if ($user->current_location_id === $locationId) {
-            $user->current_location_id = null;
+        $preferences = DB::table('user_location_preferences')
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($preferences) {
+            $updates = [];
+            if ($preferences->current_location_id === $locationId) {
+                $updates['current_location_id'] = null;
+            }
+            if ($preferences->default_location_id === $locationId) {
+                $updates['default_location_id'] = null;
+            }
+            
+            if (!empty($updates)) {
+                $updates['updated_at'] = now();
+                DB::table('user_location_preferences')
+                    ->where('user_id', $user->id)
+                    ->update($updates);
+            }
         }
-        if ($user->default_location_id === $locationId) {
-            $user->default_location_id = null;
-        }
-        $user->save();
     }
 
     /**

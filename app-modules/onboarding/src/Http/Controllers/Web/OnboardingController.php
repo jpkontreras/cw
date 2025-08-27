@@ -195,6 +195,27 @@ class OnboardingController extends Controller
 
         try {
             $completeData = $this->onboardingService->completeOnboarding($userId);
+            
+            // Force refresh the user to clear any cached data
+            $request->user()->refresh();
+            
+            // Ensure the business context is set after onboarding
+            $businessContext = app(\Colame\Business\Contracts\BusinessContextInterface::class);
+            
+            // Clear any cached businesses to force reload
+            $reflection = new \ReflectionClass($businessContext);
+            if ($reflection->hasProperty('cachedBusinesses')) {
+                $prop = $reflection->getProperty('cachedBusinesses');
+                $prop->setAccessible(true);
+                $prop->setValue($businessContext, null);
+            }
+            
+            $businesses = $businessContext->getAccessibleBusinesses();
+            
+            if (!empty($businesses)) {
+                // Set the first (or only) business as current
+                $businessContext->setCurrentBusiness($businesses[0]->id);
+            }
 
             return redirect()->route('dashboard')->with('success', 'Onboarding completed successfully!');
         } catch (\Exception $e) {

@@ -52,8 +52,16 @@ class EnsureBusinessContext
         if (!$this->businessContext->getCurrentBusinessId()) {
             $businesses = $this->businessContext->getAccessibleBusinesses();
             
-            // If user has no businesses, they need to complete onboarding
+            // If user has no businesses, they need to complete onboarding or create a business
             if (empty($businesses)) {
+                // Check if user has completed onboarding
+                $user = auth()->user();
+                if ($user && method_exists($user, 'hasCompletedOnboarding') && $user->hasCompletedOnboarding()) {
+                    // User completed onboarding but has no businesses - redirect to business creation
+                    return redirect()->route('businesses.create')
+                        ->with('info', 'Please create a business to continue.');
+                }
+                
                 return redirect()->route('onboarding.index')
                     ->with('info', 'Please complete the setup process to continue.');
             }

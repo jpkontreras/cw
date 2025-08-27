@@ -77,12 +77,6 @@ return new class extends Migration
             });
         }
 
-        // Add current_business_id to users for tracking which business they're currently working in
-        if (Schema::hasTable('users') && !Schema::hasColumn('users', 'current_business_id')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->foreignId('current_business_id')->nullable()->constrained('businesses')->onDelete('set null');
-            });
-        }
     }
 
     /**
@@ -112,12 +106,5 @@ return new class extends Migration
             });
         }
 
-        // Remove current_business_id from users
-        if (Schema::hasTable('users') && Schema::hasColumn('users', 'current_business_id')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->dropForeign(['current_business_id']);
-                $table->dropColumn('current_business_id');
-            });
-        }
     }
 };

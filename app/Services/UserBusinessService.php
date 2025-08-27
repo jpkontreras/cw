@@ -46,11 +46,15 @@ class UserBusinessService
             return null;
         }
         
-        if (!$user->current_business_id) {
+        $currentBusinessId = DB::table('user_business_preferences')
+            ->where('user_id', $user->id)
+            ->value('current_business_id');
+        
+        if (!$currentBusinessId) {
             return null;
         }
 
-        return $this->businessRepository->find($user->current_business_id);
+        return $this->businessRepository->find($currentBusinessId);
     }
 
     /**
@@ -85,8 +89,15 @@ class UserBusinessService
             return false;
         }
 
-        $user->current_business_id = $businessId;
-        return $user->save();
+        DB::table('user_business_preferences')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'current_business_id' => $businessId,
+                'updated_at' => now()
+            ]
+        );
+
+        return true;
     }
 
     /**

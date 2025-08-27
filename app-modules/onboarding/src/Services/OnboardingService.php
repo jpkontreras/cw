@@ -172,13 +172,13 @@ class OnboardingService implements OnboardingServiceInterface
                         $createBusinessData = CreateBusinessData::from([
                             'name' => $businessData['businessName'],
                             'slug' => $slug,
-                            'type' => $businessData['businessType'],
-                            'legalName' => $businessData['legalName'] ?? $businessData['businessName'],
-                            'taxId' => $businessData['taxId'],
-                            'email' => $businessData['businessEmail'] ?? $allData['account']['email'] ?? $user->email,
-                            'phone' => $businessData['businessPhone'] ?? $allData['account']['phone'] ?? null,
-                            'website' => $businessData['website'],
-                            'description' => $businessData['description'],
+                            'type' => $businessData['businessType'] ?? 'independent',
+                            'legalName' => !empty($businessData['legalName']) ? $businessData['legalName'] : $businessData['businessName'],
+                            'taxId' => !empty($businessData['taxId']) ? $businessData['taxId'] : null,
+                            'email' => !empty($businessData['businessEmail']) ? $businessData['businessEmail'] : ($allData['account']['email'] ?? $user->email),
+                            'phone' => !empty($businessData['businessPhone']) ? $businessData['businessPhone'] : ($allData['account']['phone'] ?? null),
+                            'website' => !empty($businessData['website']) ? $businessData['website'] : null,
+                            'description' => !empty($businessData['description']) ? $businessData['description'] : null,
                             'ownerId' => $userId,
                         ]);
                         
@@ -201,8 +201,14 @@ class OnboardingService implements OnboardingServiceInterface
                         ]);
                         
                         // Set as current business for the user
-                        $user->current_business_id = $businessId;
-                        $user->save();
+                        DB::table('user_business_preferences')->updateOrInsert(
+                            ['user_id' => $userId],
+                            [
+                                'current_business_id' => $businessId,
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ]
+                        );
                         
                         break;
                     } catch (\Exception $e) {

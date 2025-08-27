@@ -9,6 +9,7 @@ use Colame\Business\Contracts\BusinessRepositoryInterface;
 use Colame\Business\Contracts\BusinessUserRepositoryInterface;
 use Colame\Business\Data\BusinessData;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 class BusinessContextService implements BusinessContextInterface
@@ -58,10 +59,14 @@ class BusinessContextService implements BusinessContextInterface
             return $sessionBusinessId;
         }
 
-        // Then check user's default
-        if ($user->current_business_id && $this->hasAccess($user->current_business_id, $user->id)) {
-            Session::put('current_business_id', $user->current_business_id);
-            return $user->current_business_id;
+        // Then check user's default from preferences table
+        $userBusinessId = DB::table('user_business_preferences')
+            ->where('user_id', $user->id)
+            ->value('current_business_id');
+            
+        if ($userBusinessId && $this->hasAccess($userBusinessId, $user->id)) {
+            Session::put('current_business_id', $userBusinessId);
+            return $userBusinessId;
         }
 
         // Auto-switch to first available business if configured
@@ -95,9 +100,14 @@ class BusinessContextService implements BusinessContextInterface
         // Update session
         Session::put('current_business_id', $businessId);
         
-        // Update user's default
-        $user->current_business_id = $businessId;
-        $user->save();
+        // Update user's default in preferences table
+        DB::table('user_business_preferences')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'current_business_id' => $businessId,
+                'updated_at' => now()
+            ]
+        );
         
         // Clear cache
         $this->currentBusiness = null;
@@ -119,8 +129,12 @@ class BusinessContextService implements BusinessContextInterface
         
         $user = Auth::user();
         if ($user) {
-            $user->current_business_id = null;
-            $user->save();
+            DB::table('user_business_preferences')
+                ->where('user_id', $user->id)
+                ->update([
+                    'current_business_id' => null,
+                    'updated_at' => now()
+                ]);
         }
     }
 
