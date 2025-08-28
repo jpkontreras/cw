@@ -141,17 +141,14 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
       title="Welcome - Getting Started"
       currentStep={currentStepIndex + 1}
       totalSteps={availableSteps.length}
-      stepTitle="Onboarding Overview"
-      stepDescription="Complete all steps to set up your restaurant"
+      stepTitle="Setup Overview"
+      stepDescription={`Next: ${currentStepDetails.title} - ${currentStepDetails.description}`}
       completedSteps={completedCount}
     >
       {/* Steps Overview */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
         {/* Steps List */}
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
-            Setup Steps
-          </h2>
           <div className="space-y-3">
             {availableSteps.map((step) => {
               const details = stepDetails[step as keyof typeof stepDetails];
@@ -166,7 +163,7 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                 <div
                   key={step}
                   className={cn(
-                    "flex items-center gap-4 p-4 rounded-lg border transition-all",
+                    "flex items-center gap-4 p-6 rounded-lg border transition-all min-h-[110px]",
                     isCompleted && "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30",
                     isCurrent && "border-primary bg-primary/5 shadow-sm",
                     !isCompleted && !isCurrent && "border-neutral-200 dark:border-neutral-800"
@@ -174,15 +171,15 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                 >
                   {/* Step Icon/Number */}
                   <div className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
                     isCompleted && "bg-green-600 text-white",
                     isCurrent && "bg-primary text-primary-foreground",
                     !isCompleted && !isCurrent && "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
                   )}>
                     {isCompleted ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-6 w-6" />
                     ) : (
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-6 w-6" />
                     )}
                   </div>
 
@@ -190,7 +187,7 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className={cn(
-                        "font-medium",
+                        "font-medium text-base",
                         isCurrent && "text-primary",
                         isCompleted && "text-green-700 dark:text-green-400"
                       )}>
@@ -200,7 +197,7 @@ export default function OnboardingIndex({ progress, nextStep, availableSteps }: 
                         <Badge className="text-xs overflow-hidden">Current</Badge>
                       )}
                     </div>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
                       {details.description}
                     </p>
                   </div>
