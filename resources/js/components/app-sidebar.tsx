@@ -6,14 +6,11 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import {
   BarChart3,
-  BookOpen,
   Building2,
   Calendar,
   ChefHat,
-  Copy,
   DollarSign,
   FileText,
-  Folder,
   Gift,
   GitBranch,
   LayoutGrid,
@@ -22,7 +19,6 @@ import {
   Monitor,
   Package,
   PackageCheck,
-  Percent,
   Plus,
   Settings,
   Shield,
@@ -40,33 +36,6 @@ const mainNavItems: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutGrid,
-  },
-  {
-    title: 'Businesses',
-    href: '/businesses',
-    icon: Building2,
-    items: [
-      {
-        title: 'All Businesses',
-        href: '/businesses',
-        icon: List,
-      },
-      {
-        title: 'Current Business',
-        href: '/businesses/current',
-        icon: Building2,
-      },
-      {
-        title: 'Business Settings',
-        href: '/businesses/settings',
-        icon: Settings,
-      },
-      {
-        title: 'Team Members',
-        href: '/businesses/users',
-        icon: Users,
-      },
-    ],
   },
   {
     title: 'Orders',
@@ -92,28 +61,6 @@ const mainNavItems: NavItem[] = [
         title: 'Kitchen Display',
         href: '/orders/kitchen',
         icon: ChefHat,
-      },
-    ],
-  },
-  {
-    title: 'Menu',
-    href: '/menu',
-    icon: FileText,
-    items: [
-      {
-        title: 'All Menus',
-        href: '/menu',
-        icon: List,
-      },
-      {
-        title: 'Create Menu',
-        href: '/menu/create',
-        icon: Plus,
-      },
-      {
-        title: 'Menu Builder',
-        href: '/menu/builder',
-        icon: SlidersHorizontal,
       },
     ],
   },
@@ -155,6 +102,50 @@ const mainNavItems: NavItem[] = [
     ],
   },
   {
+    title: 'Menu',
+    href: '/menu',
+    icon: FileText,
+    items: [
+      {
+        title: 'All Menus',
+        href: '/menu',
+        icon: List,
+      },
+      {
+        title: 'Create Menu',
+        href: '/menu/create',
+        icon: Plus,
+      },
+      {
+        title: 'Menu Builder',
+        href: '/menu/builder',
+        icon: SlidersHorizontal,
+      },
+    ],
+  },
+  {
+    title: 'Offers',
+    href: '/offers',
+    icon: Gift,
+    items: [
+      {
+        title: 'All Offers',
+        href: '/offers',
+        icon: List,
+      },
+      {
+        title: 'Create Offer',
+        href: '/offers/create',
+        icon: Plus,
+      },
+      {
+        title: 'Analytics',
+        href: '/offers/analytics',
+        icon: BarChart3,
+      },
+    ],
+  },
+  {
     title: 'Staff',
     href: '/staff',
     icon: Users,
@@ -192,6 +183,33 @@ const mainNavItems: NavItem[] = [
     ],
   },
   {
+    title: 'Businesses',
+    href: '/businesses',
+    icon: Building2,
+    items: [
+      {
+        title: 'All Businesses',
+        href: '/businesses',
+        icon: List,
+      },
+      {
+        title: 'Current Business',
+        href: '/businesses/current',
+        icon: Building2,
+      },
+      {
+        title: 'Business Settings',
+        href: '/businesses/settings',
+        icon: Settings,
+      },
+      {
+        title: 'Team Members',
+        href: '/businesses/users',
+        icon: Users,
+      },
+    ],
+  },
+  {
     title: 'Locations',
     href: '/locations',
     icon: MapPin,
@@ -224,28 +242,6 @@ const mainNavItems: NavItem[] = [
     ],
   },
   {
-    title: 'Offers',
-    href: '/offers',
-    icon: Gift,
-    items: [
-      {
-        title: 'All Offers',
-        href: '/offers',
-        icon: List,
-      },
-      {
-        title: 'Create Offer',
-        href: '/offers/create',
-        icon: Plus,
-      },
-      {
-        title: 'Analytics',
-        href: '/offers/analytics',
-        icon: BarChart3,
-      },
-    ],
-  },
-  {
     title: 'System Settings',
     href: '/system-settings',
     icon: Wrench,
@@ -264,18 +260,7 @@ const mainNavItems: NavItem[] = [
   },
 ];
 
-const footerNavItems: NavItem[] = [
-  {
-    title: 'Repository',
-    href: 'https://github.com/laravel/react-starter-kit',
-    icon: Folder,
-  },
-  {
-    title: 'Documentation',
-    href: 'https://laravel.com/docs/starter-kits#react',
-    icon: BookOpen,
-  },
-];
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
   return (
