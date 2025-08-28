@@ -22,6 +22,7 @@ class LocationData extends BaseData
         public readonly string $type,
         public readonly string $status,
         public readonly ?string $address,
+        public readonly ?string $addressLine2,
         public readonly ?string $city,
         public readonly ?string $state,
         public readonly string $country,
@@ -57,6 +58,7 @@ class LocationData extends BaseData
             type: $location->type,
             status: $location->status,
             address: $location->address,
+            addressLine2: $location->address_line_2,
             city: $location->city,
             state: $location->state,
             country: $location->country,
@@ -94,6 +96,7 @@ class LocationData extends BaseData
     {
         $parts = array_filter([
             $this->address,
+            $this->addressLine2,
             $this->city,
             $this->state,
             $this->postalCode,

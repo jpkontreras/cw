@@ -19,6 +19,7 @@ interface Location {
   type: string;
   status: string;
   address: string;
+  addressLine2: string | null;
   city: string;
   state: string | null;
   country: string;
@@ -62,6 +63,7 @@ export default function LocationEdit({
     type: location.type,
     status: location.status,
     address: location.address,
+    addressLine2: location.addressLine2 || '',
     city: location.city,
     state: location.state || '',
     country: location.country,
@@ -178,6 +180,18 @@ export default function LocationEdit({
                     </Select>
                     <InputError message={errors.type} />
                   </div>
+                </div>
+
+                {/* Address Line 2 */}
+                <div className="space-y-2">
+                  <Label htmlFor="addressLine2">Address Line 2</Label>
+                  <Input
+                    id="addressLine2"
+                    value={data.addressLine2}
+                    onChange={(e) => setData('addressLine2', e.target.value)}
+                    placeholder="e.g., Office 201, Floor 2"
+                  />
+                  <InputError message={errors.addressLine2} />
                 </div>
 
                 {/* City and Country Row */}

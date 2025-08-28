@@ -20,6 +20,7 @@ return new class extends Migration
             
             // Address information
             $table->string('address');
+            $table->string('address_line_2')->nullable();
             $table->string('city');
             $table->string('state')->nullable();
             $table->string('country', 2)->default('CL'); // ISO 3166-1 alpha-2

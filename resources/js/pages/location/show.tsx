@@ -39,6 +39,7 @@ interface Location {
   type: string;
   status: string;
   address: string;
+  addressLine2: string | null;
   city: string;
   state: string | null;
   country: string;
@@ -208,6 +209,9 @@ export default function LocationShow({ location, statistics, canEdit, canDelete 
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Street Address</div>
                   <div className="mt-1">{location.address}</div>
+                  {location.addressLine2 && (
+                    <div className="mt-1">{location.addressLine2}</div>
+                  )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>

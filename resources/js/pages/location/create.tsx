@@ -41,6 +41,7 @@ export default function LocationCreate({
     type: 'restaurant',
     status: 'active',
     address: '',
+    addressLine2: '',
     city: '',
     state: '',
     country: 'CL',
@@ -145,6 +146,18 @@ export default function LocationCreate({
                     </Select>
                     <InputError message={errors.type} />
                   </div>
+                </div>
+
+                {/* Address Line 2 */}
+                <div className="space-y-2">
+                  <Label htmlFor="addressLine2">Address Line 2</Label>
+                  <Input
+                    id="addressLine2"
+                    value={data.addressLine2}
+                    onChange={(e) => setData('addressLine2', e.target.value)}
+                    placeholder="e.g., Office 201, Floor 2"
+                  />
+                  <InputError message={errors.addressLine2} />
                 </div>
 
                 {/* City and Country Row */}

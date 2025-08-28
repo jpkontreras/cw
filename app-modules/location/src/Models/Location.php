@@ -30,6 +30,7 @@ class Location extends Model
         'type',
         'status',
         'address',
+        'address_line_2',
         'city',
         'state',
         'country',
@@ -245,6 +246,7 @@ class Location extends Model
     {
         $parts = array_filter([
             $this->address,
+            $this->address_line_2,
             $this->city,
             $this->state,
             $this->postal_code,

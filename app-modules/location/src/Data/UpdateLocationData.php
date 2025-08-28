@@ -38,6 +38,9 @@ class UpdateLocationData extends BaseData
         #[StringType, Max(255)]
         public readonly string|Optional $address,
 
+        #[Nullable, StringType, Max(255)]
+        public readonly string|null|Optional $addressLine2,
+
         #[StringType, Max(100)]
         public readonly string|Optional $city,
 
