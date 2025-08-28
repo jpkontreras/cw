@@ -1,11 +1,19 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Building2, CheckCircle, Clock, MapPin, Settings, User } from 'lucide-react';
-import React from 'react';
+import { Link } from '@inertiajs/react';
+import { 
+  ArrowRight, 
+  Building2, 
+  CheckCircle, 
+  Clock, 
+  MapPin, 
+  Settings, 
+  User,
+  Check
+} from 'lucide-react';
+import OnboardingLayout from '@/layouts/onboarding-layout';
 
 interface OnboardingProgressData {
   id?: number;
@@ -54,159 +62,239 @@ const stepDetails = {
 };
 
 export default function OnboardingIndex({ progress, nextStep, availableSteps }: OnboardingIndexProps) {
-  const progressPercentage = progress ? (progress.completedSteps.length / availableSteps.length) * 100 : 0;
   const completedCount = progress?.completedSteps.length || 0;
   const currentStep = nextStep || availableSteps[0];
+  const currentStepIndex = availableSteps.indexOf(currentStep);
   const currentStepDetails = stepDetails[currentStep as keyof typeof stepDetails];
-  const currentStepIndex = availableSteps.indexOf(currentStep) + 1;
 
-  return (
-    <>
-      <Head title="Welcome - Onboarding" />
-
-      <div className="flex min-h-screen flex-col bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900">
-        {/* Minimal Header */}
-        <div className="border-b border-neutral-200 bg-white/50 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-          <div className="mx-auto max-w-3xl px-4 py-3 sm:px-6 lg:px-8">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h1 className="text-xl font-medium text-neutral-900 dark:text-neutral-100">Colame Setup</h1>
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {completedCount} of {availableSteps.length} completed
-                </span>
-              </div>
-              <Progress value={progressPercentage} className="h-1.5" />
+  // If onboarding is completed
+  if (progress?.isCompleted) {
+    return (
+      <OnboardingLayout
+        title="Setup Complete"
+        currentStep={availableSteps.length}
+        totalSteps={availableSteps.length}
+        stepTitle="All Done!"
+        stepDescription="Your restaurant management system is ready"
+        completedSteps={availableSteps.length}
+      >
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mb-6 inline-flex rounded-full bg-green-100 p-4 dark:bg-green-900/30">
+              <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
             </div>
+            <h2 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Congratulations!
+            </h2>
+            <p className="text-lg text-neutral-600 dark:text-neutral-400">
+              Your Colame setup is complete. You're ready to start managing your restaurant.
+            </p>
+          </div>
+
+          <Card className="border-0 bg-white shadow-lg dark:bg-neutral-900">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <Link href="/dashboard" className="block">
+                  <Button size="lg" className="w-full">
+                    Go to Dashboard
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/onboarding/review" className="block">
+                  <Button size="lg" variant="outline" className="w-full">
+                    Review Configuration
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </OnboardingLayout>
+    );
+  }
+
+  // If current step details not found
+  if (!currentStepDetails) {
+    return (
+      <OnboardingLayout
+        title="Onboarding"
+        currentStep={0}
+        totalSteps={availableSteps.length}
+        stepTitle="Getting Started"
+        stepDescription="Let's set up your restaurant"
+        completedSteps={0}
+      >
+        <div className="text-center py-8">
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Unable to load onboarding steps. Please refresh the page.
+          </p>
+        </div>
+      </OnboardingLayout>
+    );
+  }
+  
+  const CurrentIcon = currentStepDetails.icon;
+
+  // Show onboarding journey overview (in progress)
+  return (
+    <OnboardingLayout
+      title="Welcome - Getting Started"
+      currentStep={currentStepIndex + 1}
+      totalSteps={availableSteps.length}
+      stepTitle="Onboarding Overview"
+      stepDescription="Complete all steps to set up your restaurant"
+      completedSteps={completedCount}
+    >
+      {/* Steps Overview */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+        {/* Steps List */}
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
+            Setup Steps
+          </h2>
+          <div className="space-y-3">
+            {availableSteps.map((step) => {
+              const details = stepDetails[step as keyof typeof stepDetails];
+              const isCompleted = progress?.completedSteps.includes(step);
+              const isCurrent = step === currentStep;
+
+              if (!details) return null;
+
+              const Icon = details.icon;
+
+              return (
+                <div
+                  key={step}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-lg border transition-all",
+                    isCompleted && "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30",
+                    isCurrent && "border-primary bg-primary/5 shadow-sm",
+                    !isCompleted && !isCurrent && "border-neutral-200 dark:border-neutral-800"
+                  )}
+                >
+                  {/* Step Icon/Number */}
+                  <div className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                    isCompleted && "bg-green-600 text-white",
+                    isCurrent && "bg-primary text-primary-foreground",
+                    !isCompleted && !isCurrent && "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                  )}>
+                    {isCompleted ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                  </div>
+
+                  {/* Step Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className={cn(
+                        "font-medium",
+                        isCurrent && "text-primary",
+                        isCompleted && "text-green-700 dark:text-green-400"
+                      )}>
+                        {details.title}
+                      </h3>
+                      {isCurrent && (
+                        <Badge className="text-xs overflow-hidden">Current</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
+                      {details.description}
+                    </p>
+                  </div>
+
+                  {/* Time & Actions */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {details.estimatedTime}
+                    </span>
+                    {isCompleted && (
+                      <Link href={`/onboarding/${step}`}>
+                        <Button variant="ghost" size="sm" className="text-xs">
+                          Edit
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Main Content - Centered and Focused */}
-        <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
-          <div className="w-full max-w-2xl">
-            {/* Current Action Card - Single Focus */}
-            {!progress?.isCompleted && currentStepDetails && (
-              <div className="space-y-4">
-                {/* Step Counter */}
-                <div className="text-center">
-                  <p className="mb-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    Step {currentStepIndex} of {availableSteps.length}
-                  </p>
-                  <h2 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">{currentStepDetails.title}</h2>
-                  <p className="mt-1 text-lg text-neutral-600 dark:text-neutral-400">{currentStepDetails.description}</p>
+        {/* Current Step Details */}
+        <div className="flex">
+          <Card className="border-2 border-primary/50 flex-1 flex flex-col">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <CurrentIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-xl">
+                    {currentStepDetails.title}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {currentStepDetails.description}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="overflow-hidden">
+                  Step {currentStepIndex + 1}
+                </Badge>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6 flex-1 flex flex-col">
+              <div className="flex-1 space-y-6">
+                {/* Quick Info */}
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                    <Clock className="h-4 w-4" />
+                    <span>About {currentStepDetails.estimatedTime}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>{currentStepDetails.requiredFields.length} required fields</span>
+                  </div>
                 </div>
 
-                {/* Action Card */}
-                <Card className="relative border-0 bg-white shadow-lg dark:bg-neutral-900">
-                  {/* Time Badge at top */}
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="secondary" className="text-sm">
-                      <Clock className="h-3 w-3" />
-                      {currentStepDetails.estimatedTime}
-                    </Badge>
-                  </div>
-
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {/* Icon and Required Fields Section */}
-                      <div className="flex gap-6">
-                        {/* Icon */}
-                        <div className="shrink-0">
-                          <div className="rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 p-3 dark:from-neutral-800 dark:to-neutral-900">
-                            {React.createElement(currentStepDetails.icon, { className: 'h-8 w-8 text-neutral-700 dark:text-neutral-300' })}
-                          </div>
-                        </div>
-
-                        {/* Required Fields */}
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200">What we'll need from you:</p>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                              Have this information ready to complete this step quickly
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            {currentStepDetails.requiredFields.map((field) => (
-                              <div key={field} className="flex items-center gap-2 rounded-lg bg-neutral-50 p-2 dark:bg-neutral-800/50">
-                                <CheckCircle className="h-4 w-4 shrink-0 text-neutral-400" />
-                                <span className="text-sm text-neutral-700 dark:text-neutral-300">{field}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                {/* Required Fields */}
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                    Information we'll need:
+                  </h4>
+                  <div className="space-y-2">
+                    {currentStepDetails.requiredFields.map((field) => (
+                      <div 
+                        key={field} 
+                        className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400"
+                      >
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                        <span>{field}</span>
                       </div>
-
-                      {/* Additional Info */}
-                      <div className="border-t border-neutral-200 pt-3 dark:border-neutral-800">
-                        <p className="text-center text-xs text-neutral-500 dark:text-neutral-400">
-                          This information will be saved securely and you can update it anytime
-                        </p>
-                      </div>
-
-                      {/* CTA Button */}
-                      <Link href={`/onboarding/${currentStep}`} className="block">
-                        <Button size="lg" className="w-full">
-                          Continue
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Progress Indicator */}
-                <div className="flex justify-center pt-2">
-                  <div className="flex items-center gap-2">
-                    {availableSteps.map((step) => {
-                      const isCompleted = progress?.completedSteps.includes(step);
-                      const isCurrent = step === currentStep;
-                      return (
-                        <div
-                          key={step}
-                          className={cn(
-                            'h-2 rounded-full transition-all',
-                            isCompleted ? 'w-8 bg-green-500' : isCurrent ? 'w-8 bg-primary' : 'w-2 bg-neutral-300 dark:bg-neutral-700',
-                          )}
-                        />
-                      );
-                    })}
+                    ))}
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* Completion State */}
-            {progress?.isCompleted && (
-              <div className="space-y-8">
-                <div className="text-center">
-                  <div className="mb-4 inline-flex rounded-full bg-green-100 p-4 dark:bg-green-900/30">
-                    <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
-                  </div>
-                  <h2 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">Setup Complete!</h2>
-                  <p className="mt-2 text-lg text-neutral-600 dark:text-neutral-400">Your restaurant management system is ready to use</p>
-                </div>
-
-                <Card className="border-0 bg-white shadow-xl dark:bg-neutral-900">
-                  <CardContent className="p-8">
-                    <div className="space-y-4">
-                      <Link href="/dashboard" className="block">
-                        <Button size="lg" className="w-full text-base">
-                          Go to Dashboard
-                          <ArrowRight className="h-5 w-5" />
-                        </Button>
-                      </Link>
-                      <Link href="/onboarding/review" className="block">
-                        <Button size="lg" variant="outline" className="w-full text-base">
-                          Review Configuration
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* CTA */}
+              <div className="mt-auto pt-6">
+                <Link href={`/onboarding/${currentStep}`} className="block">
+                  <Button size="lg" className="w-full">
+                    {completedCount === 0 ? "Get Started" : "Continue Setup"}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+                <p className="text-xs text-center text-neutral-500 dark:text-neutral-400 mt-3">
+                  You can always come back and edit any step later
+                </p>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </>
+    </OnboardingLayout>
   );
 }
