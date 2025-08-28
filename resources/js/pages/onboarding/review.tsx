@@ -4,8 +4,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, CheckCircle, Edit2, User, Building2, MapPin, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import OnboardingLayout from '@/components/modules/onboarding/OnboardingLayout'
-import OnboardingCard from '@/components/modules/onboarding/OnboardingCard'
+import OnboardingLayout from '@/layouts/onboarding-layout'
+import { OnboardingCard } from '@/modules/onboarding'
 
 interface ReviewProps {
   progress: any

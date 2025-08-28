@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, ArrowRight, MapPin, CheckCircle } from 'lucide-react'
-import OnboardingLayout from '@/components/modules/onboarding/OnboardingLayout'
-import OnboardingCard from '@/components/modules/onboarding/OnboardingCard'
+import OnboardingLayout from '@/layouts/onboarding-layout'
+import { OnboardingCard } from '@/modules/onboarding'
 
 interface LocationSetupProps {
   progress?: any

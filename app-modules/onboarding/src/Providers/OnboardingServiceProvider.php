@@ -4,11 +4,8 @@ namespace Colame\Onboarding\Providers;
 
 use Colame\Onboarding\Contracts\OnboardingRepositoryInterface;
 use Colame\Onboarding\Contracts\OnboardingServiceInterface;
-use Colame\Onboarding\Http\Middleware\EnsureOnboardingCompleted;
 use Colame\Onboarding\Repositories\OnboardingRepository;
 use Colame\Onboarding\Services\OnboardingService;
-use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
 class OnboardingServiceProvider extends ServiceProvider

@@ -4,8 +4,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, ArrowRight, Settings, CheckCircle } from 'lucide-react'
-import OnboardingLayout from '@/components/modules/onboarding/OnboardingLayout'
-import OnboardingCard from '@/components/modules/onboarding/OnboardingCard'
+import OnboardingLayout from '@/layouts/onboarding-layout'
+import { OnboardingCard } from '@/modules/onboarding'
 
 interface ConfigurationSetupProps {
   progress?: any

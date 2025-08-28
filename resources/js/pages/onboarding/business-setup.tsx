@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, ArrowRight, Building2, CheckCircle } from 'lucide-react'
-import OnboardingLayout from '@/components/modules/onboarding/OnboardingLayout'
-import OnboardingCard from '@/components/modules/onboarding/OnboardingCard'
+import OnboardingLayout from '@/layouts/onboarding-layout'
+import { OnboardingCard } from '@/modules/onboarding'
 
 interface BusinessSetupProps {
   progress?: any
