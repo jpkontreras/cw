@@ -29,12 +29,12 @@ class AccountSetupData extends BaseData
         #[Required, Email, Max(255)]
         public readonly string $email,
         
-        #[Required, StringType, Max(20)]
-        public readonly string $phone,
+        #[Nullable, StringType, Max(20)]
+        public readonly ?string $phone,
         
-        // For Chilean market - RUT is required
-        #[Required, StringType, Max(20)]
-        public readonly string $nationalId,
+        // For Chilean market - RUT is optional during onboarding
+        #[Nullable, StringType, Max(20)]
+        public readonly ?string $nationalId,
         
         // Password fields for new users (optional if user already exists)
         #[Nullable, StringType, Min(8)]
@@ -60,7 +60,7 @@ class AccountSetupData extends BaseData
     public static function rules(ValidationContext $context): array
     {
         return [
-            'nationalId' => ['required', 'regex:/^[0-9]{7,8}-[0-9kK]$/'], // Chilean RUT format
+            'nationalId' => ['nullable', 'string', 'max:20'], // Generic ID validation - format depends on country
             'password' => ['nullable', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'], // Strong password
             'passwordConfirmation' => ['nullable', 'required_with:password', 'same:password'],
         ];

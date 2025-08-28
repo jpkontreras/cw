@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ArrowRight, Mail, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Mail, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import OnboardingLayout from '@/layouts/onboarding-layout'
 import { OnboardingCard } from '@/modules/onboarding'
@@ -26,6 +26,7 @@ interface AccountSetupProps {
   user?: {
     email?: string
     name?: string
+    email_verified?: boolean
   }
   currentStep?: number
   totalSteps?: number
@@ -69,7 +70,7 @@ export default function AccountSetup({
 
   // Update phone field when country code or number changes
   const updatePhone = (countryCode: string, phoneNumber: string) => {
-    const fullPhone = phoneNumber ? `${countryCode} ${phoneNumber}` : countryCode
+    const fullPhone = phoneNumber ? `${countryCode} ${phoneNumber}` : ''
     setData('phone', fullPhone)
   }
 
@@ -94,8 +95,6 @@ export default function AccountSetup({
   // Form validation states - check if all required fields are filled
   const isFormValid = data.firstName.trim() !== '' && 
                       data.lastName.trim() !== '' && 
-                      data.phoneNumber.trim() !== '' && 
-                      data.nationalId.trim() !== '' &&
                       data.email.trim() !== ''
 
   return (
@@ -108,12 +107,12 @@ export default function AccountSetup({
       completedSteps={completedSteps.length}
     >
       <OnboardingCard estimatedTime="2 min">
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Form Section */}
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Display (if exists) */}
             {(user?.email || savedData?.email) && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center justify-between p-3.5 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
                   <div className="flex items-center gap-2">
@@ -121,17 +120,24 @@ export default function AccountSetup({
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">{user?.email || savedData?.email}</span>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Verified
-                </Badge>
+                {user?.email_verified ? (
+                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Not Verified
+                  </Badge>
+                )}
               </div>
             )}
 
             {/* Name Fields - Side by side */}
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="firstName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                <Label htmlFor="firstName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
                   First Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -153,14 +159,14 @@ export default function AccountSetup({
               </div>
               
               <div>
-                <Label htmlFor="lastName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                <Label htmlFor="lastName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
                   Last Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="lastName"
                   value={data.lastName}
                   onChange={(e) => setData('lastName', e.target.value)}
-                  placeholder="Contreras"
+                  placeholder="Patricio"
                   className={cn(
                     "h-9 transition-colors",
                     errors.lastName && "border-red-500 focus:ring-red-500"
@@ -175,21 +181,20 @@ export default function AccountSetup({
               </div>
             </div>
 
-            {/* RUT/National ID Field */}
+            {/* National ID Field */}
             <div>
-              <Label htmlFor="nationalId" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                RUT (Chilean Tax ID) <span className="text-red-500">*</span>
+              <Label htmlFor="nationalId" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
+                Tax ID / National ID <span className="text-neutral-400 text-xs ml-1">(Optional)</span>
               </Label>
               <Input
                 id="nationalId"
                 value={data.nationalId}
                 onChange={(e) => setData('nationalId', e.target.value)}
-                placeholder="12345678-9 (numbers and verification digit)"
+                placeholder="RUT, passport, or other ID document"
                 className={cn(
                   "h-9 transition-colors",
                   errors.nationalId && "border-red-500 focus:ring-red-500"
                 )}
-                required
               />
               {errors.nationalId && (
                 <p className="text-xs text-red-600 mt-1">
@@ -200,8 +205,8 @@ export default function AccountSetup({
 
             {/* Phone Field */}
             <div>
-              <Label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                Phone Number <span className="text-red-500">*</span>
+              <Label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
+                Phone Number <span className="text-neutral-400 text-xs ml-1">(Optional)</span>
               </Label>
               <PhoneInput
                 countryCode={data.countryCode}
@@ -219,7 +224,7 @@ export default function AccountSetup({
 
             {/* Error Alert */}
             {hasErrors && Object.keys(errors).length > 0 && (
-              <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 py-2">
+              <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 py-2.5">
                 <AlertCircle className="h-3 w-3 text-red-600" />
                 <AlertDescription className="text-xs text-red-800 dark:text-red-200">
                   Please correct the errors above before continuing.
@@ -228,7 +233,7 @@ export default function AccountSetup({
             )}
 
             {isStepCompleted && (
-              <Alert className="py-2">
+              <Alert className="py-2.5">
                 <AlertDescription className="text-xs">
                   You've already completed this step. You can update your information or continue to the next step.
                 </AlertDescription>
@@ -236,14 +241,17 @@ export default function AccountSetup({
             )}
 
             {/* Additional Info */}
-            <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="pt-3 mt-1 border-t border-neutral-200 dark:border-neutral-800">
               <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                 Your personal information is protected and will never be shared without your consent
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center mt-1">
+                Phone and Tax ID can be added later when needed for billing or legal compliance
               </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-2">
+            <div className="flex justify-between pt-3">
               <Link href="/onboarding">
                 <Button type="button" variant="outline" size="sm">
                   <ArrowLeft className="mr-1 h-3 w-3" />

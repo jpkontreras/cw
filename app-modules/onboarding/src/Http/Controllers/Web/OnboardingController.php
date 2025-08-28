@@ -70,6 +70,7 @@ class OnboardingController extends Controller
             'user' => [
                 'email' => $user->email,
                 'name' => $user->name,
+                'email_verified' => $user->hasVerifiedEmail(),
             ],
         ]);
     }
