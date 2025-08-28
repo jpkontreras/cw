@@ -159,8 +159,7 @@ class BusinessRepository implements BusinessRepositoryInterface
     public function findWithRelations(int $id): ?BusinessData
     {
         $business = Business::with([
-            'users.user',
-            'locations',
+            'businessUsers',
             'currentSubscription',
             'owner',
         ])->find($id);
@@ -195,5 +194,14 @@ class BusinessRepository implements BusinessRepositoryInterface
             $query->where('user_id', $userId)
                   ->where('status', 'active');
         })->orWhere('owner_id', $userId)->count();
+    }
+
+    /**
+     * Find businesses by owner ID
+     */
+    public function findByOwnerId(int $ownerId): DataCollection
+    {
+        $businesses = Business::where('owner_id', $ownerId)->get();
+        return BusinessData::collect($businesses, DataCollection::class);
     }
 }

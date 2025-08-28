@@ -37,6 +37,9 @@ class CreateLocationData extends BaseData
         #[Nullable, StringType, Max(255)]
         public readonly ?string $address = null,
 
+        #[Nullable, StringType, Max(255)]
+        public readonly ?string $addressLine2 = null,
+
         #[Nullable, StringType, Max(100)]
         public readonly ?string $city = null,
 
@@ -76,6 +79,9 @@ class CreateLocationData extends BaseData
 
         #[Nullable, Numeric]
         public readonly ?int $managerId = null,
+
+        #[Nullable, Numeric]
+        public readonly ?int $businessId = null,
 
         #[Nullable, ArrayType]
         public readonly ?array $metadata = null,

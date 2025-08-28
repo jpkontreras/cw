@@ -69,4 +69,45 @@ interface BusinessContextInterface
      * @return array<BusinessData>
      */
     public function getAccessibleBusinesses(): array;
+
+    /**
+     * Get businesses owned by a specific user
+     * 
+     * @param int $userId
+     * @return array<BusinessData>
+     */
+    public function getOwnedBusinesses(int $userId): array;
+
+    /**
+     * Get user's businesses with their role information
+     * 
+     * @param int $userId
+     * @return array{business: BusinessData, role: string, isOwner: bool, status: string}[]
+     */
+    public function getUserBusinessesWithRoles(int $userId): array;
+
+    /**
+     * Get effective business for a user (current or first available)
+     * 
+     * @param int $userId
+     * @return BusinessData|null
+     */
+    public function getEffectiveBusiness(int $userId): ?BusinessData;
+
+    /**
+     * Check if a user owns any business
+     * 
+     * @param int $userId
+     * @return bool
+     */
+    public function ownsAnyBusiness(int $userId): bool;
+
+    /**
+     * Get a user's role in a specific business
+     * 
+     * @param int $userId
+     * @param int $businessId
+     * @return string|null
+     */
+    public function getUserRoleInBusiness(int $userId, int $businessId): ?string;
 }

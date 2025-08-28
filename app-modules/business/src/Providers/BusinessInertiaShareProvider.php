@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Business\Providers;
 
-use App\Services\UserBusinessService;
+use Colame\Business\Contracts\BusinessContextInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
@@ -41,18 +41,21 @@ class BusinessInertiaShareProvider extends ServiceProvider
             }
 
             try {
-                // Use UserBusinessService to get business data
-                $userBusinessService = app(UserBusinessService::class);
+                // Use BusinessContextService to get business data
+                $businessContext = app(BusinessContextInterface::class);
                 
-                // Get user's current business
-                $currentBusiness = $userBusinessService->getCurrentBusiness($user);
+                // Get user's effective business (current or first available)
+                $currentBusiness = $businessContext->getEffectiveBusiness($user->id);
                 
                 // Get all businesses accessible by the user
-                $businesses = $userBusinessService->getUserBusinesses($user);
+                // We need to get businesses directly using the repository since Auth::user() might not be set in this context
+                $businessRepository = app(\Colame\Business\Contracts\BusinessRepositoryInterface::class);
+                $businessesCollection = $businessRepository->getUserBusinesses($user->id);
+                $businesses = $businessesCollection->toArray();
                 
                 return [
                     'current' => $currentBusiness?->toArray(),
-                    'businesses' => $businesses->toArray(),
+                    'businesses' => $businesses,
                 ];
             } catch (\Exception $e) {
                 Log::debug('Business data error in BusinessInertiaShareProvider: ' . $e->getMessage());

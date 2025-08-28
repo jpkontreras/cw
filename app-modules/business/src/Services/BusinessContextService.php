@@ -255,4 +255,73 @@ class BusinessContextService implements BusinessContextInterface
         
         return $this->cachedBusinesses;
     }
+
+    /**
+     * Get businesses owned by a specific user
+     */
+    public function getOwnedBusinesses(int $userId): array
+    {
+        $businesses = $this->businessRepository->findByOwnerId($userId);
+        return $businesses->toArray();
+    }
+
+    /**
+     * Get user's businesses with their role information
+     */
+    public function getUserBusinessesWithRoles(int $userId): array
+    {
+        $businessUsers = $this->userRepository->getUserBusinesses($userId);
+        $businessesWithRoles = [];
+
+        foreach ($businessUsers as $businessUser) {
+            $business = $this->businessRepository->find($businessUser->businessId);
+            if ($business) {
+                $businessesWithRoles[] = [
+                    'business' => $business,
+                    'role' => $businessUser->role,
+                    'isOwner' => $businessUser->isOwner ?? false,
+                    'status' => $businessUser->status ?? 'active',
+                ];
+            }
+        }
+
+        return $businessesWithRoles;
+    }
+
+    /**
+     * Get effective business for a user (current or first available)
+     */
+    public function getEffectiveBusiness(int $userId): ?BusinessData
+    {
+        // Try to get current business from preferences
+        $currentBusinessId = DB::table('user_business_preferences')
+            ->where('user_id', $userId)
+            ->value('current_business_id');
+        
+        if ($currentBusinessId && $this->hasAccess($currentBusinessId, $userId)) {
+            return $this->businessRepository->find($currentBusinessId);
+        }
+
+        // Return first available business
+        $businesses = $this->businessRepository->getUserBusinesses($userId);
+        return $businesses->first();
+    }
+
+    /**
+     * Check if a user owns any business
+     */
+    public function ownsAnyBusiness(int $userId): bool
+    {
+        return DB::table('businesses')
+            ->where('owner_id', $userId)
+            ->exists();
+    }
+
+    /**
+     * Get a user's role in a specific business
+     */
+    public function getUserRoleInBusiness(int $userId, int $businessId): ?string
+    {
+        return $this->userRepository->getUserRole($businessId, $userId);
+    }
 }

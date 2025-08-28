@@ -145,8 +145,8 @@ class BusinessData extends BaseData
             isDemo: $business->is_demo,
             createdAt: $business->created_at,
             updatedAt: $business->updated_at,
-            users: Lazy::whenLoaded('users', $business, fn() => 
-                BusinessUserData::collect($business->users, DataCollection::class)
+            users: Lazy::whenLoaded('businessUsers', $business, fn() => 
+                BusinessUserData::collect($business->businessUsers, DataCollection::class)
             ),
             locations: Lazy::whenLoaded('locations', $business, fn() => 
                 DataCollection::empty() // Will be LocationData::collection when Location module is updated

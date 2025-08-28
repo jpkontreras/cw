@@ -104,6 +104,11 @@ interface BusinessServiceInterface
     public function updateSubscription(int $businessId, string $planId): bool;
 
     /**
+     * Create business subscription
+     */
+    public function createSubscription(int $businessId, array $data): bool;
+
+    /**
      * Generate a unique slug for a business
      */
     public function generateSlug(string $name): string;

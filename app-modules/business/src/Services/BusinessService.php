@@ -57,9 +57,14 @@ class BusinessService implements BusinessServiceInterface
             $business = $this->businessRepository->create($data);
 
             // Set as current business for the owner
-            User::where('id', $data->ownerId)->update([
-                'current_business_id' => $business->id,
-            ]);
+            DB::table('user_business_preferences')->updateOrInsert(
+                ['user_id' => $data->ownerId],
+                [
+                    'current_business_id' => $business->id,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
 
             return $business;
         });
@@ -101,9 +106,12 @@ class BusinessService implements BusinessServiceInterface
 
         return DB::transaction(function () use ($businessId) {
             // Update users who have this as their current business
-            User::where('current_business_id', $businessId)->update([
-                'current_business_id' => null,
-            ]);
+            DB::table('user_business_preferences')
+                ->where('current_business_id', $businessId)
+                ->update([
+                    'current_business_id' => null,
+                    'updated_at' => now(),
+                ]);
 
             return $this->businessRepository->delete($businessId);
         });
@@ -169,10 +177,14 @@ class BusinessService implements BusinessServiceInterface
         }
 
         // Update current business if needed
-        $user = User::find($userId);
-        if ($user && $user->current_business_id === $businessId) {
-            $user->current_business_id = null;
-            $user->save();
+        $currentBusinessId = DB::table('user_business_preferences')
+            ->where('user_id', $userId)
+            ->value('current_business_id');
+            
+        if ($currentBusinessId === $businessId) {
+            DB::table('user_business_preferences')
+                ->where('user_id', $userId)
+                ->update(['current_business_id' => null, 'updated_at' => now()]);
         }
 
         return $this->userRepository->removeUser($businessId, $userId);
@@ -267,9 +279,14 @@ class BusinessService implements BusinessServiceInterface
         }
 
         // Update user's current business
-        User::where('id', $userId)->update([
-            'current_business_id' => $businessId,
-        ]);
+        DB::table('user_business_preferences')->updateOrInsert(
+            ['user_id' => $userId],
+            [
+                'current_business_id' => $businessId,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
         // Update last accessed time
         $this->userRepository->find($businessId, $userId)?->touchLastAccessed();

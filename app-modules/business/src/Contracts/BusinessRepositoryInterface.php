@@ -83,4 +83,11 @@ interface BusinessRepositoryInterface
      * Count businesses for a user
      */
     public function countUserBusinesses(int $userId): int;
+
+    /**
+     * Find businesses by owner ID
+     * 
+     * @return DataCollection<BusinessData>
+     */
+    public function findByOwnerId(int $ownerId): DataCollection;
 }
