@@ -171,4 +171,14 @@ class BusinessUserRepository implements BusinessUserRepositoryInterface
 
         return BusinessUserData::collect($owners, DataCollection::class);
     }
+
+    /**
+     * Update user's last accessed timestamp for a business
+     */
+    public function updateLastAccessed(int $businessId, int $userId): void
+    {
+        BusinessUser::where('business_id', $businessId)
+            ->where('user_id', $userId)
+            ->update(['last_accessed_at' => now()]);
+    }
 }

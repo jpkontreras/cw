@@ -113,10 +113,7 @@ class BusinessContextService implements BusinessContextInterface
         $this->currentBusiness = null;
         
         // Touch last accessed
-        $businessUser = $this->userRepository->find($businessId, $user->id);
-        if ($businessUser) {
-            $businessUser->touchLastAccessed();
-        }
+        $this->userRepository->updateLastAccessed($businessId, $user->id);
     }
 
     /**

@@ -1,11 +1,9 @@
 import { useForm } from '@inertiajs/react'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, ArrowRight, Building2, CheckCircle } from 'lucide-react'
 import OnboardingLayout from '@/layouts/onboarding-layout'
 import { OnboardingCard } from '@/modules/onboarding'
 
@@ -38,8 +36,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
     description: savedData?.description || '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = () => {
     post('/onboarding/business')
   }
 
@@ -58,10 +55,21 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
       stepDescription="Tell us about your business"
       completedSteps={completedSteps.length}
     >
-      <OnboardingCard estimatedTime="5 min">
+      <OnboardingCard 
+        estimatedTime="5 min"
+        stepNumber={currentStep}
+        totalSteps={totalSteps}
+        stepTitle="Business Information"
+        stepDescription="Tell us about your business"
+        onBack={() => window.history.back()}
+        onNext={handleSubmit}
+        nextDisabled={processing || !isFormValid}
+        nextLoading={processing}
+      >
         <div className="space-y-3">
           {/* Form Section */}
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
+                {/* Required Fields */}
                 <div>
                   <Label htmlFor="businessName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
                     Business Name <span className="text-red-500">*</span>
@@ -76,38 +84,6 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                   />
                   {errors.businessName && (
                     <p className="text-xs text-red-600 mt-1">{errors.businessName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="legalName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                    Legal Name <span className="text-xs text-neutral-500">(Optional)</span>
-                  </Label>
-                  <Input
-                    id="legalName"
-                    value={data.legalName}
-                    onChange={(e) => setData('legalName', e.target.value)}
-                    placeholder="My Business S.A. (leave empty if same as business name)"
-                    className="h-9"
-                  />
-                  {errors.legalName && (
-                    <p className="text-xs text-red-600 mt-1">{errors.legalName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="taxId" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                    Tax ID (RUT) <span className="text-xs text-neutral-500">(Optional)</span>
-                  </Label>
-                  <Input
-                    id="taxId"
-                    value={data.taxId}
-                    onChange={(e) => setData('taxId', e.target.value)}
-                    placeholder="12.345.678-9"
-                    className="h-9"
-                  />
-                  {errors.taxId && (
-                    <p className="text-xs text-red-600 mt-1">{errors.taxId}</p>
                   )}
                 </div>
 
@@ -133,9 +109,50 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
                   )}
                 </div>
 
+                {/* Divider with Optional Label */}
+                <div className="pt-2">
+                  <p className="text-tiny font-semibold text-neutral-600 dark:text-neutral-400 uppercase mb-1">
+                    Optional Information
+                  </p>
+                  <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                </div>
+
+                {/* Optional Fields */}
+                <div>
+                  <Label htmlFor="legalName" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                    Legal Name
+                  </Label>
+                  <Input
+                    id="legalName"
+                    value={data.legalName}
+                    onChange={(e) => setData('legalName', e.target.value)}
+                    placeholder="My Business S.A. (leave empty if same as business name)"
+                    className="h-9"
+                  />
+                  {errors.legalName && (
+                    <p className="text-xs text-red-600 mt-1">{errors.legalName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="taxId" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                    Tax ID (RUT)
+                  </Label>
+                  <Input
+                    id="taxId"
+                    value={data.taxId}
+                    onChange={(e) => setData('taxId', e.target.value)}
+                    placeholder="12.345.678-9"
+                    className="h-9"
+                  />
+                  {errors.taxId && (
+                    <p className="text-xs text-red-600 mt-1">{errors.taxId}</p>
+                  )}
+                </div>
+
                 <div>
                   <Label htmlFor="website" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                    Website <span className="text-xs text-neutral-500">(Optional)</span>
+                    Website
                   </Label>
                   <Input
                     id="website"
@@ -152,7 +169,7 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
 
                 <div>
                   <Label htmlFor="description" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                    Description <span className="text-xs text-neutral-500">(Optional)</span>
+                    Description
                   </Label>
                   <Textarea
                     id="description"
@@ -180,34 +197,6 @@ export default function BusinessSetup({ progress, savedData, currentStep = 2, to
               <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                 This information will be saved securely and you can update it anytime
               </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => window.history.back()}
-              >
-                <ArrowLeft className="mr-1 h-3 w-3" />
-                Back
-              </Button>
-              
-              <Button 
-                type="submit" 
-                disabled={processing || !isFormValid} 
-                size="sm"
-              >
-                {processing ? (
-                  <span className="animate-pulse">Saving...</span>
-                ) : (
-                  <>
-                    Continue Setup
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </>
-                )}
-              </Button>
             </div>
           </form>
         </div>

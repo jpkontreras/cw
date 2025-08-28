@@ -29,8 +29,8 @@ class LocationSetupData extends BaseData
         #[Nullable, StringType, Max(20)]
         public readonly ?string $code = null, // Auto-generated if not provided
         
-        #[Nullable, In(['restaurant', 'kitchen', 'warehouse', 'central_kitchen'])]
-        public readonly ?string $type = 'restaurant',
+        #[Required, In(['restaurant', 'kitchen', 'warehouse', 'central_kitchen'])]
+        public readonly string $type = 'restaurant',
         
         // Complete Address Structure - Now optional
         #[Nullable, StringType, Max(255)]
@@ -45,15 +45,15 @@ class LocationSetupData extends BaseData
         #[Nullable, StringType, Max(100)]
         public readonly ?string $state = null,
         
-        #[Required, StringType, Max(2)]
-        public readonly string $country = 'CL',
+        #[Nullable, StringType, Max(2)]
+        public readonly ?string $country = 'CL',
         
         #[Nullable, StringType, Max(20)]
         public readonly ?string $postalCode = null,
         
         // Contact Information
-        #[Required, StringType, Max(50)]
-        public readonly string $phone,
+        #[Nullable, StringType, Max(50)]
+        public readonly ?string $phone = null,
         
         #[Nullable, Email, Max(255)]
         public readonly ?string $email = null,

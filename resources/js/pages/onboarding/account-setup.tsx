@@ -1,11 +1,10 @@
 import React from 'react'
-import { useForm, Link } from '@inertiajs/react'
-import { Button } from '@/components/ui/button'
+import { useForm } from '@inertiajs/react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ArrowRight, Mail, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { Mail, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import OnboardingLayout from '@/layouts/onboarding-layout'
 import { OnboardingCard } from '@/modules/onboarding'
@@ -84,8 +83,7 @@ export default function AccountSetup({
     updatePhone(data.countryCode, value)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = () => {
     post('/onboarding/account')
   }
 
@@ -106,10 +104,20 @@ export default function AccountSetup({
       stepDescription="Create your account and set up basic information"
       completedSteps={completedSteps.length}
     >
-      <OnboardingCard estimatedTime="2 min">
+      <OnboardingCard 
+        estimatedTime="2 min"
+        stepNumber={currentStep}
+        totalSteps={totalSteps}
+        stepTitle="Account Setup"
+        stepDescription="Create your account and set up basic information"
+        onBack={() => window.history.back()}
+        onNext={handleSubmit}
+        nextDisabled={processing || !isFormValid}
+        nextLoading={processing}
+      >
         <div className="space-y-4">
           {/* Form Section */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
             {/* Email Display (if exists) */}
             {(user?.email || savedData?.email) && (
               <div className="flex items-center justify-between p-3.5 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
@@ -181,10 +189,18 @@ export default function AccountSetup({
               </div>
             </div>
 
+            {/* Divider with Optional Label */}
+            <div className="pt-2">
+              <p className="text-tiny font-semibold text-neutral-600 dark:text-neutral-400 uppercase mb-1">
+                Optional Information
+              </p>
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+            </div>
+
             {/* National ID Field */}
             <div>
               <Label htmlFor="nationalId" className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
-                Tax ID / National ID <span className="text-neutral-400 text-xs ml-1">(Optional)</span>
+                Tax ID / National ID
               </Label>
               <Input
                 id="nationalId"
@@ -206,7 +222,7 @@ export default function AccountSetup({
             {/* Phone Field */}
             <div>
               <Label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">
-                Phone Number <span className="text-neutral-400 text-xs ml-1">(Optional)</span>
+                Phone Number
               </Label>
               <PhoneInput
                 countryCode={data.countryCode}
@@ -248,31 +264,6 @@ export default function AccountSetup({
               <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center mt-1">
                 Phone and Tax ID can be added later when needed for billing or legal compliance
               </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-3">
-              <Link href="/onboarding">
-                <Button type="button" variant="outline" size="sm">
-                  <ArrowLeft className="mr-1 h-3 w-3" />
-                  Back
-                </Button>
-              </Link>
-              
-              <Button 
-                type="submit" 
-                size="sm"
-                disabled={processing || !isFormValid}
-              >
-                {processing ? (
-                  <span className="animate-pulse">Saving...</span>
-                ) : (
-                  <>
-                    Continue Setup
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </>
-                )}
-              </Button>
             </div>
           </form>
         </div>

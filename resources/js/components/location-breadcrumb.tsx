@@ -209,7 +209,51 @@ export function LocationBreadcrumb({ className }: { className?: string }) {
       </PopoverTrigger>
       <PopoverContent className="w-80" align="start">
         <div className="space-y-4">
-          <LocationInfo />
+          {/* Current location info */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-sm">Current Location</h4>
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                currentLocation.isActive 
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+              )}>
+                {currentLocation.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-start gap-2">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{currentLocation.displayName}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{currentLocation.type}</p>
+                </div>
+              </div>
+              {currentLocation.address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    {currentLocation.address}, {currentLocation.city}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" size="sm" asChild className="flex-1">
+                <Link href={`/locations/${currentLocation.id}`}>
+                  <Eye className="mr-1.5 h-3.5 w-3.5" />
+                  View
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild className="flex-1">
+                <Link href="/locations/settings">
+                  <Cog className="mr-1.5 h-3.5 w-3.5" />
+                  Settings
+                </Link>
+              </Button>
+            </div>
+          </div>
           <Separator />
           
           {/* Location switcher */}

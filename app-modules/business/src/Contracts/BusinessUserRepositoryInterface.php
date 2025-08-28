@@ -74,4 +74,9 @@ interface BusinessUserRepositoryInterface
      * @return DataCollection<BusinessUserData>
      */
     public function getBusinessOwners(int $businessId): DataCollection;
+
+    /**
+     * Update user's last accessed timestamp for a business
+     */
+    public function updateLastAccessed(int $businessId, int $userId): void;
 }

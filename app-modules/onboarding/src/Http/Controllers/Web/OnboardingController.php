@@ -215,7 +215,10 @@ class OnboardingController extends Controller
             
             if (!empty($businesses)) {
                 // Set the first (or only) business as current
-                $businessContext->setCurrentBusiness($businesses[0]->id);
+                // Handle both array and object formats
+                $firstBusiness = $businesses[0];
+                $businessId = is_array($firstBusiness) ? $firstBusiness['id'] : $firstBusiness->id;
+                $businessContext->setCurrentBusiness($businessId);
             }
 
             return redirect()->route('dashboard')->with('success', 'Onboarding completed successfully!');
