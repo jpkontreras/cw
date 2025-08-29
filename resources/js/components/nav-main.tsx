@@ -10,29 +10,23 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
-  const page = usePage();
+  const page = usePage<SharedData>();
   const [openItems, setOpenItems] = useState<string[]>([]);
 
   const toggleItem = (title: string) => {
     setOpenItems((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]));
   };
 
+  const currentPath = page.url;
+  const isExactMatch = (href: string) => currentPath === href || currentPath === href + '/';
   const isItemActive = (item: NavItem): boolean => {
-    // Check if the current page URL starts with the item's href
-    if (page.url.startsWith(item.href)) return true;
-
-    // Check if any of the subitems are active
-    if (item.items) {
-      return item.items.some((subItem) => page.url.startsWith(subItem.href));
-    }
-
-    return false;
+    return item.items ? item.items.some((sub) => isExactMatch(sub.href)) : isExactMatch(item.href);
   };
 
   return (
@@ -59,7 +53,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     <SidebarMenuSub>
                       {item.items.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild isActive={page.url.startsWith(subItem.href)}>
+                          <SidebarMenuSubButton asChild isActive={isExactMatch(subItem.href)}>
                             <Link href={subItem.href} prefetch>
                               {subItem.icon && <subItem.icon className="h-4 w-4" />}
                               <span>{subItem.title}</span>
