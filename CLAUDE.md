@@ -6,6 +6,7 @@ Core guidance for Claude Code when working with this Laravel/React modular appli
 - [Advanced Patterns](.claude/advanced-patterns.md) - Events, Error Handling, Feature Flags
 - [Frontend Details](.claude/frontend-guide.md) - Component patterns, Empty states
 - [Module Examples](.claude/module-examples.md) - Full implementation examples
+- [Event-Sourced Flows](.claude/event-sourced-flows.md) - Complex order flows with event sourcing
 
 ## Project Overview
 
@@ -102,6 +103,36 @@ Modules communicate through interfaces, never direct model imports. This ensures
 - Each module registers its own interfaces in its ServiceProvider
 - Dependent modules use optional injection: `?ItemRepositoryInterface $repo = null`
 - No "Core" intermediary interfaces needed - use module interfaces directly
+
+### Event-Sourced Architecture (Complex Flows)
+
+For complex multi-step operations like order-taking, we use **Event Sourcing** which provides:
+
+**Benefits:**
+- **Resilience**: No deadlocks, self-healing through event replay
+- **Offline-First**: Perfect for mobile apps with sync capabilities
+- **Audit Trail**: Complete history of all actions
+- **Multi-Version Support**: Old and new clients coexist
+- **Cross-Module Communication**: Modules react to events asynchronously
+
+**Implementation:**
+```php
+// Aggregate records events
+OrderAggregate::retrieve($uuid)
+    ->startOrder($staffId, $locationId)
+    ->addItems($items)
+    ->confirmOrder()
+    ->persist();
+
+// Modules react via projectors
+class ItemValidationProjector {
+    public function onItemsAddedToOrder($event) {
+        // Validate and emit response event
+    }
+}
+```
+
+See [Event-Sourced Flows](.claude/event-sourced-flows.md) for detailed implementation.
 
 ### Laravel-Data Usage Requirements
 
