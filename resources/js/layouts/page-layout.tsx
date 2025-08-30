@@ -78,7 +78,7 @@ Page.displayName = 'Page';
 const PageHeader = ({ title, subtitle, actions, className }: PageHeaderProps) => {
   return (
     <header className={cn('border-b bg-background', className)}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-8">
         <div className="flex items-center justify-between py-3 sm:py-4">
           <div className="min-w-0 flex-1">
             {title && <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>}
@@ -86,7 +86,7 @@ const PageHeader = ({ title, subtitle, actions, className }: PageHeaderProps) =>
             {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
           </div>
 
-          {actions && <div className="ml-4 flex shrink-0 items-center gap-2 sm:ml-6">{actions}</div>}
+          {actions && <div className="ml-4 flex shrink-0 items-center gap-2">{actions}</div>}
         </div>
       </div>
     </header>
@@ -108,7 +108,7 @@ PageActions.displayName = 'Page.Actions';
 const PageContent = React.forwardRef<HTMLDivElement, PageContentProps>(({ children, className, noPadding = false }, ref) => {
   return (
     <main ref={ref} className={cn('flex-1 overflow-x-hidden overflow-y-auto', className)}>
-      <div className={cn(!noPadding && 'container mx-auto px-4 py-6 sm:px-6 lg:px-8')}>{children}</div>
+      <div className={cn(!noPadding && 'w-full px-8 py-6')}>{children}</div>
     </main>
   );
 });
@@ -118,7 +118,7 @@ PageContent.displayName = 'Page.Content';
 const PageBottom = ({ children, className }: PageBottomProps) => {
   return (
     <div className={cn('border-t bg-white dark:bg-gray-950', 'shadow-[0_-2px_10px_rgba(0,0,0,0.05)]', className)}>
-      <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+      <div className="w-full px-8 py-4">
         <div className="w-full">{children}</div>
       </div>
     </div>
