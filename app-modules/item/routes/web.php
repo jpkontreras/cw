@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Colame\Item\Http\Controllers\Web\ItemController;
+use Colame\Item\Http\Controllers\Web\ItemSearchController;
 use Colame\Item\Http\Controllers\Web\ModifierController;
 use Colame\Item\Http\Controllers\Web\InventoryController;
 use Colame\Item\Http\Controllers\Web\PricingController;
@@ -13,12 +14,20 @@ Route::middleware(['web', 'auth', 'onboarding.completed'])->group(function () {
         Route::get('/', [ItemController::class, 'index'])->name('index');
         Route::get('/create', [ItemController::class, 'create'])->name('create');
         Route::post('/', [ItemController::class, 'store'])->name('store');
+        Route::post('/bulk-update', [ItemController::class, 'bulkUpdate'])->name('bulk-update');
+        
+        // Item search routes (for AJAX/JSON responses) - nested under items
+        Route::prefix('search')->name('search.')->group(function () {
+            Route::get('/', [ItemSearchController::class, 'search'])->name('query');
+            Route::get('/suggestions', [ItemSearchController::class, 'suggestions'])->name('suggestions');
+            Route::get('/popular', [ItemSearchController::class, 'popular'])->name('popular');
+            Route::post('/select', [ItemSearchController::class, 'recordSelection'])->name('select');
+        });
+        
         Route::get('/{id}', [ItemController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [ItemController::class, 'edit'])->name('edit');
         Route::put('/{id}', [ItemController::class, 'update'])->name('update');
         Route::delete('/{id}', [ItemController::class, 'destroy'])->name('destroy');
-        Route::get('/search', [ItemController::class, 'search'])->name('search');
-        Route::post('/bulk-update', [ItemController::class, 'bulkUpdate'])->name('bulk-update');
     });
     
     // Modifier management routes

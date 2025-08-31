@@ -10,6 +10,7 @@ use Colame\Order\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Scout\Builder;
+use Spatie\LaravelData\DataCollection;
 
 class OrderSearchService implements OrderSearchInterface, ModuleSearchInterface
 {
@@ -31,14 +32,14 @@ class OrderSearchService implements OrderSearchInterface, ModuleSearchInterface
         $results = $searchBuilder->paginate($filters['per_page'] ?? 20);
         
         // Transform to DTOs
-        $items = OrderSearchData::collection(
-            $results->map(function ($order) use ($query) {
-                $dto = OrderSearchData::from($order);
-                $dto->searchScore = $this->calculateRelevanceScore($order, $query);
-                $dto->matchReason = $this->determineMatchReason($order, $query);
-                return $dto;
-            })
-        );
+        $mappedItems = $results->map(function ($order) use ($query) {
+            $dto = OrderSearchData::from($order);
+            $dto->searchScore = $this->calculateRelevanceScore($order, $query);
+            $dto->matchReason = $this->determineMatchReason($order, $query);
+            return $dto;
+        });
+        // Convert Collection to DataCollection
+        $items = new DataCollection(OrderSearchData::class, $mappedItems);
         
         // Get facets for filtering
         $facets = $this->getFacets($query);
@@ -84,7 +85,9 @@ class OrderSearchService implements OrderSearchInterface, ModuleSearchInterface
         $results = $query->orderByDesc('created_at')
             ->paginate($filters['per_page'] ?? 20);
         
-        $items = OrderSearchData::collection($results->items());
+        // Convert items to DataCollection
+        $mappedItems = collect($results->items())->map(fn($order) => OrderSearchData::from($order));
+        $items = new DataCollection(OrderSearchData::class, $mappedItems);
         
         return new SearchResultData(
             items: $items,

@@ -327,25 +327,6 @@ class ItemController extends Controller
     }
     
     /**
-     * Search items
-     */
-    public function search(Request $request)
-    {
-        $query = $request->input('q');
-        $locationId = $request->input('location_id');
-        
-        $items = $this->itemService->searchItems($query, [
-            'location_id' => $locationId,
-            'with_availability' => true,
-            'with_price' => true,
-        ]);
-        
-        return response()->json([
-            'items' => $items,
-        ]);
-    }
-    
-    /**
      * Bulk update items
      */
     public function bulkUpdate(Request $request)

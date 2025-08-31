@@ -124,6 +124,20 @@ class OrderController extends Controller
     }
 
     /**
+     * Show the new improved form for creating orders (V2)
+     */
+    public function createV2(): Response
+    {
+        // For the new version, we'll use our search-based approach
+        // No need to load all items upfront
+        return Inertia::render('order/create-v2', [
+            // We can add any initial data needed here
+            'popularItems' => [], // Will be loaded via API
+            'recentOrders' => [], // Could show recent orders by this user
+        ]);
+    }
+
+    /**
      * Store a newly created order
      */
     public function store(Request $request): RedirectResponse

@@ -5,10 +5,11 @@ namespace Colame\Item\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 class Item extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, Searchable;
     
     protected $fillable = [
         'name',
@@ -161,5 +162,35 @@ class Item extends Model
     {
         return $query->tracksInventory()
             ->where('stock_quantity', '<=', 0);
+    }
+    
+    /**
+     * Get the indexable data array for the model.
+     * This is what gets sent to MeiliSearch for indexing.
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'sku' => $this->sku,
+            'category' => 'Uncategorized', // TODO: get from categories relation
+            'base_price' => $this->base_price,
+            'is_active' => $this->is_active,
+            'is_available' => $this->is_available,
+            'preparation_time' => $this->preparation_time,
+            'stock_quantity' => $this->stock_quantity,
+            'search_keywords' => $this->search_keywords ?? '',
+            'order_frequency' => 0, // TODO: track this field
+        ];
+    }
+    
+    /**
+     * Determine if the model should be searchable.
+     */
+    public function shouldBeSearchable(): bool
+    {
+        return $this->is_active;
     }
 }

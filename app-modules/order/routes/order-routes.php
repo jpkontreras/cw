@@ -24,6 +24,7 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         
         // Create
         Route::get('/create', [WebOrderController::class, 'create'])->name('create');
+        Route::get('/create-v2', [WebOrderController::class, 'createV2'])->name('create-v2');
         Route::post('/', [WebOrderController::class, 'store'])->name('store');
         
         // NOTE: All specific routes must be defined BEFORE the dynamic {order} routes

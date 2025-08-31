@@ -2,9 +2,11 @@
 
 namespace Colame\Item\Providers;
 
+use App\Core\Services\UnifiedSearchService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Colame\Item\Contracts\ItemRepositoryInterface;
+use Colame\Item\Contracts\ItemSearchInterface;
 use Colame\Item\Contracts\ModifierRepositoryInterface;
 use Colame\Item\Contracts\PricingRepositoryInterface;
 use Colame\Item\Contracts\InventoryRepositoryInterface;
@@ -15,6 +17,7 @@ use Colame\Item\Repositories\ModifierRepository;
 use Colame\Item\Repositories\PricingRepository;
 use Colame\Item\Repositories\InventoryRepository;
 use Colame\Item\Repositories\RecipeRepository;
+use Colame\Item\Services\ItemSearchService;
 use Colame\Item\Services\ItemService;
 
 class ItemServiceProvider extends ServiceProvider
@@ -33,6 +36,10 @@ class ItemServiceProvider extends ServiceProvider
         
         // Register service bindings
         $this->app->bind(ItemServiceInterface::class, ItemService::class);
+        $this->app->bind(ItemSearchInterface::class, ItemSearchService::class);
+        
+        // Register as singleton for better performance
+        $this->app->singleton(ItemSearchService::class);
         
         // Merge config
         $this->mergeConfigFrom(
@@ -73,6 +80,14 @@ class ItemServiceProvider extends ServiceProvider
         
         // Register event listeners
         $this->registerEventListeners();
+        
+        // Register search module with UnifiedSearchService
+        if ($this->app->bound(UnifiedSearchService::class)) {
+            $this->app->make(UnifiedSearchService::class)->registerModule(
+                'items',
+                $this->app->make(ItemSearchService::class)
+            );
+        }
         
         // Publish config
         if ($this->app->runningInConsole()) {
