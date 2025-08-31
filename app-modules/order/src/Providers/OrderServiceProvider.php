@@ -2,13 +2,16 @@
 
 namespace Colame\Order\Providers;
 
+use App\Core\Services\UnifiedSearchService;
 use Colame\Order\Console\Commands\GenerateSampleOrdersCommand;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
+use Colame\Order\Contracts\OrderSearchInterface;
 use Colame\Order\Contracts\OrderServiceInterface;
 use Colame\Order\Models\Order;
 use Colame\Order\Repositories\OrderItemRepository;
 use Colame\Order\Repositories\OrderRepository;
+use Colame\Order\Services\OrderSearchService;
 use Colame\Order\Services\OrderService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +29,10 @@ class OrderServiceProvider extends ServiceProvider
         
         // Register service bindings
         $this->app->bind(OrderServiceInterface::class, OrderService::class);
+        $this->app->bind(OrderSearchInterface::class, OrderSearchService::class);
+        
+        // Register as singleton for better performance
+        $this->app->singleton(OrderSearchService::class);
         
         // Merge config
         $this->mergeConfigFrom(
@@ -50,6 +57,14 @@ class OrderServiceProvider extends ServiceProvider
         
         // Register event listeners
         $this->registerEventListeners();
+        
+        // Register search module with UnifiedSearchService
+        if ($this->app->bound(UnifiedSearchService::class)) {
+            $this->app->make(UnifiedSearchService::class)->registerModule(
+                'orders',
+                $this->app->make(OrderSearchService::class)
+            );
+        }
         
         // Publish config
         if ($this->app->runningInConsole()) {

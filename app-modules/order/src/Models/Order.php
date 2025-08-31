@@ -7,6 +7,7 @@ namespace Colame\Order\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 /**
  * Order model
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Order extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Searchable;
 
     /**
      * The table associated with the model
@@ -243,5 +244,42 @@ class Order extends Model
             self::STATUS_PLACED,
             self::STATUS_CONFIRMED
         ]);
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     * This is what gets sent to MeiliSearch for indexing.
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'order_number' => $this->order_number,
+            'status' => $this->status,
+            'type' => $this->type,
+            'priority' => $this->priority,
+            'customer_name' => $this->customer_name,
+            'customer_phone' => $this->customer_phone,
+            'customer_email' => $this->customer_email,
+            'table_number' => $this->table_number,
+            'location_id' => $this->location_id,
+            'waiter_id' => $this->waiter_id,
+            'total_amount' => $this->total_amount,
+            'payment_status' => $this->payment_status,
+            'notes' => $this->notes,
+            'special_instructions' => $this->special_instructions,
+            'created_at' => $this->created_at?->timestamp,
+            'placed_at' => $this->placed_at?->timestamp,
+            'view_count' => $this->view_count ?? 0,
+        ];
+    }
+
+    /**
+     * Determine if the model should be searchable.
+     */
+    public function shouldBeSearchable(): bool
+    {
+        // Don't index draft orders
+        return $this->status !== self::STATUS_DRAFT;
     }
 }

@@ -7,6 +7,7 @@ Core guidance for Claude Code when working with this Laravel/React modular appli
 - [Frontend Details](.claude/frontend-guide.md) - Component patterns, Empty states
 - [Module Examples](.claude/module-examples.md) - Full implementation examples
 - [Event-Sourced Flows](.claude/event-sourced-flows.md) - Complex order flows with event sourcing
+- [Search Architecture](.claude/search-architecture.md) - Modular search with MeiliSearch
 
 ## Project Overview
 
@@ -431,6 +432,75 @@ public function index(Request $request) {
     }
     
     return Inertia::render('order/index', $data->toArray());
+}
+```
+
+### Modular Search Architecture
+
+The application uses a unified search system with MeiliSearch for high-performance, typo-tolerant search:
+
+```php
+// Module implements search interface
+class OrderSearchService implements OrderSearchInterface, ModuleSearchInterface {
+    public function search(string $query, array $filters = []): SearchResultData {
+        // Use Laravel Scout for MeiliSearch integration
+        $results = Order::search($query)
+            ->where('status', $filters['status'] ?? null)
+            ->paginate();
+        
+        return new SearchResultData(
+            items: OrderSearchData::collection($results),
+            query: $query,
+            searchId: Str::uuid(),
+            total: $results->total()
+        );
+    }
+}
+
+// Register in ServiceProvider
+public function boot(): void {
+    if ($this->app->bound(UnifiedSearchService::class)) {
+        $this->app->make(UnifiedSearchService::class)->registerModule(
+            'orders',
+            $this->app->make(OrderSearchService::class)
+        );
+    }
+}
+
+// Model must use Searchable trait
+use Laravel\Scout\Searchable;
+
+class Order extends Model {
+    use Searchable;
+    
+    public function toSearchableArray(): array {
+        return [
+            'id' => $this->id,
+            'order_number' => $this->order_number,
+            'customer_name' => $this->customer_name,
+            // ... other searchable fields
+        ];
+    }
+}
+```
+
+**Search API Usage:**
+```bash
+# Global search across modules
+GET /api/search?q=john&types[]=orders&types[]=items
+
+# Type-specific search
+GET /api/search/orders?q=john&filters[status]=pending
+
+# Autocomplete suggestions
+GET /api/search/suggest?q=joh&type=orders
+
+# Record selection for learning
+POST /api/search/select
+{
+    "search_id": "uuid",
+    "type": "orders",
+    "entity_id": 123
 }
 ```
 
