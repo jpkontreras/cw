@@ -259,7 +259,7 @@ export default function CreateOrder({ locations, tables = [], items = [] }: Prop
         <Page.Header 
           title="New Order" 
           subtitle="Select items from the menu"
-          actions={currentStep === 'menu' && <ViewModeToggle value={viewMode} onChange={setViewMode} />}
+          actions={currentStep === 'menu' && items.length > 0 && <ViewModeToggle value={viewMode} onChange={setViewMode} />}
         />
 
         <div className="flex-1 flex flex-col min-h-0">

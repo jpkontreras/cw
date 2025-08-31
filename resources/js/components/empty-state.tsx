@@ -49,9 +49,9 @@ export function EmptyState({
         
         {/* Help text */}
         {helpText && (
-          <p className="text-sm text-gray-500 mt-8">
+          <div className="text-sm text-gray-500 mt-8">
             {helpText}
-          </p>
+          </div>
         )}
       </div>
     </div>

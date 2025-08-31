@@ -1,11 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/empty-state';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { cn } from '@/lib/utils';
 import { Head, router } from '@inertiajs/react';
-import { AlertCircle, CheckCircle, ChefHat, Clock, Home, Maximize2, Package, RefreshCw, ShoppingBag, Truck, User } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, ChefHat, Clock, Home, Maximize2, Package, RefreshCw, ShoppingBag, Truck, User } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 interface OrderItem {
@@ -24,9 +25,12 @@ interface Order {
   items: OrderItem[];
   placedAt?: string;
   createdAt: string;
+  type?: 'dine_in' | 'dine-in' | 'takeout' | 'delivery';
   orderType?: 'dine-in' | 'takeout' | 'delivery';
+  orderNumber?: string;
   tableNumber?: number;
   priority?: 'normal' | 'rush' | 'vip';
+  specialInstructions?: string;
 }
 
 interface Props {
@@ -153,7 +157,7 @@ const OrderCard = ({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (s
           <>
             <div className="-mx-4 border-t border-gray-100" />
             <div className="space-y-1.5">
-              {order.items.map((item, index) => (
+              {order.items.map((item) => (
                 <div
                   key={item.id}
                   className={cn(
@@ -418,85 +422,113 @@ export default function KitchenDisplay({ orders: initialOrders, locationId }: Pr
           </div>
         )}
 
-        <div className="grid flex-1 grid-cols-3">
-          {/* New Orders Column */}
-          <div className="flex flex-col border-r border-gray-200 bg-gray-50">
-            <div className="border-b border-amber-200 bg-gradient-to-r from-amber-100 to-amber-50 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">New Orders</h2>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold text-amber-600">{confirmedOrders.length}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {confirmedOrders.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-gray-400">
-                  <ChefHat className="mb-4 h-16 w-16 opacity-20" />
-                  <p className="text-sm">No new orders</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {confirmedOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
-                  ))}
-                </div>
-              )}
+        {/* Check if there are no orders at all */}
+        {orders.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-center">
+              <EmptyState
+                icon={ChefHat}
+                title="Kitchen is ready"
+                description="Waiting for new orders. The display will update automatically when orders arrive."
+                helpText={
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Activity className="h-4 w-4 animate-pulse text-green-500" />
+                      <span>System is live and monitoring</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Last checked: {lastRefresh.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                }
+              />
             </div>
           </div>
+        ) : (
+          <div className="grid flex-1 grid-cols-3">
+            {/* New Orders Column */}
+            <div className="flex flex-col border-r border-gray-200 bg-gray-50">
+              <div className="border-b border-amber-200 bg-gradient-to-r from-amber-100 to-amber-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">New Orders</h2>
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold text-amber-600">{confirmedOrders.length}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {confirmedOrders.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-gray-400">
+                    <ChefHat className="mb-4 h-16 w-16 opacity-20" />
+                    <p className="text-sm">No new orders</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {confirmedOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {/* Preparing Column */}
-          <div className="flex flex-col border-r border-gray-200 bg-gray-50">
-            <div className="border-b border-blue-200 bg-gradient-to-r from-blue-100 to-blue-50 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Preparing</h2>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold text-blue-600">{preparingOrders.length}</span>
+            {/* Preparing Column */}
+            <div className="flex flex-col border-r border-gray-200 bg-gray-50">
+              <div className="border-b border-blue-200 bg-gradient-to-r from-blue-100 to-blue-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">Preparing</h2>
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold text-blue-600">{preparingOrders.length}</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {preparingOrders.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-gray-400">
+                    <ChefHat className="mb-4 h-16 w-16 opacity-20" />
+                    <p className="text-sm">No orders being prepared</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {preparingOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {preparingOrders.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-gray-400">
-                  <ChefHat className="mb-4 h-16 w-16 opacity-20" />
-                  <p className="text-sm">No orders being prepared</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {preparingOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Ready Column */}
-          <div className="flex flex-col bg-gray-50">
-            <div className="border-b border-green-200 bg-gradient-to-r from-green-100 to-green-50 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Ready for Pickup</h2>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold text-green-600">{readyOrders.length}</span>
+            {/* Ready Column */}
+            <div className="flex flex-col bg-gray-50">
+              <div className="border-b border-green-200 bg-gradient-to-r from-green-100 to-green-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">Ready for Pickup</h2>
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold text-green-600">{readyOrders.length}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {readyOrders.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-gray-400">
-                  <ChefHat className="mb-4 h-16 w-16 opacity-20" />
-                  <p className="text-sm">No orders ready</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {readyOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
-                  ))}
-                </div>
-              )}
+              <div className="flex-1 overflow-y-auto p-4">
+                {readyOrders.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-gray-400">
+                    <ChefHat className="mb-4 h-16 w-16 opacity-20" />
+                    <p className="text-sm">No orders ready</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {readyOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} onStatusUpdate={(status) => handleStatusUpdate(order.id, status)} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
           {/* Keyboard shortcuts help */}
