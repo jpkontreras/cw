@@ -417,7 +417,7 @@ class OrderController extends Controller
 
         // Get active orders
         $ordersQuery = Order::query()
-            ->with(['items', 'waiter'])
+            ->with(['items'])
             ->whereNotIn('status', ['completed', 'cancelled', 'refunded'])
             ->when($locationId, fn($q) => $q->where('location_id', $locationId))
             ->orderBy('created_at', 'asc');
