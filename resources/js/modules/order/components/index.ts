@@ -5,6 +5,7 @@ export { EmptyOrderState } from './empty-order-state';
 export { OrderItemsView } from './order-items-view';
 export { SearchInput } from './search-input';
 export { SearchView } from './search-view';
+export { CartPopover } from './cart-popover';
 
 // Order Management Components
 export { OrderCard } from './order-card';

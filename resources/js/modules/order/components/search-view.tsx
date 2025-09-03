@@ -31,7 +31,9 @@ interface SearchViewProps {
   favoriteItems: SearchResult[];
   recentSearches: string[];
   popularItems: SearchResult[];
+  orderItems?: Array<{ id: number; quantity: number }>;
   onAddItem: (item: SearchResult) => void;
+  onUpdateQuantity?: (itemId: number, delta: number) => void;
   onToggleFavorite: (item: SearchResult) => void;
   onSearch: (query: string) => void;
   onCategorySelect: (categoryId: string) => void;
@@ -44,11 +46,19 @@ export const SearchView: React.FC<SearchViewProps> = ({
   favoriteItems,
   recentSearches,
   popularItems,
+  orderItems = [],
   onAddItem,
+  onUpdateQuantity,
   onToggleFavorite,
   onSearch,
   onCategorySelect,
 }) => {
+  // Helper function to get item quantity in cart
+  const getItemQuantity = (itemId: number): number => {
+    const item = orderItems.find(item => item.id === itemId);
+    return item?.quantity || 0;
+  };
+
   const categories: Category[] = [
     { id: 'empanadas', name: 'Empanadas', icon: Package2, color: 'from-orange-400 to-orange-600', emoji: '🥟' },
     { id: 'completos', name: 'Completos', icon: Package2, color: 'from-red-400 to-red-600', emoji: '🌭' },
@@ -122,14 +132,37 @@ export const SearchView: React.FC<SearchViewProps> = ({
                           ${item.price.toLocaleString('es-CL')}
                         </p>
                       </div>
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                        onClick={() => onAddItem(item)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span className="ml-1">Agregar</span>
-                      </Button>
+                      {getItemQuantity(item.id) > 0 ? (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 transition-all hover:scale-105 active:scale-95"
+                            onClick={() => onUpdateQuantity?.(item.id, -1)}
+                          >
+                            <span className="text-lg">−</span>
+                          </Button>
+                          <div className="flex-1 text-center">
+                            <span className="font-bold text-lg bg-secondary text-secondary-foreground px-3 py-1 rounded-lg">{getItemQuantity(item.id)}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="flex-1 transition-all hover:scale-105 active:scale-95"
+                            onClick={() => onUpdateQuantity?.(item.id, 1)}
+                          >
+                            <span className="text-lg">+</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          className="w-full transition-all hover:scale-105 active:scale-95"
+                          onClick={() => onAddItem(item)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span className="ml-1">Agregar</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -229,9 +262,43 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   <p className="text-lg font-bold text-gray-900 dark:text-white">
                     ${item.price.toLocaleString('es-CL')}
                   </p>
-                  <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {getItemQuantity(item.id) > 0 ? (
+                    <div className="flex items-center gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0 transition-all hover:scale-105 active:scale-95"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateQuantity?.(item.id, -1);
+                        }}
+                      >
+                        −
+                      </Button>
+                      <span className="font-bold w-10 text-center bg-secondary text-secondary-foreground rounded px-1">{getItemQuantity(item.id)}</span>
+                      <Button
+                        size="sm"
+                        className="h-8 w-8 p-0 transition-all hover:scale-105 active:scale-95"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateQuantity?.(item.id, 1);
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      className="transition-all hover:scale-105 active:scale-95"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddItem(item);
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -287,14 +354,37 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       ${item.price.toLocaleString('es-CL')}
                     </p>
                   </div>
-                  <Button 
-                    size="sm" 
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                    onClick={() => onAddItem(item)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="ml-1">Agregar</span>
-                  </Button>
+                  {getItemQuantity(item.id) > 0 ? (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 transition-all hover:scale-105 active:scale-95"
+                        onClick={() => onUpdateQuantity?.(item.id, -1)}
+                      >
+                        <span className="text-lg">−</span>
+                      </Button>
+                      <div className="flex-1 text-center">
+                        <span className="font-bold text-lg bg-secondary text-secondary-foreground px-3 py-1 rounded-lg">{getItemQuantity(item.id)}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="flex-1 transition-all hover:scale-105 active:scale-95"
+                        onClick={() => onUpdateQuantity?.(item.id, 1)}
+                      >
+                        <span className="text-lg">+</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      className="w-full transition-all hover:scale-105 active:scale-95"
+                      onClick={() => onAddItem(item)}
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="ml-1">Agregar</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -27,7 +27,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         isSearchMode ? "scale-[1.02]" : "scale-100"
       )}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur opacity-20 hover:opacity-30 transition-opacity" />
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full blur-xl opacity-10 hover:opacity-20 transition-opacity" />
       <div className="relative flex items-center">
         {isSearchMode && (
           <Button
@@ -37,7 +37,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               setIsSearchMode(false);
               setSearchQuery('');
             }}
-            className="absolute left-2 h-9 w-9 z-10"
+            className="absolute left-2 h-9 w-9 z-10 rounded-full"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -54,7 +54,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsSearchMode(true)}
           className={cn(
-            "w-full h-14 text-base bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 rounded-2xl shadow-sm transition-all duration-200 focus:shadow-lg",
+            "w-full h-14 text-base bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-400 rounded-full shadow-sm transition-all duration-200 focus:shadow-md focus:ring-2 focus:ring-blue-400/20",
             isSearchMode ? "pl-24 pr-32" : "pl-12 pr-32"
           )}
           autoComplete="off"
@@ -65,14 +65,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => setSearchQuery('')}
-              className="h-9 w-9"
+              className="h-9 w-9 rounded-full"
             >
               <X className="h-4 w-4" />
             </Button>
           )}
-          <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0">
-            Beta
-          </Badge>
         </div>
       </div>
     </div>

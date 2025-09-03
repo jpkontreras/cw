@@ -162,7 +162,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     if (popularItems.length === 0) {
       axios.get('/items/search/popular', { params: { limit: 12 } })
         .then(response => {
-          setPopularItems(response.data.items || []);
+          setPopularItems(response.data.items || response.data.data || []);
         })
         .catch(error => {
           console.error('Error loading popular items:', error);
@@ -215,8 +215,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         });
         
         if (response.data) {
-          setSearchResults(response.data.items || []);
-          searchIdRef.current = response.data.searchId || null;
+          setSearchResults(response.data.items || response.data.data || []);
+          searchIdRef.current = response.data.searchId || response.data.meta?.searchId || null;
         }
       } catch (error) {
         console.error('Search error:', error);
@@ -240,10 +240,18 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     }
   }, [searchQuery]);
 
+  // Trigger search when searchQuery changes
+  useEffect(() => {
+    if (searchQuery) {
+      performSearch(searchQuery);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, performSearch]);
+
   // Handle category selection
   const handleCategorySelect = (category: string) => {
     setSearchQuery(`categoria:${category}`);
-    performSearch(`categoria:${category}`);
   };
 
   // Order Item Management
@@ -296,21 +304,33 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
   // Process Order
   const processOrder = () => {
+    // Map frontend orderType to backend expected values
+    const orderTypeMap: Record<string, string> = {
+      'dine_in': 'dineIn',  // Backend expects camelCase per validation
+      'takeout': 'takeout',
+      'delivery': 'delivery',
+      'catering': 'catering'
+    };
+    
     const orderData = {
+      // Required fields
+      locationId: 1, // TODO: Get from user context or settings
+      type: orderTypeMap[customerInfo.orderType] || 'dineIn', // Map to backend expected format
       items: orderItems.map(item => ({
-        item_id: item.id,
+        itemId: item.id, // Changed from item_id to itemId
         quantity: item.quantity,
         notes: item.notes,
         modifiers: item.modifiers || []
       })),
-      customer_name: customerInfo.name,
-      customer_phone: customerInfo.phone,
-      order_type: customerInfo.orderType,
-      table_number: customerInfo.tableNumber,
+      // Customer information
+      customerName: customerInfo.name,
+      customerPhone: customerInfo.phone,
+      tableNumber: customerInfo.tableNumber,
       address: customerInfo.address,
-      customer_notes: customerInfo.notes,
-      special_instructions: customerInfo.specialInstructions,
-      payment_method: customerInfo.paymentMethod || 'cash',
+      customerNotes: customerInfo.notes,
+      specialInstructions: customerInfo.specialInstructions,
+      paymentMethod: customerInfo.paymentMethod || 'cash',
+      // Calculated values
       subtotal: calculateSubtotal(),
       tax: calculateTax(),
       total: calculateTotal(),

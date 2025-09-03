@@ -47,9 +47,6 @@ export const CollapsedSidebar: React.FC<CollapsedSidebarProps> = ({
         >
           <PanelRightOpen className="h-4 w-4" />
           <ShoppingBag className="h-4 w-4" />
-          <Badge variant="secondary" className="ml-auto">
-            {getTotalItems()}
-          </Badge>
         </Button>
       </div>
 
