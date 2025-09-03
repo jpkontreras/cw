@@ -14,6 +14,7 @@ use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
 use Colame\Order\Services\OrderStatusService;
 use Colame\Item\Contracts\ItemRepositoryInterface;
+use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -29,7 +30,8 @@ class OrderController extends Controller
     public function __construct(
         private OrderServiceInterface $orderService,
         private OrderStatusService $statusService,
-        private ItemRepositoryInterface $itemRepository
+        private ItemRepositoryInterface $itemRepository,
+        private ?TaxonomyServiceInterface $taxonomyService = null
     ) {}
 
     /**
@@ -82,10 +84,19 @@ class OrderController extends Controller
      */
     public function create(Request $request): Response
     {
+        // Get formatted categories from the taxonomy service
+        $categories = [];
+        if ($this->taxonomyService) {
+            $locationId = $request->user()?->location_id;
+            $categoriesCollection = $this->taxonomyService->getFormattedItemCategories($locationId);
+            // Transform to array for Inertia (includes computed properties)
+            $categories = $categoriesCollection->toArray();
+        }
+
         // Clean implementation with search-based interface
-        // All data is loaded via API calls as needed
         return Inertia::render('order/create', [
             'popularItems' => [], // Will be loaded via API
+            'categories' => $categories,
         ]);
     }
 

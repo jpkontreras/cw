@@ -7,11 +7,27 @@ import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/cont
 import { ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
-interface CreateOrderProps {
-  popularItems?: SearchResult[];
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  metadata?: {
+    icon?: string;
+    emoji?: string;
+    color?: string;
+  };
 }
 
-const CreateOrderContent: React.FC = () => {
+interface CreateOrderProps {
+  popularItems?: SearchResult[];
+  categories?: Category[];
+}
+
+interface CreateOrderContentProps {
+  categories: Category[];
+}
+
+const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) => {
   const {
     orderItems,
     customerInfo,
@@ -210,7 +226,7 @@ const CreateOrderContent: React.FC = () => {
                   activeCount={activeFiltersCount}
                   onFilterChange={updateSearchFilter}
                   onClearFilters={clearSearchFilters}
-                  categories={['Empanadas', 'Completos', 'Pizzas', 'Ensaladas', 'Bebidas', 'Postres']}
+                  categories={categories?.map(cat => cat.name) || []}
                 />
               )}
             </div>
@@ -229,6 +245,7 @@ const CreateOrderContent: React.FC = () => {
                     recentItems={recentItems}
                     popularItems={popularItems}
                     orderItems={orderItems}
+                    categories={categories}
                     onAddItem={handleAddItemWithFeedback}
                     onUpdateQuantity={(itemId, delta) => {
                       const item = orderItems.find(i => i.id === itemId);
@@ -259,6 +276,7 @@ const CreateOrderContent: React.FC = () => {
                     recentItems={recentItems}
                     popularItems={popularItems}
                     orderItems={orderItems}
+                    categories={categories}
                     onAddItem={handleAddItemWithFeedback}
                     onUpdateQuantity={(itemId, delta) => {
                       const item = orderItems.find(i => i.id === itemId);
@@ -477,10 +495,10 @@ const CreateOrderContent: React.FC = () => {
   );
 };
 
-export default function CreateOrder({ popularItems = [] }: CreateOrderProps) {
+export default function CreateOrder({ popularItems = [], categories = [] }: CreateOrderProps) {
   return (
     <OrderProvider initialPopularItems={popularItems}>
-      <CreateOrderContent />
+      <CreateOrderContent categories={categories} />
     </OrderProvider>
   );
 }

@@ -17,11 +17,17 @@ interface SearchResult {
 }
 
 interface Category {
-  id: string;
+  id: string | number;
   name: string;
-  icon: any;
-  color: string;
-  emoji: string;
+  slug?: string;
+  icon?: any;
+  color?: string;
+  emoji?: string;
+  metadata?: {
+    icon?: string;
+    emoji?: string;
+    color?: string;
+  };
 }
 
 interface SearchViewProps {
@@ -33,11 +39,12 @@ interface SearchViewProps {
   recentItems?: SearchResult[];
   popularItems: SearchResult[];
   orderItems?: Array<{ id: number; quantity: number }>;
+  categories?: Category[];
   onAddItem: (item: SearchResult) => void;
   onUpdateQuantity?: (itemId: number, delta: number) => void;
   onToggleFavorite: (item: SearchResult) => void;
   onSearch: (query: string) => void;
-  onCategorySelect: (categoryId: string) => void;
+  onCategorySelect: (categoryId: string | number) => void;
 }
 
 export const SearchView: React.FC<SearchViewProps> = ({
@@ -49,6 +56,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   recentItems = [],
   popularItems,
   orderItems = [],
+  categories = [],
   onAddItem,
   onUpdateQuantity,
   onToggleFavorite,
@@ -61,14 +69,12 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return item?.quantity || 0;
   };
 
-  const categories: Category[] = [
-    { id: 'empanadas', name: 'Empanadas', icon: Package2, color: 'from-orange-400 to-orange-600', emoji: '🥟' },
-    { id: 'completos', name: 'Completos', icon: Package2, color: 'from-red-400 to-red-600', emoji: '🌭' },
-    { id: 'pizzas', name: 'Pizzas', icon: Package2, color: 'from-yellow-400 to-yellow-600', emoji: '🍕' },
-    { id: 'ensaladas', name: 'Ensaladas', icon: Package2, color: 'from-green-400 to-green-600', emoji: '🥗' },
-    { id: 'bebidas', name: 'Bebidas', icon: Package2, color: 'from-blue-400 to-blue-600', emoji: '🥤' },
-    { id: 'postres', name: 'Postres', icon: Package2, color: 'from-purple-400 to-purple-600', emoji: '🍰' },
-  ];
+  // Get category display properties
+  const getCategoryDisplay = (category: Category) => {
+    const emoji = category.metadata?.emoji || category.emoji || '📦';
+    const color = category.metadata?.color || category.color || 'from-gray-400 to-gray-600';
+    return { emoji, color };
+  };
 
   const isFavorite = (item: SearchResult) => {
     return favoriteItems.some(fav => fav.id === item.id);
@@ -185,33 +191,38 @@ export const SearchView: React.FC<SearchViewProps> = ({
   // Default view with categories, favorites, recent searches, popular items
   return (
     <div className="space-y-6">
-      {/* Categories */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-          <Hash className="h-5 w-5 text-purple-500" />
-          Explorar Categorías
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => onCategorySelect(category.id)}
-                className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 group"
-              >
-                <div className={cn(
-                  "absolute inset-0 bg-gradient-to-br opacity-10 group-hover:opacity-20 transition-opacity",
-                  category.color
-                )} />
-                <div className="relative flex flex-col items-center justify-center gap-1">
-                  <div className="text-3xl mb-1">{category.emoji}</div>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                    {category.name}
-                  </span>
-                </div>
-              </button>
-          ))}
+      {/* Categories - Only show if we have categories */}
+      {categories.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+            <Hash className="h-5 w-5 text-purple-500" />
+            Explorar Categorías
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {categories.map((category) => {
+              const { emoji, color } = getCategoryDisplay(category);
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => onCategorySelect(category.slug || category.id)}
+                  className="relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 group"
+                >
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-10 group-hover:opacity-20 transition-opacity",
+                    color
+                  )} />
+                  <div className="relative flex flex-col items-center justify-center gap-1">
+                    <div className="text-3xl mb-1">{emoji}</div>
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {category.name}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recent Items */}
       {recentItems.length > 0 && (

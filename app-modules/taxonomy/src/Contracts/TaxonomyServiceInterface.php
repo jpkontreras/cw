@@ -77,4 +77,9 @@ interface TaxonomyServiceInterface
      * Bulk create taxonomies
      */
     public function bulkCreateTaxonomies(array $taxonomies): DataCollection;
+    
+    /**
+     * Get formatted item categories for order interface
+     */
+    public function getFormattedItemCategories(?int $locationId = null): DataCollection;
 }

@@ -6,6 +6,7 @@ namespace Colame\Taxonomy\Services;
 
 use Colame\Taxonomy\Contracts\TaxonomyRepositoryInterface;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
+use Colame\Taxonomy\Data\CategoryForOrderData;
 use Colame\Taxonomy\Data\CreateTaxonomyData;
 use Colame\Taxonomy\Data\TaxonomyData;
 use Colame\Taxonomy\Data\UpdateTaxonomyData;
@@ -254,5 +255,33 @@ class TaxonomyService implements TaxonomyServiceInterface
         
         // Clear any entity-specific caches
         Cache::forget("entity.{$class}.{$id}.taxonomies");
+    }
+    
+    /**
+     * Get formatted item categories for order interface
+     * Returns DataCollection of CategoryForOrderData
+     */
+    public function getFormattedItemCategories(?int $locationId = null): DataCollection
+    {
+        try {
+            $categories = $this->getTaxonomiesByType(TaxonomyType::ITEM_CATEGORY, $locationId);
+            
+            // Convert DataCollection to array, filter, and transform
+            $formattedCategories = collect($categories->toArray())
+                ->filter(fn($cat) => $cat['isActive'] ?? false)
+                ->map(fn($cat) => CategoryForOrderData::from([
+                    'id' => $cat['id'],
+                    'name' => $cat['name'],
+                    'slug' => $cat['slug'],
+                    'metadata' => $cat['metadata'] ?? null,
+                ]))
+                ->values()
+                ->toArray();
+            
+            return new DataCollection(CategoryForOrderData::class, $formattedCategories);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to get formatted item categories: ' . $e->getMessage());
+            return new DataCollection(CategoryForOrderData::class, []);
+        }
     }
 }
