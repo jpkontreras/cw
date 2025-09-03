@@ -82,60 +82,13 @@ class OrderController extends Controller
      */
     public function create(Request $request): Response
     {
-        $user = $request->user();
-
-        // Get locations for dropdown
-        $locations = [
-            ['id' => 1, 'name' => 'Main Branch'],
-            ['id' => 2, 'name' => 'Downtown Branch'],
-            // TODO: Replace with actual location service
-        ];
-
-        // Get available tables for location
-        $tables = [
-            ['id' => 1, 'number' => 1, 'available' => true],
-            ['id' => 2, 'number' => 2, 'available' => true],
-            ['id' => 3, 'number' => 3, 'available' => false],
-            ['id' => 4, 'number' => 4, 'available' => true],
-            // TODO: Replace with actual table service
-        ];
-
-        // Get active items from the repository
-        $activeItems = $this->itemRepository->getActiveItems();
-
-        // Transform items for the frontend
-        $items = $activeItems->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'name' => $item->name,
-                'price' => $item->basePrice,
-                'category' => $item->categoryName ?? 'Uncategorized',
-                'description' => $item->description,
-                'isAvailable' => $item->isAvailable,
-                'modifiers' => [], // TODO: Add modifiers when needed
-            ];
-        })->toArray();
-
+        // Clean implementation with search-based interface
+        // All data is loaded via API calls as needed
         return Inertia::render('order/create', [
-            'locations' => $locations,
-            'tables' => $tables,
-            'items' => $items,
+            'popularItems' => [], // Will be loaded via API
         ]);
     }
 
-    /**
-     * Show the new improved form for creating orders (V2)
-     */
-    public function createV2(): Response
-    {
-        // For the new version, we'll use our search-based approach
-        // No need to load all items upfront
-        return Inertia::render('order/create-v2', [
-            // We can add any initial data needed here
-            'popularItems' => [], // Will be loaded via API
-            'recentOrders' => [], // Could show recent orders by this user
-        ]);
-    }
 
     /**
      * Store a newly created order
