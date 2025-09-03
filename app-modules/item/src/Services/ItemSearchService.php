@@ -7,6 +7,7 @@ use App\Core\Data\SearchResultData;
 use Colame\Item\Contracts\ItemSearchInterface;
 use Colame\Item\Data\ItemSearchData;
 use Colame\Item\Models\Item;
+use Colame\Item\Services\UserFavoritesService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -15,6 +16,12 @@ use Spatie\LaravelData\DataCollection;
 
 class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
 {
+    protected UserFavoritesService $favoritesService;
+
+    public function __construct(UserFavoritesService $favoritesService)
+    {
+        $this->favoritesService = $favoritesService;
+    }
     /**
      * Search items using Scout/MeiliSearch.
      */
@@ -23,8 +30,15 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         $searchId = Str::uuid()->toString();
         $startTime = microtime(true);
 
-        // If no query, return popular items
-        if (empty($query)) {
+        // Check for special keywords
+        if ($query === 'recent:' || str_starts_with($query, 'recent:')) {
+            // Get recent items for current user
+            $items = $this->getRecentItemsData($filters['limit'] ?? 50);
+        } elseif ($query === 'favorites:' || str_starts_with($query, 'favorites:')) {
+            // Get favorite items for current user
+            $items = $this->getFavoriteItemsData($filters['limit'] ?? 50);
+        } elseif (empty($query)) {
+            // If no query, return popular items
             $popularItems = $this->getPopularItemsData($filters['limit'] ?? 20);
             // Convert Collection to DataCollection
             $items = new DataCollection(ItemSearchData::class, $popularItems);
@@ -123,9 +137,17 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
 
         $searchTime = microtime(true) - $startTime;
 
+        // For special queries, adjust the response
+        $displayQuery = $query;
+        if (str_starts_with($query, 'recent:')) {
+            $displayQuery = 'Recent Items';
+        } elseif (str_starts_with($query, 'favorites:')) {
+            $displayQuery = 'Favorite Items';
+        }
+
         return new SearchResultData(
             items: $items,
-            query: $query,
+            query: $displayQuery,
             searchId: $searchId,
             total: isset($results) ? $results->total() : $items->count(),
             facets: $facets,
@@ -237,6 +259,100 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
                 'orderFrequency' => $item->order_frequency ?? 0,
             ]);
         });
+    }
+
+    /**
+     * Get recent items for current user.
+     */
+    private function getRecentItemsData(int $limit = 50): DataCollection
+    {
+        $userId = auth()->user()?->id;
+        
+        if (!$userId) {
+            return new DataCollection(ItemSearchData::class, []);
+        }
+
+        // Get recent item IDs from the favorites service
+        $recentItemIds = $this->favoritesService->getRecentItemIds($userId, $limit);
+        
+        if (empty($recentItemIds)) {
+            return new DataCollection(ItemSearchData::class, []);
+        }
+
+        // Fetch items preserving the order
+        $items = Item::whereIn('id', $recentItemIds)
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('id');
+
+        // Map to DTOs preserving order
+        $mappedItems = collect($recentItemIds)
+            ->map(function ($itemId) use ($items) {
+                $item = $items->get($itemId);
+                if (!$item) return null;
+
+                return ItemSearchData::from([
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'basePrice' => $item->base_price,
+                    'category' => $item->category,
+                    'description' => $item->description,
+                    'sku' => $item->sku,
+                    'isAvailable' => $item->is_available,
+                    'isActive' => $item->is_active,
+                    'preparationTime' => $item->preparation_time,
+                    'stockQuantity' => $item->stock_quantity,
+                    'image' => $item->image,
+                    'isPopular' => ($item->order_frequency ?? 0) > 50,
+                    'orderFrequency' => $item->order_frequency ?? 0,
+                    'matchReason' => 'recent',
+                ]);
+            })
+            ->filter();
+
+        return new DataCollection(ItemSearchData::class, $mappedItems);
+    }
+
+    /**
+     * Get favorite items for current user.
+     */
+    private function getFavoriteItemsData(int $limit = 50): DataCollection
+    {
+        $userId = auth()->user()?->id;
+        
+        if (!$userId) {
+            return new DataCollection(ItemSearchData::class, []);
+        }
+
+        // Get favorite items from the favorites service
+        $favoriteItems = $this->favoritesService->getUserFavorites($userId);
+        
+        if ($favoriteItems->isEmpty()) {
+            return new DataCollection(ItemSearchData::class, []);
+        }
+
+        // Map to ItemSearchData
+        $mappedItems = $favoriteItems->take($limit)->map(function ($item) {
+            return ItemSearchData::from([
+                'id' => $item->id,
+                'name' => $item->name,
+                'basePrice' => $item->base_price,
+                'category' => $item->category,
+                'description' => $item->description,
+                'sku' => $item->sku,
+                'isAvailable' => $item->is_available,
+                'isActive' => $item->is_active,
+                'preparationTime' => $item->preparation_time,
+                'stockQuantity' => $item->stock_quantity,
+                'image' => $item->image,
+                'isPopular' => ($item->order_frequency ?? 0) > 50,
+                'orderFrequency' => $item->order_frequency ?? 0,
+                'isFavorite' => true,
+                'matchReason' => 'favorite',
+            ]);
+        });
+
+        return new DataCollection(ItemSearchData::class, $mappedItems);
     }
 
     /**

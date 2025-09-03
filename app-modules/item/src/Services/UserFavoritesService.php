@@ -132,6 +132,41 @@ class UserFavoritesService
     }
     
     /**
+     * Get user's favorite items (alias for getFavorites).
+     */
+    public function getUserFavorites(int $userId, int $limit = 50): Collection
+    {
+        $favorites = UserItemFavorite::with('item')
+            ->where('user_id', $userId)
+            ->orderBy('order_position')
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+        
+        return $favorites->map(function ($favorite) {
+            return $favorite->item;
+        })->filter()->values();
+    }
+    
+    /**
+     * Get recent item IDs for user.
+     */
+    public function getRecentItemIds(int $userId, int $limit = 50): array
+    {
+        // PostgreSQL requires ORDER BY columns to be in SELECT when using DISTINCT
+        // So we need to get the latest entry for each item_id
+        $recentItemIds = DB::table('user_recent_items')
+            ->select('item_id', DB::raw('MAX(created_at) as latest_interaction'))
+            ->where('user_id', $userId)
+            ->groupBy('item_id')
+            ->orderByDesc('latest_interaction')
+            ->limit($limit)
+            ->pluck('item_id');
+        
+        return $recentItemIds->toArray();
+    }
+    
+    /**
      * Get recent items for user.
      */
     public function getRecentItems(int $userId, int $limit = 10): Collection

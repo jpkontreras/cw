@@ -20,6 +20,7 @@ class ItemSearchData extends BaseData
         public ?int $stockQuantity,
         public ?string $image,
         public ?bool $isPopular = false,
+        public ?bool $isFavorite = false,
         public ?int $orderFrequency = 0,
         public ?float $searchScore = null,
         public ?string $matchReason = null,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Star, Hash, Clock, TrendingUp, Package2, X, Heart, Sparkles } from 'lucide-react';
+import { Search, Plus, Star, Hash, Clock, TrendingUp, Package2, X, Heart, Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
@@ -55,8 +55,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
   onSearch,
   onCategorySelect,
 }) => {
-  const [showAllFavorites, setShowAllFavorites] = React.useState(false);
-  
   // Helper function to get item quantity in cart
   const getItemQuantity = (itemId: number): number => {
     const item = orderItems.find(item => item.id === itemId);
@@ -217,149 +215,67 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Recent Items */}
       {recentItems.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" />
-            Vistos Recientemente
-            <Badge variant="secondary" className="text-xs">
-              {recentItems.length}
-            </Badge>
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {recentItems.slice(0, 6).map((item) => (
-              <div
-                key={item.id}
-                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                onClick={() => onAddItem(item)}
-              >
-                <div className="h-20 w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-md flex items-center justify-center mb-2">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-md" />
-                  ) : (
-                    <Package2 className="h-10 w-10 text-gray-400" />
-                  )}
-                </div>
-                
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
-                  {item.name}
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  ${item.price.toLocaleString('es-CL')}
-                </p>
-                
-                <div className="mt-2">
-                  {getItemQuantity(item.id) > 0 ? (
-                    <div className="flex items-center justify-between gap-1">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-7 w-7 rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUpdateQuantity?.(item.id, -1);
-                        }}
-                      >
-                        <span className="text-xs">−</span>
-                      </Button>
-                      <span className="text-sm font-bold">{getItemQuantity(item.id)}</span>
-                      <Button
-                        size="icon"
-                        className="h-7 w-7 rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUpdateQuantity?.(item.id, 1);
-                        }}
-                      >
-                        <span className="text-xs">+</span>
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="w-full h-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAddItem(item);
-                      }}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Agregar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Favorites */}
-      {favoriteItems.length > 0 && (
-        <div>
+        <div className="w-full overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-500 fill-red-500" />
-              Tus Favoritos
-              <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                {favoriteItems.length}
+              <Clock className="h-5 w-5 text-blue-500" />
+              Vistos Recientemente
+              <Badge variant="secondary" className="text-xs">
+                {recentItems.length}
               </Badge>
             </h3>
-            {favoriteItems.length > 6 && (
-              <button 
-                onClick={() => setShowAllFavorites(!showAllFavorites)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {showAllFavorites ? 'Ver menos' : 'Ver todos →'}
-              </button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 gap-1"
+              onClick={() => onSearch('recent:')}
+            >
+              Ver todos
+              <ArrowRight className="h-3 w-3" />
+            </Button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {(showAllFavorites ? favoriteItems : favoriteItems.slice(0, 6)).map((item) => (
-              <div
-                key={item.id}
-                className="group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-                >
-                {/* Favorite badge */}
-                <div className="absolute top-2 right-2 z-10">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-900"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleFavorite(item);
-                    }}
-                  >
-                    <Heart className="h-4 w-4 text-red-500 fill-red-500" />
-                  </Button>
-                </div>
-                
-                {/* Item image placeholder */}
-                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package2 className="h-16 w-16 text-gray-400 dark:text-gray-500" />
+          
+          <div className="relative group overflow-hidden">
+            <div 
+              className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitScrollbar: { display: 'none' }
+              }}
+            >
+              {recentItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex-none w-[180px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer",
+                    index === 0 && "ml-0",
+                    index === recentItems.length - 1 && "mr-0"
                   )}
-                </div>
-                
-                <div className="p-3">
-                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-1">
+                  onClick={() => onAddItem(item)}
+                >
+                  <div className="h-24 w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-md flex items-center justify-center mb-2">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-md" />
+                    ) : (
+                      <Package2 className="h-12 w-12 text-gray-400" />
+                    )}
+                  </div>
+                  
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
                     {item.name}
                   </h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {item.category || 'Sin categoría'}
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    ${item.price.toLocaleString('es-CL')}
                   </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      ${item.price.toLocaleString('es-CL')}
-                    </p>
+                  
+                  <div className="mt-3">
                     {getItemQuantity(item.id) > 0 ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-between gap-1">
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-6 w-6 rounded-full"
+                          className="h-7 w-7 rounded"
                           onClick={(e) => {
                             e.stopPropagation();
                             onUpdateQuantity?.(item.id, -1);
@@ -367,10 +283,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
                         >
                           <span className="text-xs">−</span>
                         </Button>
-                        <span className="font-bold text-sm w-6 text-center">{getItemQuantity(item.id)}</span>
+                        <span className="text-sm font-bold">{getItemQuantity(item.id)}</span>
                         <Button
                           size="icon"
-                          className="h-6 w-6 rounded-full"
+                          className="h-7 w-7 rounded"
                           onClick={(e) => {
                             e.stopPropagation();
                             onUpdateQuantity?.(item.id, 1);
@@ -380,21 +296,184 @@ export const SearchView: React.FC<SearchViewProps> = ({
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        size="icon"
-                        className="h-8 w-8 rounded-full"
+                      <Button
+                        size="sm"
+                        className="w-full h-8"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAddItem(item);
                         }}
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3 w-3 mr-1" />
+                        Agregar
                       </Button>
                     )}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+              
+              {/* Show more card */}
+              {recentItems.length > 8 && (
+                <div
+                  className="flex-none w-[180px] bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-600 p-3 flex flex-col items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
+                  onClick={() => onSearch('recent:')}
+                >
+                  <div className="text-center">
+                    <div className="bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-bold">+{recentItems.length - 8}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Ver más</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">productos recientes</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Scroll indicators - fade effect on edges */}
+            <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-white dark:from-gray-900 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white dark:from-gray-900 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+      )}
+
+      {/* Favorites */}
+      {favoriteItems.length > 0 && (
+        <div className="w-full overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+              Tus Favoritos
+              <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                {favoriteItems.length}
+              </Badge>
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 gap-1"
+              onClick={() => onSearch('favorites:')}
+            >
+              Ver todos
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="relative group overflow-hidden">
+            <div 
+              className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitScrollbar: { display: 'none' }
+              }}
+            >
+              {favoriteItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex-none w-[200px] group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer",
+                    index === 0 && "ml-0",
+                    index === favoriteItems.length - 1 && "mr-0"
+                  )}
+                >
+                  {/* Favorite badge */}
+                  <div className="absolute top-2 right-2 z-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-900"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(item);
+                      }}
+                    >
+                      <Heart className="h-4 w-4 text-red-500 fill-red-500" />
+                    </Button>
+                  </div>
+                  
+                  {/* Item image placeholder */}
+                  <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package2 className="h-16 w-16 text-gray-400 dark:text-gray-500" />
+                    )}
+                  </div>
+                  
+                  <div className="p-3">
+                    <h4 className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-1">
+                      {item.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {item.category || 'Sin categoría'}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        ${item.price.toLocaleString('es-CL')}
+                      </p>
+                      {getItemQuantity(item.id) > 0 ? (
+                        <div className="flex items-center justify-between gap-1">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7 rounded-md flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateQuantity?.(item.id, -1);
+                            }}
+                          >
+                            <span className="text-xs">−</span>
+                          </Button>
+                          <span className="font-bold text-sm flex-1 text-center">{getItemQuantity(item.id)}</span>
+                          <Button
+                            size="icon"
+                            className="h-7 w-7 rounded-md flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateQuantity?.(item.id, 1);
+                            }}
+                          >
+                            <span className="text-xs">+</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          size="sm"
+                          className="w-full h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddItem(item);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Agregar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Show more card for favorites */}
+              {favoriteItems.length > 6 && (
+                <div
+                  className="flex-none w-[200px] bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl border-2 border-dashed border-red-300 dark:border-red-600 p-3 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-300"
+                  onClick={() => onSearch('favorites:')}
+                >
+                  <div className="text-center">
+                    <div className="bg-red-500 text-white rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-bold">+{favoriteItems.length - 6}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">Ver más</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">favoritos</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Scroll indicators - fade effect on edges */}
+            <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-white dark:from-gray-900 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white dark:from-gray-900 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
       )}
