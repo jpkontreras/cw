@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { EmptyOrderState, OrderItemsView, SearchInput, SearchView, CartPopover } from '@/modules/order';
+import { EmptyOrderState, OrderItemsView, SearchInput, SearchView, CartPopover, FilterBar } from '@/modules/order';
 import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/OrderContext';
 import { ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
@@ -23,6 +23,8 @@ const CreateOrderContent: React.FC = () => {
     recentSearches,
     recentItems,
     popularItems,
+    searchFilters,
+    activeFiltersCount,
     setCustomerInfo,
     setSearchQuery,
     setIsSearchMode,
@@ -34,6 +36,8 @@ const CreateOrderContent: React.FC = () => {
     addToRecentSearches,
     processOrder,
     handleCategorySelect,
+    updateSearchFilter,
+    clearSearchFilters,
     getTotalItems,
     calculateSubtotal,
     calculateTax,
@@ -162,40 +166,53 @@ const CreateOrderContent: React.FC = () => {
           >
             {/* Search Bar with Cart - Sticky inside scrollable container */}
             <div 
-              className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-4"
+              className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100"
               style={{
                 position: 'sticky',
                 top: 0,
                 zIndex: 20
               }}
             >
-              <div className="max-w-6xl flex items-center gap-3">
-                <div className="flex-1">
-                  <SearchInput 
-                    searchQuery={searchQuery} 
-                    setSearchQuery={setSearchQuery} 
-                    isSearchMode={isSearchMode} 
-                    setIsSearchMode={setIsSearchMode} 
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-6xl flex items-center gap-3">
+                  <div className="flex-1">
+                    <SearchInput 
+                      searchQuery={searchQuery} 
+                      setSearchQuery={setSearchQuery} 
+                      isSearchMode={isSearchMode} 
+                      setIsSearchMode={setIsSearchMode} 
+                    />
+                  </div>
+                  <CartPopover
+                    items={orderItems}
+                    pulse={!!addedItemFeedback}
+                    onUpdateQuantity={(itemId, delta) => {
+                      const item = orderItems.find(i => i.id === itemId);
+                      if (item) {
+                        const newQuantity = item.quantity + delta;
+                        if (newQuantity <= 0) {
+                          removeItemFromOrder(itemId);
+                        } else {
+                          updateItemQuantity(itemId, newQuantity);
+                        }
+                      }
+                    }}
+                    onRemoveItem={removeItemFromOrder}
+                    onGoToCheckout={handleGoToCheckout}
                   />
                 </div>
-                <CartPopover
-                  items={orderItems}
-                  pulse={!!addedItemFeedback}
-                  onUpdateQuantity={(itemId, delta) => {
-                    const item = orderItems.find(i => i.id === itemId);
-                    if (item) {
-                      const newQuantity = item.quantity + delta;
-                      if (newQuantity <= 0) {
-                        removeItemFromOrder(itemId);
-                      } else {
-                        updateItemQuantity(itemId, newQuantity);
-                      }
-                    }
-                  }}
-                  onRemoveItem={removeItemFromOrder}
-                  onGoToCheckout={handleGoToCheckout}
-                />
               </div>
+              
+              {/* Filter Bar - Shows when searching or when filters are active */}
+              {(isSearchMode || searchQuery || activeFiltersCount > 0) && (
+                <FilterBar
+                  filters={searchFilters}
+                  activeCount={activeFiltersCount}
+                  onFilterChange={updateSearchFilter}
+                  onClearFilters={clearSearchFilters}
+                  categories={['Empanadas', 'Completos', 'Pizzas', 'Ensaladas', 'Bebidas', 'Postres']}
+                />
+              )}
             </div>
 
             {/* Content Section - Scrollable content */}

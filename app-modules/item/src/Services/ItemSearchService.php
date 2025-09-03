@@ -9,7 +9,6 @@ use Colame\Item\Data\ItemSearchData;
 use Colame\Item\Models\Item;
 use Colame\Item\Services\UserFavoritesService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Scout\Builder;
 use Spatie\LaravelData\DataCollection;
@@ -22,9 +21,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
     {
         $this->favoritesService = $favoritesService;
     }
-    /**
-     * Search items using Scout/MeiliSearch.
-     */
     public function search(string $query, array $filters = []): SearchResultData
     {
         $searchId = Str::uuid()->toString();
@@ -43,69 +39,59 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             // Convert Collection to DataCollection
             $items = new DataCollection(ItemSearchData::class, $popularItems);
         } else {
-            // Build Scout search query
-            $searchBuilder = Item::search($query);
-            
-            // Debug: Log filters being applied
-            Log::info('Applying filters', [
-                'query' => $query,
-                'filters' => $filters
-            ]);
-            
-            // Apply filters - SKIP FOR NOW TO DEBUG
-            // $searchBuilder = $this->applyFilters($searchBuilder, $filters);
-            
-            // Test without filters first
-            Log::info('Testing search without filters');
-
-            // Execute search - use get() then manually paginate
-            // There's an issue with Scout's paginate() not returning items properly
-            $allResults = $searchBuilder->get();
-            
-            // Manually paginate the results
+            // Use Eloquent query with filters instead of Scout for better filter control
             $perPage = $filters['per_page'] ?? 20;
-            $paginatedItems = $allResults->take($perPage);
+            $page = $filters['page'] ?? 1;
             
-            // Create a fake paginator for total count
-            $results = new \Illuminate\Pagination\LengthAwarePaginator(
-                $paginatedItems,
-                $allResults->count(),
-                $perPage,
-                1
-            );
+            // Build base query
+            $itemQuery = Item::query()
+                ->where('is_active', true)
+                ->where('is_available', true);
             
-            // Debug: Log what we got
-            Log::info('Scout search results', [
-                'query' => $query,
-                'total' => $results->total(),
-                'items_count' => count($paginatedItems),
-                'first_item' => $paginatedItems->first() ? [
-                    'id' => $paginatedItems->first()->id ?? 'no id',
-                    'name' => $paginatedItems->first()->name ?? 'no name',
-                ] : 'no items'
-            ]);
-
-            // Add debugging to see what's in the collection
-            if ($paginatedItems->isEmpty()) {
-                Log::error('Paginated items is empty!', [
-                    'total' => $results->total(),
-                    'per_page' => $results->perPage(),
-                    'current_page' => $results->currentPage(),
-                    'collection_class' => get_class($paginatedItems),
-                    'raw_items' => $results->items(),
-                ]);
-
-                // Try alternative method to get items
-                $paginatedItems = collect($results->items());
-                if ($paginatedItems->isEmpty()) {
-                    // If still empty, try to re-fetch from database
-                    $searchResults = $searchBuilder->get();
-                    $paginatedItems = $searchResults->take($filters['per_page'] ?? 20);
-                }
+            // Apply search to name and description
+            if (!empty($query)) {
+                $itemQuery->where(function($q) use ($query) {
+                    $q->where('name', 'LIKE', '%' . $query . '%')
+                      ->orWhere('description', 'LIKE', '%' . $query . '%')
+                      ->orWhere('sku', 'LIKE', '%' . $query . '%')
+                      ->orWhere('category', 'LIKE', '%' . $query . '%');
+                });
             }
+            
+            // Apply filters
+            if (!empty($filters['category'])) {
+                $itemQuery->where('category', $filters['category']);
+            }
+            
+            if (isset($filters['min_price']) && $filters['min_price'] !== null) {
+                $itemQuery->where('base_price', '>=', $filters['min_price']);
+            }
+            
+            if (isset($filters['max_price']) && $filters['max_price'] !== null) {
+                $itemQuery->where('base_price', '<=', $filters['max_price']);
+            }
+            
+            if (isset($filters['is_available']) && $filters['is_available']) {
+                $itemQuery->where('is_available', true);
+            }
+            
+            if (isset($filters['in_stock']) && $filters['in_stock']) {
+                $itemQuery->where('stock_quantity', '>', 0);
+            }
+            
+            // Order by relevance (items with query in name first, then by popularity)
+            if (!empty($query)) {
+                $itemQuery->orderByRaw("CASE WHEN name LIKE ? THEN 0 ELSE 1 END", ['%' . $query . '%'])
+                         ->orderByDesc('order_frequency');
+            } else {
+                $itemQuery->orderByDesc('order_frequency');
+            }
+            
+            // Paginate
+            $results = $itemQuery->paginate($perPage, ['*'], 'page', $page);
+            $paginatedItems = $results->items();
 
-            // Transform to DTOs
-            $mappedItems = $paginatedItems->map(function ($item) use ($query) {
+            $mappedItems = collect($paginatedItems)->map(function ($item) use ($query) {
                 $data = [
                     'id' => $item->id,
                     'name' => $item->name,
@@ -125,19 +111,15 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
                 ];
                 return ItemSearchData::from($data);
             });
-            // Convert Collection to DataCollection
+
             $items = new DataCollection(ItemSearchData::class, $mappedItems);
         }
 
-        // Get facets for filtering
         $facets = $this->getFacets();
-
-        // Get suggestions
         $suggestions = $this->getSuggestions($query);
 
         $searchTime = microtime(true) - $startTime;
 
-        // For special queries, adjust the response
         $displayQuery = $query;
         if (str_starts_with($query, 'recent:')) {
             $displayQuery = 'Recent Items';
@@ -156,16 +138,12 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         );
     }
 
-    /**
-     * Get item suggestions.
-     */
     public function getSuggestions(string $query, int $limit = 5): array
     {
         if (empty($query)) return [];
 
         $suggestions = [];
 
-        // Suggest by item name
         $items = Item::where('name', 'LIKE', $query . '%')
             ->where('is_active', true)
             ->where('is_available', true)
@@ -181,7 +159,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             ];
         }
 
-        // Suggest by category
         $categories = DB::table('items')
             ->select('category')
             ->where('category', 'LIKE', $query . '%')
@@ -200,9 +177,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         return array_slice($suggestions, 0, $limit);
     }
 
-    /**
-     * Get popular items.
-     */
     public function getPopularItems(int $limit = 10): array
     {
         $items = Item::where('is_active', true)
@@ -211,7 +185,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             ->limit($limit)
             ->get();
 
-        // Transform each item to ItemSearchData manually
         return $items->map(function ($item) {
             return ItemSearchData::from([
                 'id' => $item->id,
@@ -231,9 +204,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         })->toArray();
     }
 
-    /**
-     * Get popular items as collection.
-     */
     private function getPopularItemsData(int $limit = 20)
     {
         $items = Item::where('is_active', true)
@@ -261,31 +231,25 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         });
     }
 
-    /**
-     * Get recent items for current user.
-     */
     private function getRecentItemsData(int $limit = 50): DataCollection
     {
         $userId = auth()->user()?->id;
-        
+
         if (!$userId) {
             return new DataCollection(ItemSearchData::class, []);
         }
 
-        // Get recent item IDs from the favorites service
         $recentItemIds = $this->favoritesService->getRecentItemIds($userId, $limit);
-        
+
         if (empty($recentItemIds)) {
             return new DataCollection(ItemSearchData::class, []);
         }
 
-        // Fetch items preserving the order
         $items = Item::whereIn('id', $recentItemIds)
             ->where('is_active', true)
             ->get()
             ->keyBy('id');
 
-        // Map to DTOs preserving order
         $mappedItems = collect($recentItemIds)
             ->map(function ($itemId) use ($items) {
                 $item = $items->get($itemId);
@@ -313,25 +277,20 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         return new DataCollection(ItemSearchData::class, $mappedItems);
     }
 
-    /**
-     * Get favorite items for current user.
-     */
     private function getFavoriteItemsData(int $limit = 50): DataCollection
     {
         $userId = auth()->user()?->id;
-        
+
         if (!$userId) {
             return new DataCollection(ItemSearchData::class, []);
         }
 
-        // Get favorite items from the favorites service
         $favoriteItems = $this->favoritesService->getUserFavorites($userId);
-        
+
         if ($favoriteItems->isEmpty()) {
             return new DataCollection(ItemSearchData::class, []);
         }
 
-        // Map to ItemSearchData
         $mappedItems = $favoriteItems->take($limit)->map(function ($item) {
             return ItemSearchData::from([
                 'id' => $item->id,
@@ -355,9 +314,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         return new DataCollection(ItemSearchData::class, $mappedItems);
     }
 
-    /**
-     * Get searchable fields configuration.
-     */
     public function getSearchableFields(): array
     {
         return [
@@ -369,9 +325,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Get filterable fields configuration.
-     */
     public function getFilterableFields(): array
     {
         return [
@@ -384,9 +337,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Get sortable fields configuration.
-     */
     public function getSortableFields(): array
     {
         return [
@@ -398,12 +348,8 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Record item selection from search.
-     */
     public function recordSelection(string $searchId, mixed $entityId): void
     {
-        // Record the selection
         DB::table('item_search_history')->insert([
             'search_id' => $searchId,
             'item_id' => $entityId,
@@ -411,13 +357,9 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             'created_at' => now(),
         ]);
 
-        // Update item order frequency
         Item::where('id', $entityId)->increment('order_frequency');
     }
 
-    /**
-     * Apply filters to Scout builder.
-     */
     private function applyFilters(Builder $builder, array $filters): Builder
     {
         if (!empty($filters['category'])) {
@@ -432,11 +374,11 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             $builder->where('is_active', $filters['is_active']);
         }
 
-        if (!empty($filters['min_price'])) {
+        if (isset($filters['min_price']) && $filters['min_price'] !== null) {
             $builder->where('base_price', '>=', $filters['min_price']);
         }
 
-        if (!empty($filters['max_price'])) {
+        if (isset($filters['max_price']) && $filters['max_price'] !== null) {
             $builder->where('base_price', '<=', $filters['max_price']);
         }
 
@@ -447,9 +389,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         return $builder;
     }
 
-    /**
-     * Get facets for filtering.
-     */
     private function getFacets(): array
     {
         return [
@@ -459,9 +398,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Get category facets.
-     */
     private function getCategoryFacets(): array
     {
         return DB::table('items')
@@ -473,9 +409,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
             ->toArray();
     }
 
-    /**
-     * Get price range facets.
-     */
     private function getPriceRangeFacets(): array
     {
         return [
@@ -486,9 +419,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Get availability facets.
-     */
     private function getAvailabilityFacets(): array
     {
         return [
@@ -498,32 +428,25 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         ];
     }
 
-    /**
-     * Calculate relevance score for an item.
-     */
     private function calculateRelevanceScore(Item $item, string $query): float
     {
         $score = 0;
         $query = strtolower($query);
 
-        // Exact name match
         if (strtolower($item->name) === $query) {
             $score += 100;
         } elseif (str_contains(strtolower($item->name), $query)) {
             $score += 50;
         }
 
-        // SKU match
         if ($item->sku && str_contains(strtolower($item->sku), $query)) {
             $score += 40;
         }
 
-        // Category match
         if ($item->category && str_contains(strtolower($item->category), $query)) {
             $score += 20;
         }
 
-        // Popular items get a boost
         if ($item->order_frequency > 100) {
             $score += 10;
         }
@@ -531,9 +454,6 @@ class ItemSearchService implements ItemSearchInterface, ModuleSearchInterface
         return $score;
     }
 
-    /**
-     * Determine why an item matched the search.
-     */
     private function determineMatchReason(Item $item, string $query): string
     {
         $query = strtolower($query);

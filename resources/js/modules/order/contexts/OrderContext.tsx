@@ -42,6 +42,14 @@ export interface SearchResult {
   searchScore?: number;
 }
 
+export interface SearchFilters {
+  category?: string;
+  min_price?: number;
+  max_price?: number;
+  is_available?: boolean;
+  in_stock?: boolean;
+}
+
 interface OrderContextType {
   // State
   orderItems: OrderItem[];
@@ -55,6 +63,8 @@ interface OrderContextType {
   searchResults: SearchResult[];
   isSearching: boolean;
   popularItems: SearchResult[];
+  searchFilters: SearchFilters;
+  activeFiltersCount: number;
   
   // Refs
   searchIdRef: React.MutableRefObject<string | null>;
@@ -67,6 +77,7 @@ interface OrderContextType {
   setIsSearchMode: React.Dispatch<React.SetStateAction<boolean>>;
   setSearchResults: React.Dispatch<React.SetStateAction<SearchResult[]>>;
   setIsSearching: React.Dispatch<React.SetStateAction<boolean>>;
+  setSearchFilters: React.Dispatch<React.SetStateAction<SearchFilters>>;
   
   // Methods
   addItemToOrder: (item: SearchResult) => void;
@@ -77,9 +88,11 @@ interface OrderContextType {
   addToRecentSearches: (search: string) => void;
   processOrder: () => void;
   clearOrder: () => void;
-  performSearch: (query: string) => Promise<void>;
+  performSearch: (query: string, filters?: SearchFilters) => Promise<void>;
   handleCategorySelect: (category: string) => void;
   recordSearchSelection: (item: SearchResult) => void;
+  updateSearchFilter: (key: keyof SearchFilters, value: any) => void;
+  clearSearchFilters: () => void;
   
   // Calculations
   getTotalItems: () => number;
@@ -132,10 +145,16 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [popularItems, setPopularItems] = useState<SearchResult[]>(initialPopularItems);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   
   // Refs
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const searchIdRef = useRef<string | null>(null);
+  
+  // Calculate active filters count
+  const activeFiltersCount = Object.values(searchFilters).filter(value => 
+    value !== undefined && value !== null && value !== ''
+  ).length;
 
   // Load favorites and recent searches from backend
   useEffect(() => {
@@ -255,8 +274,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   };
   
   // Perform search function with server API
-  const performSearch = useCallback(async (query: string) => {
-    if (query.length < 2) {
+  const performSearch = useCallback(async (query: string, filters: SearchFilters = {}) => {
+    if (query.length < 2 && Object.keys(filters).length === 0) {
       setSearchResults([]);
       searchIdRef.current = null;
       return;
@@ -270,7 +289,10 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       setIsSearching(true);
       try {
         const response = await axios.get('/items/search', {
-          params: { q: query }
+          params: { 
+            q: query,
+            ...filters
+          }
         });
         
         if (response.data) {
@@ -293,7 +315,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         setIsSearching(false);
       }
     }, 300);
-  }, []);
+  }, [favoriteItems]);
 
   // Track search selection for learning
   const recordSearchSelection = useCallback((item: SearchResult) => {
@@ -319,7 +341,27 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
   // Handle category selection
   const handleCategorySelect = (category: string) => {
-    setSearchQuery(`categoria:${category}`);
+    setSearchFilters(prev => ({ ...prev, category }));
+    setIsSearchMode(true);
+    performSearch(searchQuery, { ...searchFilters, category });
+  };
+  
+  // Update search filter
+  const updateSearchFilter = (key: keyof SearchFilters, value: any) => {
+    setSearchFilters(prev => {
+      const updated = { ...prev };
+      if (value === null || value === undefined || value === '') {
+        delete updated[key];
+      } else {
+        updated[key] = value;
+      }
+      return updated;
+    });
+  };
+  
+  // Clear all search filters
+  const clearSearchFilters = () => {
+    setSearchFilters({});
   };
 
   // Order Item Management
@@ -447,6 +489,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     searchResults,
     isSearching,
     popularItems,
+    searchFilters,
+    activeFiltersCount,
     
     // Refs
     searchIdRef,
@@ -459,6 +503,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     setIsSearchMode,
     setSearchResults,
     setIsSearching,
+    setSearchFilters,
     
     // Methods
     addItemToOrder,
@@ -472,6 +517,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     performSearch,
     handleCategorySelect,
     recordSearchSelection,
+    updateSearchFilter,
+    clearSearchFilters,
     
     // Calculations
     getTotalItems,
