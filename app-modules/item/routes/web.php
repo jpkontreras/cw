@@ -22,6 +22,16 @@ Route::middleware(['web', 'auth', 'onboarding.completed'])->group(function () {
             Route::get('/suggestions', [ItemSearchController::class, 'suggestions'])->name('suggestions');
             Route::get('/popular', [ItemSearchController::class, 'popular'])->name('popular');
             Route::post('/select', [ItemSearchController::class, 'recordSelection'])->name('select');
+            Route::get('/recent', [ItemSearchController::class, 'recentSearches'])->name('recent'); // Legacy - returns items now
+            Route::delete('/recent', [ItemSearchController::class, 'clearRecentSearches'])->name('recent.clear');
+            Route::get('/recent-items', [ItemSearchController::class, 'recentItems'])->name('recent.items');
+            Route::delete('/recent-items', [ItemSearchController::class, 'clearRecentItems'])->name('recent.items.clear');
+        });
+        
+        // Favorites management routes
+        Route::prefix('favorites')->name('favorites.')->group(function () {
+            Route::get('/', [ItemSearchController::class, 'favorites'])->name('index');
+            Route::post('/toggle', [ItemSearchController::class, 'toggleFavorite'])->name('toggle');
         });
         
         Route::get('/{id}', [ItemController::class, 'show'])->name('show');

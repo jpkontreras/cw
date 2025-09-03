@@ -21,6 +21,7 @@ const CreateOrderContent: React.FC = () => {
     isSearchMode,
     favoriteItems,
     recentSearches,
+    recentItems,
     popularItems,
     setCustomerInfo,
     setSearchQuery,
@@ -208,6 +209,7 @@ const CreateOrderContent: React.FC = () => {
                     isSearching={isSearching}
                     favoriteItems={favoriteItems}
                     recentSearches={recentSearches}
+                    recentItems={recentItems}
                     popularItems={popularItems}
                     orderItems={orderItems}
                     onAddItem={handleAddItemWithFeedback}
@@ -237,6 +239,7 @@ const CreateOrderContent: React.FC = () => {
                     isSearching={false}
                     favoriteItems={favoriteItems}
                     recentSearches={recentSearches}
+                    recentItems={recentItems}
                     popularItems={popularItems}
                     orderItems={orderItems}
                     onAddItem={handleAddItemWithFeedback}

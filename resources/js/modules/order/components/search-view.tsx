@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Star, Hash, Clock, TrendingUp, Package2 } from 'lucide-react';
+import { Search, Plus, Star, Hash, Clock, TrendingUp, Package2, X, Heart, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
@@ -30,6 +30,7 @@ interface SearchViewProps {
   isSearching: boolean;
   favoriteItems: SearchResult[];
   recentSearches: string[];
+  recentItems?: SearchResult[];
   popularItems: SearchResult[];
   orderItems?: Array<{ id: number; quantity: number }>;
   onAddItem: (item: SearchResult) => void;
@@ -45,6 +46,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   isSearching,
   favoriteItems,
   recentSearches,
+  recentItems = [],
   popularItems,
   orderItems = [],
   onAddItem,
@@ -53,6 +55,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
   onSearch,
   onCategorySelect,
 }) => {
+  const [showAllFavorites, setShowAllFavorites] = React.useState(false);
+  
   // Helper function to get item quantity in cart
   const getItemQuantity = (itemId: number): number => {
     const item = orderItems.find(item => item.id === itemId);
@@ -211,92 +215,75 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       </div>
 
-      {/* Recent Searches */}
-      {recentSearches.length > 0 && (
+      {/* Recent Items */}
+      {recentItems.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-blue-500" />
-            Búsquedas Recientes
+            Vistos Recientemente
+            <Badge variant="secondary" className="text-xs">
+              {recentItems.length}
+            </Badge>
           </h3>
-          <div className="flex flex-wrap gap-2">
-            {recentSearches.map((search, idx) => (
-              <button
-                key={idx}
-                onClick={() => onSearch(search)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all duration-200"
-              >
-                <Clock className="h-3.5 w-3.5 text-gray-400" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{search}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Favorites */}
-      {favoriteItems.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500" />
-            Tus Favoritos
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {favoriteItems.slice(0, 6).map((item) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {recentItems.slice(0, 6).map((item) => (
               <div
                 key={item.id}
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                 onClick={() => onAddItem(item)}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">
-                      {item.name}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {item.category}
-                    </p>
-                  </div>
-                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                <div className="h-20 w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-md flex items-center justify-center mb-2">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-md" />
+                  ) : (
+                    <Package2 className="h-10 w-10 text-gray-400" />
+                  )}
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    ${item.price.toLocaleString('es-CL')}
-                  </p>
+                
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                  {item.name}
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  ${item.price.toLocaleString('es-CL')}
+                </p>
+                
+                <div className="mt-2">
                   {getItemQuantity(item.id) > 0 ? (
-                    <div className="flex items-center gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="flex items-center justify-between gap-1">
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="outline"
-                        className="h-8 w-8 p-0 transition-all hover:scale-105 active:scale-95"
+                        className="h-7 w-7 rounded"
                         onClick={(e) => {
                           e.stopPropagation();
                           onUpdateQuantity?.(item.id, -1);
                         }}
                       >
-                        −
+                        <span className="text-xs">−</span>
                       </Button>
-                      <span className="font-bold w-10 text-center bg-secondary text-secondary-foreground rounded px-1">{getItemQuantity(item.id)}</span>
+                      <span className="text-sm font-bold">{getItemQuantity(item.id)}</span>
                       <Button
-                        size="sm"
-                        className="h-8 w-8 p-0 transition-all hover:scale-105 active:scale-95"
+                        size="icon"
+                        className="h-7 w-7 rounded"
                         onClick={(e) => {
                           e.stopPropagation();
                           onUpdateQuantity?.(item.id, 1);
                         }}
                       >
-                        +
+                        <span className="text-xs">+</span>
                       </Button>
                     </div>
                   ) : (
-                    <Button 
-                      size="sm" 
-                      className="transition-all hover:scale-105 active:scale-95"
+                    <Button
+                      size="sm"
+                      className="w-full h-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         onAddItem(item);
                       }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar
                     </Button>
                   )}
                 </div>
@@ -306,83 +293,213 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       )}
 
-      {/* Popular Items */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-green-500" />
-          Productos Populares
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {popularItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 flex flex-col"
-            >
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex items-start justify-between mb-3">
-                  <Badge variant="secondary" className="text-xs">
-                    Popular
-                  </Badge>
+      {/* Favorites */}
+      {favoriteItems.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+              Tus Favoritos
+              <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                {favoriteItems.length}
+              </Badge>
+            </h3>
+            {favoriteItems.length > 6 && (
+              <button 
+                onClick={() => setShowAllFavorites(!showAllFavorites)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {showAllFavorites ? 'Ver menos' : 'Ver todos →'}
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {(showAllFavorites ? favoriteItems : favoriteItems.slice(0, 6)).map((item) => (
+              <div
+                key={item.id}
+                className="group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                >
+                {/* Favorite badge */}
+                <div className="absolute top-2 right-2 z-10">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-900"
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleFavorite(item);
                     }}
-                    className="h-8 w-8 -mr-2 -mt-2"
+                  >
+                    <Heart className="h-4 w-4 text-red-500 fill-red-500" />
+                  </Button>
+                </div>
+                
+                {/* Item image placeholder */}
+                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Package2 className="h-16 w-16 text-gray-400 dark:text-gray-500" />
+                  )}
+                </div>
+                
+                <div className="p-3">
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-1">
+                    {item.name}
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {item.category || 'Sin categoría'}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                      ${item.price.toLocaleString('es-CL')}
+                    </p>
+                    {getItemQuantity(item.id) > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-6 w-6 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity?.(item.id, -1);
+                          }}
+                        >
+                          <span className="text-xs">−</span>
+                        </Button>
+                        <span className="font-bold text-sm w-6 text-center">{getItemQuantity(item.id)}</span>
+                        <Button
+                          size="icon"
+                          className="h-6 w-6 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity?.(item.id, 1);
+                          }}
+                        >
+                          <span className="text-xs">+</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddItem(item);
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Popular Items */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-500" />
+            Productos Populares
+            <Sparkles className="h-4 w-4 text-amber-500" />
+          </h3>
+          <Badge variant="outline" className="text-xs border-green-200 text-green-700 dark:border-green-800 dark:text-green-400">
+            Más vendidos
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {popularItems.slice(0, 12).map((item) => (
+            <div
+              key={item.id}
+              className="group bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden"
+            >
+              {/* Popular badge */}
+              <div className="relative">
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-xs font-bold">
+                    🔥 Popular
+                  </Badge>
+                </div>
+                <div className="absolute top-2 right-2 z-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-900"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(item);
+                    }}
                   >
                     <Star className={cn(
-                      "h-4 w-4",
-                      isFavorite(item) ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
+                      "h-4 w-4 transition-colors",
+                      isFavorite(item) ? "fill-yellow-400 text-yellow-400" : "text-gray-400 hover:text-yellow-400"
                     )} />
                   </Button>
                 </div>
                 
+                {/* Image placeholder */}
+                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Package2 className="h-16 w-16 text-gray-400 dark:text-gray-500" />
+                  )}
+                </div>
+              </div>
+              
+              <div className="p-3 flex-1 flex flex-col">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2">
                     {item.name}
                   </h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {item.category || 'Uncategorized'}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {item.category || 'Sin categoría'}
                   </p>
+                  {item.preparationTime && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <Clock className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-500">{item.preparationTime} min</span>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      ${item.price.toLocaleString('es-CL')}
-                    </p>
-                  </div>
+                <div className="mt-3 space-y-2">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    ${item.price.toLocaleString('es-CL')}
+                  </p>
                   {getItemQuantity(item.id) > 0 ? (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="flex items-center gap-1">
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="outline"
-                        className="flex-1 transition-all hover:scale-105 active:scale-95"
+                        className="h-8 w-8 rounded-lg"
                         onClick={() => onUpdateQuantity?.(item.id, -1)}
                       >
-                        <span className="text-lg">−</span>
+                        <span className="text-sm">−</span>
                       </Button>
                       <div className="flex-1 text-center">
-                        <span className="font-bold text-lg bg-secondary text-secondary-foreground px-3 py-1 rounded-lg">{getItemQuantity(item.id)}</span>
+                        <span className="font-bold text-lg">{getItemQuantity(item.id)}</span>
                       </div>
                       <Button
-                        size="sm"
-                        className="flex-1 transition-all hover:scale-105 active:scale-95"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg"
                         onClick={() => onUpdateQuantity?.(item.id, 1)}
                       >
-                        <span className="text-lg">+</span>
+                        <span className="text-sm">+</span>
                       </Button>
                     </div>
                   ) : (
                     <Button 
                       size="sm" 
-                      className="w-full transition-all hover:scale-105 active:scale-95"
+                      className="w-full h-9 font-semibold"
                       onClick={() => onAddItem(item)}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span className="ml-1">Agregar</span>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar
                     </Button>
                   )}
                 </div>
