@@ -16,7 +16,9 @@ use Colame\Order\Services\OrderService;
 use Colame\Order\Services\EventSourcedOrderService;
 use Colame\Order\Services\OrderCalculationService;
 use Colame\Order\Services\OrderValidationService;
+use Colame\Order\Services\OrderSessionService;
 use Colame\Order\Projectors\OrderProjector;
+use Colame\Order\Projectors\OrderSessionProjector;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Spatie\EventSourcing\Facades\Projectionist;
@@ -40,6 +42,7 @@ class OrderServiceProvider extends ServiceProvider
         $this->app->singleton(EventSourcedOrderService::class);
         $this->app->singleton(OrderCalculationService::class);
         $this->app->singleton(OrderValidationService::class);
+        $this->app->singleton(OrderSessionService::class);
         
         // Register as singleton for better performance
         $this->app->singleton(OrderSearchService::class);
@@ -65,8 +68,9 @@ class OrderServiceProvider extends ServiceProvider
         // Load routes
         $this->loadRoutesFrom(__DIR__ . '/../../routes/order-routes.php');
         
-        // Register event sourcing projector
+        // Register event sourcing projectors
         Projectionist::addProjector(OrderProjector::class);
+        Projectionist::addProjector(OrderSessionProjector::class);
         
         // Register event listeners
         $this->registerEventListeners();

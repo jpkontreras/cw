@@ -65,6 +65,9 @@ interface OrderContextType {
   popularItems: SearchResult[];
   searchFilters: SearchFilters;
   activeFiltersCount: number;
+  orderUuid: string | null;
+  sessionStatus: 'initializing' | 'active' | 'recovered' | 'error' | 'idle';
+  lastSavedAt: Date | null;
   
   // Refs
   searchIdRef: React.MutableRefObject<string | null>;
@@ -80,6 +83,7 @@ interface OrderContextType {
   setSearchFilters: React.Dispatch<React.SetStateAction<SearchFilters>>;
   
   // Methods
+  initializeOrderSession: (orderType?: 'dine_in' | 'takeout' | 'delivery') => Promise<{ success: boolean; uuid?: string; error?: string }>;
   addItemToOrder: (item: SearchResult) => void;
   removeItemFromOrder: (itemId: number) => void;
   updateItemQuantity: (itemId: number, quantity: number) => void;
@@ -93,6 +97,8 @@ interface OrderContextType {
   recordSearchSelection: (item: SearchResult) => void;
   updateSearchFilter: (key: keyof SearchFilters, value: any) => void;
   clearSearchFilters: () => void;
+  trackEvent: (eventType: string, data: any) => Promise<void>;
+  saveDraftOrder: (autoSaved?: boolean) => Promise<void>;
   
   // Calculations
   getTotalItems: () => number;
@@ -123,13 +129,19 @@ export const useOrder = () => {
 interface OrderProviderProps {
   children: React.ReactNode;
   initialPopularItems?: SearchResult[];
+  initialSessionUuid?: string;
 }
 
 export const OrderProvider: React.FC<OrderProviderProps> = ({ 
   children, 
-  initialPopularItems = [] 
+  initialPopularItems = [],
+  initialSessionUuid
 }) => {
   // State Management
+  const [orderUuid, setOrderUuid] = useState<string | null>(initialSessionUuid || null);
+  const [sessionStatus, setSessionStatus] = useState<'initializing' | 'active' | 'recovered' | 'error' | 'idle'>(
+    initialSessionUuid ? 'active' : 'idle'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -146,18 +158,211 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [popularItems, setPopularItems] = useState<SearchResult[]>(initialPopularItems);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   
   // Refs
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const searchIdRef = useRef<string | null>(null);
+  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionActivityRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Check for existing session on mount (but don't create new one)
+  useEffect(() => {
+    // Only try to recover if we don't already have a session UUID
+    if (!initialSessionUuid) {
+      checkAndRecoverExistingSession();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+      }
+      if (sessionActivityRef.current) {
+        clearTimeout(sessionActivityRef.current);
+      }
+    };
+  }, []);
+  
+  // Set up auto-save when session becomes active
+  useEffect(() => {
+    if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
+      // Clear any existing interval
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+      }
+      
+      // Set up auto-save every 30 seconds
+      autoSaveIntervalRef.current = setInterval(() => {
+        if (orderItems.length > 0) {
+          saveDraftOrder(true);
+        }
+      }, 30000);
+    }
+    
+    return () => {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+      }
+    };
+  }, [orderUuid, sessionStatus]);
+  
+  // Check for existing session in localStorage
+  const checkExistingSession = async (): Promise<string | null> => {
+    const storedSession = localStorage.getItem('order_session');
+    if (!storedSession) return null;
+    
+    try {
+      const session = JSON.parse(storedSession);
+      const sessionAge = Date.now() - new Date(session.timestamp).getTime();
+      
+      // Session older than 2 hours, ignore it
+      if (sessionAge > 2 * 60 * 60 * 1000) {
+        localStorage.removeItem('order_session');
+        return null;
+      }
+      
+      // Try to recover the session
+      const response = await axios.get(`/orders/session/${session.uuid}/state`);
+      if (response.data.success && !response.data.data.is_expired) {
+        return session.uuid;
+      }
+    } catch (error) {
+      console.error('Failed to recover session:', error);
+      localStorage.removeItem('order_session');
+    }
+    
+    return null;
+  };
+  
+  // Check and recover existing session (called on mount)
+  const checkAndRecoverExistingSession = async () => {
+    try {
+      const existingUuid = await checkExistingSession();
+      
+      if (existingUuid) {
+        // Try to recover existing session
+        const response = await axios.post(`/orders/session/${existingUuid}/recover`);
+        if (response.data.success) {
+          setOrderUuid(existingUuid);
+          setSessionStatus('recovered');
+          
+          // Restore cart items and customer info
+          const sessionData = response.data.data;
+          if (sessionData.cart_items) {
+            setOrderItems(sessionData.cart_items.map((item: any) => ({
+              id: item.itemId,
+              name: item.itemName,
+              price: item.unitPrice,
+              quantity: item.quantity,
+              category: item.category,
+              modifiers: item.modifiers,
+              notes: item.notes,
+            })));
+          }
+          
+          if (sessionData.customer_info) {
+            setCustomerInfo(prev => ({ ...prev, ...sessionData.customer_info }));
+          }
+          
+          if (sessionData.serving_type) {
+            setCustomerInfo(prev => ({ ...prev, orderType: sessionData.serving_type }));
+          }
+        } else {
+          // Session expired or invalid, clean up
+          localStorage.removeItem('order_session');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to recover session:', error);
+      localStorage.removeItem('order_session');
+    }
+  };
+  
+  // Initialize NEW order session (called explicitly by user action)
+  const initializeOrderSession = async (orderType?: 'dine_in' | 'takeout' | 'delivery') => {
+    try {
+      // Don't create duplicate sessions
+      if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
+        return { success: true, uuid: orderUuid };
+      }
+      
+      // Create new session using web route
+      const response = await axios.post('/orders/session/start', {
+        location_id: 1, // TODO: Get from user context
+        platform: 'web',
+        source: 'web',
+        order_type: orderType,
+      });
+      
+      if (response.data.success) {
+        const uuid = response.data.data.uuid || response.data.data.order_uuid;
+        setOrderUuid(uuid);
+        setSessionStatus('active');
+        
+        // Store in localStorage
+        localStorage.setItem('order_session', JSON.stringify({
+          uuid: uuid,
+          timestamp: new Date().toISOString(),
+        }));
+        
+        // If order type was provided, track it
+        if (orderType) {
+          setCustomerInfo(prev => ({ ...prev, orderType }));
+          await trackEvent('serving_type', {
+            type: orderType,
+          });
+        }
+        
+        return { success: true, uuid };
+      }
+      
+      return { success: false, error: 'Failed to create session' };
+    } catch (error) {
+      console.error('Failed to initialize order session:', error);
+      setSessionStatus('error');
+      return { success: false, error: error.message };
+    }
+  };
+  
+  // Track event to backend
+  const trackEvent = useCallback(async (eventType: string, data: any) => {
+    if (!orderUuid) return;
+    
+    try {
+      await axios.post(`/orders/session/${orderUuid}/track`, {
+        event_type: eventType,
+        data: data,
+      });
+    } catch (error) {
+      console.error(`Failed to track ${eventType} event:`, error);
+    }
+  }, [orderUuid]);
+  
+  // Save draft order
+  const saveDraftOrder = useCallback(async (autoSaved: boolean = false) => {
+    if (!orderUuid) return;
+    
+    try {
+      await axios.post(`/orders/session/${orderUuid}/save-draft`, {
+        auto_saved: autoSaved,
+      });
+      setLastSavedAt(new Date());
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    }
+  }, [orderUuid]);
   
   // Calculate active filters count
   const activeFiltersCount = Object.values(searchFilters).filter(value => 
     value !== undefined && value !== null && value !== ''
   ).length;
 
-  // Load favorites and recent searches from backend
+  // Load favorites and recent searches from backend (only when we have a session)
   useEffect(() => {
+    // Only load search data when we have an active session
+    if (!orderUuid) return;
+    
     const loadUserData = async () => {
       try {
         // Load favorites from backend
@@ -199,10 +404,12 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     };
     
     loadUserData();
-  }, []);
+  }, [orderUuid]);
 
-  // Load popular items from server
+  // Load popular items from server (only when we have a session)
   useEffect(() => {
+    if (!orderUuid) return; // Only load when we have a session
+    
     if (popularItems.length === 0) {
       axios.get('/items/search/popular', { params: { limit: 12 } })
         .then(response => {
@@ -212,7 +419,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
           console.error('Error loading popular items:', error);
         });
     }
-  }, [popularItems.length]);
+  }, [popularItems.length, orderUuid]);
 
   // Toggle favorite with backend sync
   const toggleFavorite = async (item: SearchResult) => {
@@ -307,6 +514,16 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
           
           setSearchResults(items);
           searchIdRef.current = response.data.searchId || response.data.meta?.searchId || null;
+          
+          // Track search event
+          if (orderUuid && query.trim()) {
+            trackEvent('search', {
+              query: query,
+              filters: filters,
+              results_count: items.length,
+              search_id: searchIdRef.current,
+            });
+          }
         }
       } catch (error) {
         console.error('Search error:', error);
@@ -315,7 +532,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         setIsSearching(false);
       }
     }, 300);
-  }, [favoriteItems]);
+  }, [favoriteItems, orderUuid, trackEvent]);
 
   // Track search selection for learning
   const recordSearchSelection = useCallback((item: SearchResult) => {
@@ -365,7 +582,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   };
 
   // Order Item Management
-  const addItemToOrder = (item: SearchResult) => {
+  const addItemToOrder = async (item: SearchResult) => {
     recordSearchSelection(item);
     
     // Add to recent items (optimistic update)
@@ -374,9 +591,11 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       return [item, ...filtered].slice(0, 10);
     });
     
+    // Update local state
+    const existingItem = orderItems.find(orderItem => orderItem.id === item.id);
+    const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+    
     setOrderItems(prevItems => {
-      const existingItem = prevItems.find(orderItem => orderItem.id === item.id);
-      
       if (existingItem) {
         return prevItems.map(orderItem =>
           orderItem.id === item.id
@@ -387,6 +606,22 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       
       return [...prevItems, { ...item, quantity: 1 }];
     });
+    
+    // Track to backend if session is active
+    if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
+      try {
+        await axios.post(`/orders/session/${orderUuid}/cart/add`, {
+          item_id: item.id,
+          item_name: item.name,
+          quantity: newQuantity === 1 ? 1 : 1, // Always add 1 at a time
+          unit_price: item.price,
+          category: item.category,
+          source: isSearchMode ? 'search' : 'browse',
+        });
+      } catch (error) {
+        console.error('Failed to track cart addition:', error);
+      }
+    }
     
     setIsSearchMode(false);
     setSearchQuery('');
@@ -418,8 +653,49 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     );
   };
 
-  // Process Order
-  const processOrder = () => {
+  // Process Order (convert session to confirmed order)
+  const processOrder = async () => {
+    // If we have a session, convert it to an order
+    if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
+      try {
+        // Track customer info and payment method before conversion
+        await trackEvent('customer_info', {
+          fields: {
+            name: customerInfo.name,
+            phone: customerInfo.phone,
+            orderType: customerInfo.orderType,
+            tableNumber: customerInfo.tableNumber,
+            address: customerInfo.address,
+          },
+          is_complete: true,
+        });
+        
+        if (customerInfo.paymentMethod) {
+          await trackEvent('payment_method', {
+            payment_method: customerInfo.paymentMethod,
+          });
+        }
+        
+        // Convert session to order
+        const response = await axios.post(`/orders/session/${orderUuid}/convert`, {
+          payment_method: customerInfo.paymentMethod || 'cash',
+        });
+        
+        if (response.data.success) {
+          // Clear local storage
+          localStorage.removeItem('order_session');
+          
+          // Navigate to success page or order details
+          router.visit(`/orders/${orderUuid}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to convert session to order:', error);
+        // Fall back to legacy flow
+      }
+    }
+    
+    // Legacy flow if session conversion fails or not available
     // Map frontend orderType to backend expected values
     const orderTypeMap: Record<string, string> = {
       'dine_in': 'dineIn',  // Backend expects camelCase per validation
@@ -493,6 +769,9 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     popularItems,
     searchFilters,
     activeFiltersCount,
+    orderUuid,
+    sessionStatus,
+    lastSavedAt,
     
     // Refs
     searchIdRef,
@@ -508,6 +787,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     setSearchFilters,
     
     // Methods
+    initializeOrderSession,
     addItemToOrder,
     removeItemFromOrder,
     updateItemQuantity,
@@ -521,6 +801,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     recordSearchSelection,
     updateSearchFilter,
     clearSearchFilters,
+    trackEvent,
+    saveDraftOrder,
     
     // Calculations
     getTotalItems,

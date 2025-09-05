@@ -87,7 +87,20 @@ class OrderController extends Controller
     /**
      * Show the form for creating a new order
      */
-    public function create(Request $request): Response
+    /**
+     * Display the order initialization screen (welcome screen)
+     */
+    public function new(Request $request): Response
+    {
+        // This is the welcome screen where user selects service type
+        // No data needed here - just show the welcome screen
+        return Inertia::render('order/new');
+    }
+
+    /**
+     * Display the order creation session
+     */
+    public function session(Request $request, string $uuid): Response
     {
         // Get formatted categories from the taxonomy service
         $categories = [];
@@ -98,11 +111,18 @@ class OrderController extends Controller
             $categories = $categoriesCollection->toArray();
         }
 
-        // Clean implementation with search-based interface
-        return Inertia::render('order/create', [
+        // Return the order creation interface with the session UUID
+        return Inertia::render('order/session', [
+            'sessionUuid' => $uuid,
             'popularItems' => [], // Will be loaded via API
             'categories' => $categories,
         ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        // Legacy method - redirects to new
+        return redirect()->route('orders.new');
     }
 
 

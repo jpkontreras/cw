@@ -23,6 +23,18 @@ use Colame\Order\Events\PaymentFailed;
 use Colame\Order\Events\CustomerInfoUpdated;
 use Colame\Order\Events\OrderItemsUpdated;
 use Colame\Order\Events\ItemModifiersChanged;
+use Colame\Order\Events\Session\OrderSessionInitiated;
+use Colame\Order\Events\Session\ItemSearched;
+use Colame\Order\Events\Session\CategoryBrowsed;
+use Colame\Order\Events\Session\ItemViewed;
+use Colame\Order\Events\Session\ItemAddedToCart;
+use Colame\Order\Events\Session\ItemRemovedFromCart;
+use Colame\Order\Events\Session\CartModified;
+use Colame\Order\Events\Session\ServingTypeSelected;
+use Colame\Order\Events\Session\CustomerInfoEntered;
+use Colame\Order\Events\Session\PaymentMethodSelected;
+use Colame\Order\Events\Session\OrderDraftSaved;
+use Colame\Order\Events\Session\SessionAbandoned;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Akaunting\Money\Money;
 use Akaunting\Money\Currency;
@@ -50,6 +62,19 @@ class OrderAggregate extends AggregateRoot
     protected array $metadata = [];
     protected bool $itemsValidated = false;
     protected bool $promotionsCalculated = false;
+    
+    // Session tracking properties
+    protected bool $sessionInitiated = false;
+    protected ?string $userId = null;
+    protected array $cartItems = [];
+    protected array $searchHistory = [];
+    protected array $viewedItems = [];
+    protected array $browsedCategories = [];
+    protected ?string $servingType = null;
+    protected array $customerInfo = [];
+    protected ?string $sessionStartedAt = null;
+    protected ?string $lastActivityAt = null;
+    protected int $modificationCount = 0;
 
     public function __construct()
     {
@@ -58,6 +83,318 @@ class OrderAggregate extends AggregateRoot
         $this->tax = Money::CLP(0);
         $this->tip = Money::CLP(0);
         $this->total = Money::CLP(0);
+    }
+
+    /**
+     * Initiate a new order session (called when user opens order creation page)
+     */
+    public function initiateSession(
+        ?string $userId,
+        string $locationId,
+        array $deviceInfo = [],
+        ?string $referrer = null,
+        array $metadata = []
+    ): self {
+        if ($this->sessionInitiated) {
+            return $this; // Session already initiated
+        }
+
+        $this->recordThat(new OrderSessionInitiated(
+            aggregateRootUuid: $this->uuid(),
+            userId: $userId,
+            locationId: $locationId,
+            deviceInfo: $deviceInfo,
+            referrer: $referrer,
+            metadata: $metadata
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Record a search query
+     */
+    public function recordSearch(
+        string $query,
+        array $filters = [],
+        int $resultsCount = 0,
+        ?string $searchId = null
+    ): self {
+        $this->recordThat(new ItemSearched(
+            aggregateRootUuid: $this->uuid(),
+            query: $query,
+            filters: $filters,
+            resultsCount: $resultsCount,
+            searchId: $searchId
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Record category browsing
+     */
+    public function browseCategory(
+        int $categoryId,
+        string $categoryName,
+        int $itemsViewed = 0,
+        int $timeSpentSeconds = 0
+    ): self {
+        $this->recordThat(new CategoryBrowsed(
+            aggregateRootUuid: $this->uuid(),
+            categoryId: $categoryId,
+            categoryName: $categoryName,
+            itemsViewed: $itemsViewed,
+            timeSpentSeconds: $timeSpentSeconds
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Record item view
+     */
+    public function viewItem(
+        int $itemId,
+        string $itemName,
+        float $price,
+        ?string $category = null,
+        string $viewSource = 'browse',
+        int $viewDurationSeconds = 0
+    ): self {
+        $this->recordThat(new ItemViewed(
+            aggregateRootUuid: $this->uuid(),
+            itemId: $itemId,
+            itemName: $itemName,
+            price: $price,
+            category: $category,
+            viewSource: $viewSource,
+            viewDurationSeconds: $viewDurationSeconds
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Add item to cart (before order confirmation)
+     */
+    public function addToCart(
+        int $itemId,
+        string $itemName,
+        int $quantity,
+        float $unitPrice,
+        ?string $category = null,
+        array $modifiers = [],
+        ?string $notes = null,
+        string $addedFrom = 'browse'
+    ): self {
+        $this->recordThat(new ItemAddedToCart(
+            aggregateRootUuid: $this->uuid(),
+            itemId: $itemId,
+            itemName: $itemName,
+            quantity: $quantity,
+            unitPrice: $unitPrice,
+            category: $category,
+            modifiers: $modifiers,
+            notes: $notes,
+            addedFrom: $addedFrom
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Remove item from cart
+     */
+    public function removeFromCart(
+        int $itemId,
+        string $itemName,
+        int $removedQuantity,
+        string $removalReason = 'user_action'
+    ): self {
+        $this->recordThat(new ItemRemovedFromCart(
+            aggregateRootUuid: $this->uuid(),
+            itemId: $itemId,
+            itemName: $itemName,
+            removedQuantity: $removedQuantity,
+            removalReason: $removalReason
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Modify cart item
+     */
+    public function modifyCartItem(
+        int $itemId,
+        string $itemName,
+        string $modificationType,
+        array $changes = []
+    ): self {
+        $this->recordThat(new CartModified(
+            aggregateRootUuid: $this->uuid(),
+            itemId: $itemId,
+            itemName: $itemName,
+            modificationType: $modificationType,
+            changes: $changes
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Set serving type
+     */
+    public function setServingType(
+        string $servingType,
+        ?string $tableNumber = null,
+        ?string $deliveryAddress = null
+    ): self {
+        $this->recordThat(new ServingTypeSelected(
+            aggregateRootUuid: $this->uuid(),
+            servingType: $servingType,
+            previousType: $this->servingType,
+            tableNumber: $tableNumber,
+            deliveryAddress: $deliveryAddress
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Enter customer information
+     */
+    public function enterCustomerInfo(
+        array $fields,
+        array $validationErrors = [],
+        bool $isComplete = false
+    ): self {
+        $this->recordThat(new CustomerInfoEntered(
+            aggregateRootUuid: $this->uuid(),
+            fields: $fields,
+            validationErrors: $validationErrors,
+            isComplete: $isComplete
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Select payment method
+     */
+    public function selectPaymentMethod(string $paymentMethod): self {
+        $this->recordThat(new PaymentMethodSelected(
+            aggregateRootUuid: $this->uuid(),
+            paymentMethod: $paymentMethod,
+            previousMethod: $this->paymentMethod
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Save order draft
+     */
+    public function saveDraft(bool $autoSaved = false): self {
+        $this->recordThat(new OrderDraftSaved(
+            aggregateRootUuid: $this->uuid(),
+            cartItems: $this->cartItems,
+            customerInfo: $this->customerInfo,
+            servingType: $this->servingType,
+            paymentMethod: $this->paymentMethod,
+            subtotal: $this->calculateCartSubtotal(),
+            autoSaved: $autoSaved
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Abandon session
+     */
+    public function abandonSession(
+        string $reason,
+        int $sessionDurationSeconds,
+        string $lastActivity = ''
+    ): self {
+        $this->recordThat(new SessionAbandoned(
+            aggregateRootUuid: $this->uuid(),
+            reason: $reason,
+            sessionDurationSeconds: $sessionDurationSeconds,
+            itemsInCart: count($this->cartItems),
+            cartValue: $this->calculateCartSubtotal(),
+            lastActivity: $lastActivity
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Convert cart to order (transition from session to order)
+     */
+    public function convertCartToOrder(): self {
+        if (empty($this->cartItems)) {
+            throw new InvalidOrderStateException("Cannot convert empty cart to order");
+        }
+
+        // Convert cart items to order items format
+        $orderItems = array_map(function($cartItem) {
+            return [
+                'item_id' => $cartItem['itemId'],
+                'name' => $cartItem['itemName'],
+                'quantity' => $cartItem['quantity'],
+                'unit_price' => $cartItem['unitPrice'],
+                'notes' => $cartItem['notes'] ?? null,
+                'modifiers' => $cartItem['modifiers'] ?? [],
+                'metadata' => $cartItem['metadata'] ?? [],
+            ];
+        }, $this->cartItems);
+
+        // Start the order with collected information
+        $this->startOrder(
+            staffId: (string) ($this->userId ?? 'guest'),
+            locationId: $this->locationId,
+            tableNumber: $this->customerInfo['tableNumber'] ?? null,
+            metadata: array_merge($this->metadata, [
+                'type' => $this->servingType ?? 'dine_in',
+                'customer_name' => $this->customerInfo['name'] ?? null,
+                'customer_phone' => $this->customerInfo['phone'] ?? null,
+                'session_duration' => $this->getSessionDuration(),
+                'items_viewed' => count($this->viewedItems),
+                'searches_performed' => count($this->searchHistory),
+            ])
+        );
+
+        // Add the items to the order
+        if (!empty($orderItems)) {
+            $this->addItems($orderItems);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Calculate cart subtotal
+     */
+    private function calculateCartSubtotal(): float {
+        return array_reduce($this->cartItems, function($total, $item) {
+            return $total + ($item['quantity'] * $item['unitPrice']);
+        }, 0);
+    }
+
+    /**
+     * Get session duration in seconds
+     */
+    private function getSessionDuration(): int {
+        if (!$this->sessionStartedAt) {
+            return 0;
+        }
+        
+        $start = strtotime($this->sessionStartedAt);
+        $end = $this->lastActivityAt ? strtotime($this->lastActivityAt) : time();
+        
+        return $end - $start;
     }
 
     public function startOrder(
@@ -937,5 +1274,167 @@ class OrderAggregate extends AggregateRoot
     public function getTotal(): Money
     {
         return $this->total;
+    }
+
+    // Apply methods for session events
+
+    protected function applyOrderSessionInitiated(OrderSessionInitiated $event): void
+    {
+        $this->sessionInitiated = true;
+        $this->userId = $event->userId;
+        $this->locationId = $event->locationId;
+        $this->sessionStartedAt = now()->toIso8601String();
+        $this->lastActivityAt = now()->toIso8601String();
+        $this->metadata = array_merge($this->metadata, $event->metadata);
+        $this->status = 'session_initiated';
+    }
+
+    protected function applyItemSearched(ItemSearched $event): void
+    {
+        $this->searchHistory[] = [
+            'query' => $event->query,
+            'filters' => $event->filters,
+            'resultsCount' => $event->resultsCount,
+            'searchId' => $event->searchId,
+            'timestamp' => now()->toIso8601String(),
+        ];
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyCategoryBrowsed(CategoryBrowsed $event): void
+    {
+        $this->browsedCategories[] = [
+            'categoryId' => $event->categoryId,
+            'categoryName' => $event->categoryName,
+            'itemsViewed' => $event->itemsViewed,
+            'timeSpentSeconds' => $event->timeSpentSeconds,
+            'timestamp' => now()->toIso8601String(),
+        ];
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyItemViewed(ItemViewed $event): void
+    {
+        $this->viewedItems[] = [
+            'itemId' => $event->itemId,
+            'itemName' => $event->itemName,
+            'price' => $event->price,
+            'category' => $event->category,
+            'viewSource' => $event->viewSource,
+            'viewDurationSeconds' => $event->viewDurationSeconds,
+            'timestamp' => now()->toIso8601String(),
+        ];
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyItemAddedToCart(ItemAddedToCart $event): void
+    {
+        // Check if item already exists in cart
+        $existingIndex = null;
+        foreach ($this->cartItems as $index => $item) {
+            if ($item['itemId'] === $event->itemId) {
+                $existingIndex = $index;
+                break;
+            }
+        }
+
+        if ($existingIndex !== null) {
+            // Update existing item quantity
+            $this->cartItems[$existingIndex]['quantity'] += $event->quantity;
+        } else {
+            // Add new item to cart
+            $this->cartItems[] = [
+                'itemId' => $event->itemId,
+                'itemName' => $event->itemName,
+                'quantity' => $event->quantity,
+                'unitPrice' => $event->unitPrice,
+                'category' => $event->category,
+                'modifiers' => $event->modifiers,
+                'notes' => $event->notes,
+                'addedFrom' => $event->addedFrom,
+                'timestamp' => now()->toIso8601String(),
+            ];
+        }
+        
+        $this->lastActivityAt = now()->toIso8601String();
+        if ($this->status === 'session_initiated') {
+            $this->status = 'cart_building';
+        }
+    }
+
+    protected function applyItemRemovedFromCart(ItemRemovedFromCart $event): void
+    {
+        $this->cartItems = array_filter($this->cartItems, function($item) use ($event) {
+            if ($item['itemId'] === $event->itemId) {
+                // If removing partial quantity
+                if ($item['quantity'] > $event->removedQuantity) {
+                    $item['quantity'] -= $event->removedQuantity;
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        });
+        
+        // Re-index array
+        $this->cartItems = array_values($this->cartItems);
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyCartModified(CartModified $event): void
+    {
+        foreach ($this->cartItems as &$item) {
+            if ($item['itemId'] === $event->itemId) {
+                foreach ($event->changes as $key => $value) {
+                    $item[$key] = $value;
+                }
+                break;
+            }
+        }
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyServingTypeSelected(ServingTypeSelected $event): void
+    {
+        $this->servingType = $event->servingType;
+        if ($event->tableNumber) {
+            $this->customerInfo['tableNumber'] = $event->tableNumber;
+        }
+        if ($event->deliveryAddress) {
+            $this->customerInfo['deliveryAddress'] = $event->deliveryAddress;
+        }
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyCustomerInfoEntered(CustomerInfoEntered $event): void
+    {
+        foreach ($event->fields as $key => $value) {
+            $this->customerInfo[$key] = $value;
+        }
+        $this->lastActivityAt = now()->toIso8601String();
+        if ($event->isComplete && $this->status === 'cart_building') {
+            $this->status = 'details_collecting';
+        }
+    }
+
+    protected function applyPaymentMethodSelected(PaymentMethodSelected $event): void
+    {
+        $this->paymentMethod = $event->paymentMethod;
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applyOrderDraftSaved(OrderDraftSaved $event): void
+    {
+        $this->metadata['lastDraftSaved'] = now()->toIso8601String();
+        $this->metadata['autoSaved'] = $event->autoSaved;
+        $this->lastActivityAt = now()->toIso8601String();
+    }
+
+    protected function applySessionAbandoned(SessionAbandoned $event): void
+    {
+        $this->metadata['abandonedAt'] = now()->toIso8601String();
+        $this->metadata['abandonmentReason'] = $event->reason;
+        $this->metadata['sessionDuration'] = $event->sessionDurationSeconds;
+        $this->status = 'abandoned';
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use Colame\Order\Http\Controllers\Web\OrderController as WebOrderController;
+use Colame\Order\Http\Controllers\Web\OrderFlowController as WebOrderFlowController;
 use Colame\Order\Http\Controllers\Api\OrderController as ApiOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,9 +23,42 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         Route::get('/operations', [WebOrderController::class, 'operations'])->name('operations');
         Route::get('/kitchen', [WebOrderController::class, 'kitchen'])->name('kitchen');
         
-        // Create
-        Route::get('/create', [WebOrderController::class, 'create'])->name('create');
+        // Order Creation Flow
+        Route::get('/new', [WebOrderController::class, 'new'])->name('new'); // Welcome screen
+        Route::get('/session/{uuid}', [WebOrderController::class, 'session'])->name('session'); // Active session
+        
+        // Legacy create route (redirects to /new)
+        Route::get('/create', function() {
+            return redirect()->route('orders.new');
+        })->name('create');
         Route::post('/', [WebOrderController::class, 'store'])->name('store');
+        
+        // Session-based order flow (comprehensive tracking)
+        Route::prefix('session')->name('session.')->group(function () {
+            // Start new session (rate limited to prevent abuse)
+            Route::post('/start', [WebOrderFlowController::class, 'startSession'])
+                ->name('start')
+                ->middleware('throttle:10,1'); // 10 requests per minute per IP
+            
+            // Session operations
+            Route::prefix('{orderUuid}')->group(function () {
+                // Track generic events
+                Route::post('/track', [WebOrderFlowController::class, 'trackEvent'])->name('track');
+                
+                // Cart operations
+                Route::post('/cart/add', [WebOrderFlowController::class, 'addToCart'])->name('cart.add');
+                Route::post('/cart/remove', [WebOrderFlowController::class, 'removeFromCart'])->name('cart.remove');
+                Route::post('/cart/update', [WebOrderFlowController::class, 'updateCartItem'])->name('cart.update');
+                
+                // Session management
+                Route::get('/state', [WebOrderFlowController::class, 'getSessionState'])->name('state');
+                Route::post('/recover', [WebOrderFlowController::class, 'recoverSession'])->name('recover');
+                Route::post('/save-draft', [WebOrderFlowController::class, 'saveDraft'])->name('save-draft');
+                
+                // Convert to order
+                Route::post('/convert', [WebOrderFlowController::class, 'convertToOrder'])->name('convert');
+            });
+        });
         
         // NOTE: All specific routes must be defined BEFORE the dynamic {order} routes
         

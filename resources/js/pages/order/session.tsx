@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { EmptyOrderState, OrderItemsView, SearchInput, SearchView, CartPopover, FilterBar } from '@/modules/order';
 import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/OrderContext';
-import { ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface Category {
@@ -18,16 +18,18 @@ interface Category {
   };
 }
 
-interface CreateOrderProps {
+interface OrderSessionProps {
+  sessionUuid: string;
   popularItems?: SearchResult[];
   categories?: Category[];
 }
 
-interface CreateOrderContentProps {
+interface OrderSessionContentProps {
+  sessionUuid: string;
   categories: Category[];
 }
 
-const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) => {
+const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, categories }) => {
   const {
     orderItems,
     customerInfo,
@@ -47,7 +49,6 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
     setCustomerInfo,
     setSearchQuery,
     setIsSearchMode,
-    initializeOrderSession,
     addItemToOrder,
     removeItemFromOrder,
     updateItemQuantity,
@@ -67,43 +68,6 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
 
   const [currentStep, setCurrentStep] = useState(0);
   const [addedItemFeedback, setAddedItemFeedback] = useState<{ id: number; name: string } | null>(null);
-  const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
-  const [showWelcomeScreen, setShowWelcomeScreen] = useState(true);
-  const [isInitializingSession, setIsInitializingSession] = useState(false);
-
-  // Handle session status changes
-  useEffect(() => {
-    if (sessionStatus === 'recovered' && orderItems.length > 0) {
-      // Session was recovered, skip welcome screen
-      setShowWelcomeScreen(false);
-      setShowRecoveryPrompt(true);
-      // Hide prompt after 5 seconds
-      const timer = setTimeout(() => {
-        setShowRecoveryPrompt(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    } else if (sessionStatus === 'active' && orderUuid) {
-      // New session started, hide welcome screen
-      setShowWelcomeScreen(false);
-    }
-  }, [sessionStatus, orderItems.length, orderUuid]);
-
-  // Handle order type selection and session initialization
-  const handleOrderTypeSelection = async (type: 'dine_in' | 'takeout' | 'delivery') => {
-    setIsInitializingSession(true);
-    setCustomerInfo(prev => ({ ...prev, orderType: type }));
-    
-    const result = await initializeOrderSession(type);
-    
-    if (result.success) {
-      setShowWelcomeScreen(false);
-    } else {
-      // Show error message
-      console.error('Failed to start session:', result.error);
-    }
-    
-    setIsInitializingSession(false);
-  };
 
   // Handle adding item with feedback
   const handleAddItemWithFeedback = (item: SearchResult) => {
@@ -141,147 +105,13 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
     container.scrollTop = 0;
   }, [currentStep]);
 
-  // If welcome screen should be shown, render it instead of the main content
-  if (showWelcomeScreen && sessionStatus !== 'recovered') {
-    return (
-      <AppLayout containerClassName="overflow-visible">
-        <Page>
-          <Page.Header
-            title="New Order"
-            subtitle="Choose your service type to get started"
-          />
-          
-          <Page.Content>
-            <div className="max-w-3xl mx-auto">
-
-              {/* Options Grid - Cleaner, minimal design */}
-              <div className="grid gap-4 md:grid-cols-3 mb-8">
-                {/* Dine In Option */}
-                <button
-                  onClick={() => handleOrderTypeSelection('dine_in')}
-                  disabled={isInitializingSession}
-                  className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">Dine In</h3>
-                      <p className="text-sm text-gray-500 mt-1">Eat at restaurant</p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Takeout Option */}
-                <button
-                  onClick={() => handleOrderTypeSelection('takeout')}
-                  disabled={isInitializingSession}
-                  className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">Takeout</h3>
-                      <p className="text-sm text-gray-500 mt-1">Pick up order</p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Delivery Option */}
-                <button
-                  onClick={() => handleOrderTypeSelection('delivery')}
-                  disabled={isInitializingSession}
-                  className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">Delivery</h3>
-                      <p className="text-sm text-gray-500 mt-1">Home delivery</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Simplified Information */}
-              <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
-                <div className="flex items-start space-x-3">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      <span className="font-medium">Why choose a service type?</span> This creates a session that automatically saves your progress, allows recovery if the page closes, and personalizes the ordering experience.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Loading State */}
-              {isInitializingSession && (
-                <div className="mt-6">
-                  <div className="bg-white rounded-xl p-4 border border-gray-100">
-                    <div className="flex items-center justify-center space-x-3">
-                      <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <p className="text-sm text-gray-600">Setting up your order session...</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Page.Content>
-        </Page>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout containerClassName="overflow-visible">
       <Page>
-        {/* Session Recovery Notification */}
-        {showRecoveryPrompt && (
-          <div 
-            className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-5 fade-in duration-300"
-          >
-            <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-              <svg 
-                className="w-5 h-5 flex-shrink-0" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
-                />
-              </svg>
-              <p className="text-sm font-medium">
-                Tu orden anterior ha sido recuperada con {orderItems.length} producto{orderItems.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Auto-save Indicator */}
         {lastSavedAt && (
           <div className="fixed bottom-20 right-4 z-40 text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded">
-            Guardado automáticamente {new Date(lastSavedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+            Auto-saved {new Date(lastSavedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
 
@@ -310,7 +140,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold">¡Agregado al carrito!</p>
+                <p className="font-semibold">Added to cart!</p>
                 <p className="text-sm opacity-90">{addedItemFeedback.name}</p>
               </div>
               <Badge variant="secondary" className="bg-background/10 text-primary-foreground border-0">
@@ -321,10 +151,14 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
         )}
 
         <Page.Header
-          title="Nueva Orden"
-          subtitle={currentStep === 0 ? "Selecciona productos para agregar a la orden" : "Revisa y confirma los detalles de la orden"}
+          title="Order Session"
+          subtitle={currentStep === 0 ? "Select products to add to the order" : "Review and confirm order details"}
           actions={
             <div className="flex items-center gap-3">
+              {/* Session ID Badge */}
+              <Badge variant="outline" className="text-xs">
+                Session: {sessionUuid.slice(0, 8)}
+              </Badge>
               
               {/* Action buttons */}
               {currentStep === 0 ? (
@@ -334,7 +168,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                   className="gap-2"
                   disabled={orderItems.length === 0}
                 >
-                  Ir al Checkout
+                  Go to Checkout
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
@@ -345,7 +179,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                   className="gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Volver a Productos
+                  Back to Products
                 </Button>
               )}
             </div>
@@ -494,8 +328,8 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                   <div className="min-w-0">
                     <div className="bg-white rounded-lg shadow-sm h-fit">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <h2 className="text-base font-bold text-gray-900">Resumen de tu Orden</h2>
-                        <p className="text-xs text-gray-600 mt-0.5">{getTotalItems()} productos en tu carrito</p>
+                        <h2 className="text-base font-bold text-gray-900">Order Summary</h2>
+                        <p className="text-xs text-gray-600 mt-0.5">{getTotalItems()} products in your cart</p>
                       </div>
                       <div className="p-3 max-h-[calc(100vh-200px)] overflow-y-auto">
                         {orderItems.length > 0 ? (
@@ -526,7 +360,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                   <div className="space-y-3">
                     {/* Order Type */}
                     <div className="bg-white rounded-lg shadow-sm p-4 h-fit">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Tipo de Orden</h3>
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Order Type</h3>
                       <div className="grid grid-cols-3 gap-1.5">
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, orderType: 'dine_in' })}
@@ -537,7 +371,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                           }`}
                         >
                           <div className="text-lg">🏠</div>
-                          <div className="text-xs font-medium">Local</div>
+                          <div className="text-xs font-medium">Dine In</div>
                         </button>
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, orderType: 'takeout' })}
@@ -548,7 +382,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                           }`}
                         >
                           <div className="text-lg">🛍️</div>
-                          <div className="text-xs font-medium">Llevar</div>
+                          <div className="text-xs font-medium">Takeout</div>
                         </button>
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, orderType: 'delivery' })}
@@ -566,18 +400,18 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                     
                     {/* Customer Information */}
                     <div className="bg-white rounded-lg shadow-sm p-4 h-fit">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Información del Cliente</h3>
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Customer Information</h3>
                       <div className="space-y-2">
                         <input
                           type="text"
-                          placeholder="Nombre del cliente"
+                          placeholder="Customer name"
                           value={customerInfo.name}
                           onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                           className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                         <input
                           type="tel"
-                          placeholder="Teléfono"
+                          placeholder="Phone"
                           value={customerInfo.phone}
                           onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                           className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
@@ -585,14 +419,14 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                         {customerInfo.orderType === 'dine_in' && (
                           <input
                             type="text"
-                            placeholder="Número de mesa"
+                            placeholder="Table number"
                             value={customerInfo.tableNumber}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, tableNumber: e.target.value })}
                             className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         )}
                         <textarea
-                          placeholder="Instrucciones especiales (opcional)"
+                          placeholder="Special instructions (optional)"
                           value={customerInfo.notes}
                           onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
                           className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
@@ -603,7 +437,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                     
                     {/* Payment Method */}
                     <div className="bg-white rounded-lg shadow-sm p-4 h-fit">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Método de Pago</h3>
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm">Payment Method</h3>
                       <div className="grid grid-cols-3 gap-1.5">
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, paymentMethod: 'cash' })}
@@ -613,7 +447,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <div className="text-xs font-medium">Efectivo</div>
+                          <div className="text-xs font-medium">Cash</div>
                         </button>
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, paymentMethod: 'card' })}
@@ -623,7 +457,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <div className="text-xs font-medium">Tarjeta</div>
+                          <div className="text-xs font-medium">Card</div>
                         </button>
                         <button
                           onClick={() => setCustomerInfo({ ...customerInfo, paymentMethod: 'transfer' })}
@@ -644,16 +478,16 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Subtotal</span>
-                          <span className="font-medium">${calculateSubtotal().toLocaleString('es-CL')}</span>
+                          <span className="font-medium">${calculateSubtotal().toLocaleString('en-US')}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">IVA (19%)</span>
-                          <span className="font-medium">${calculateTax().toLocaleString('es-CL')}</span>
+                          <span className="text-gray-600">Tax (19%)</span>
+                          <span className="font-medium">${calculateTax().toLocaleString('en-US')}</span>
                         </div>
                         <div className="pt-2 mt-2 border-t border-gray-200">
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-base">Total</span>
-                            <span className="font-bold text-lg text-primary">${calculateTotal().toLocaleString('es-CL')}</span>
+                            <span className="font-bold text-lg text-primary">${calculateTotal().toLocaleString('en-US')}</span>
                           </div>
                         </div>
                       </div>
@@ -664,7 +498,7 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
                         className="w-full mt-3 h-9"
                         disabled={!customerInfo.name || !customerInfo.orderType || !customerInfo.paymentMethod}
                       >
-                        Crear Orden
+                        Create Order
                       </Button>
                     </div>
                   </div>
@@ -678,10 +512,13 @@ const CreateOrderContent: React.FC<CreateOrderContentProps> = ({ categories }) =
   );
 };
 
-export default function CreateOrder({ popularItems = [], categories = [] }: CreateOrderProps) {
+export default function OrderSession({ sessionUuid, popularItems = [], categories = [] }: OrderSessionProps) {
   return (
-    <OrderProvider initialPopularItems={popularItems}>
-      <CreateOrderContent categories={categories} />
+    <OrderProvider 
+      initialPopularItems={popularItems}
+      initialSessionUuid={sessionUuid}
+    >
+      <OrderSessionContent sessionUuid={sessionUuid} categories={categories} />
     </OrderProvider>
   );
 }

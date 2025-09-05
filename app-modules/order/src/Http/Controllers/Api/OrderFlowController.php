@@ -5,18 +5,22 @@ namespace Colame\Order\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Colame\Order\Aggregates\OrderAggregate;
 use Colame\Order\ProcessManagers\TakeOrderProcessManager;
+use Colame\Order\Services\OrderSessionService;
 use Colame\Order\Data\CreateOrderFlowData;
 use Colame\Order\Data\OrderFlowResponseData;
 use Colame\Order\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Money\Money;
 use Money\Currency;
 
 class OrderFlowController extends Controller
 {
     public function __construct(
-        private TakeOrderProcessManager $processManager
+        private TakeOrderProcessManager $processManager,
+        private OrderSessionService $sessionService
     ) {}
 
     /**
@@ -287,6 +291,380 @@ class OrderFlowController extends Controller
             'success' => true,
             'data' => OrderFlowResponseData::from($order),
         ]);
+    }
+
+    /**
+     * Initiate a new order session (called when user opens order creation)
+     */
+    public function initiateSession(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'location_id' => 'nullable|integer',
+            'platform' => 'nullable|string|in:web,mobile,kiosk',
+            'source' => 'nullable|string',
+            'order_type' => 'nullable|string|in:dine_in,takeout,delivery',
+            'referrer' => 'nullable|string',
+        ]);
+        
+        $result = $this->sessionService->startSession($validated);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Track generic events during order session
+     */
+    public function trackEvent(Request $request, string $orderUuid): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_type' => 'required|string',
+            'data' => 'nullable|array',
+        ]);
+        
+        $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        // Handle different event types
+        switch ($validated['event_type']) {
+            case 'search':
+                $aggregate->recordSearch(
+                    query: $validated['data']['query'] ?? '',
+                    filters: $validated['data']['filters'] ?? [],
+                    resultsCount: $validated['data']['results_count'] ?? 0,
+                    searchId: $validated['data']['search_id'] ?? null
+                );
+                break;
+                
+            case 'category_browse':
+                $aggregate->browseCategory(
+                    categoryId: $validated['data']['category_id'],
+                    categoryName: $validated['data']['category_name'],
+                    itemsViewed: $validated['data']['items_viewed'] ?? 0,
+                    timeSpentSeconds: $validated['data']['time_spent'] ?? 0
+                );
+                break;
+                
+            case 'item_view':
+                $aggregate->viewItem(
+                    itemId: $validated['data']['item_id'],
+                    itemName: $validated['data']['item_name'],
+                    price: $validated['data']['price'],
+                    category: $validated['data']['category'] ?? null,
+                    viewSource: $validated['data']['source'] ?? 'browse',
+                    viewDurationSeconds: $validated['data']['duration'] ?? 0
+                );
+                break;
+                
+            case 'serving_type':
+                $aggregate->setServingType(
+                    servingType: $validated['data']['type'],
+                    tableNumber: $validated['data']['table_number'] ?? null,
+                    deliveryAddress: $validated['data']['delivery_address'] ?? null
+                );
+                break;
+                
+            case 'customer_info':
+                $aggregate->enterCustomerInfo(
+                    fields: $validated['data']['fields'] ?? [],
+                    validationErrors: $validated['data']['errors'] ?? [],
+                    isComplete: $validated['data']['is_complete'] ?? false
+                );
+                break;
+                
+            case 'payment_method':
+                $aggregate->selectPaymentMethod(
+                    paymentMethod: $validated['data']['payment_method']
+                );
+                break;
+                
+            default:
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unknown event type',
+                ], 400);
+        }
+        
+        $aggregate->persist();
+        
+        // Update session activity
+        $this->updateSessionActivity($orderUuid);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'event_tracked' => $validated['event_type'],
+                'timestamp' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Add item to cart (not yet confirmed as order)
+     */
+    public function addToCart(Request $request, string $orderUuid): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_id' => 'required|integer',
+            'item_name' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+            'unit_price' => 'required|numeric|min:0',
+            'category' => 'nullable|string',
+            'modifiers' => 'nullable|array',
+            'notes' => 'nullable|string',
+            'source' => 'nullable|string',
+        ]);
+        
+        OrderAggregate::retrieve($orderUuid)
+            ->addToCart(
+                itemId: $validated['item_id'],
+                itemName: $validated['item_name'],
+                quantity: $validated['quantity'],
+                unitPrice: $validated['unit_price'],
+                category: $validated['category'] ?? null,
+                modifiers: $validated['modifiers'] ?? [],
+                notes: $validated['notes'] ?? null,
+                addedFrom: $validated['source'] ?? 'browse'
+            )
+            ->persist();
+        
+        $this->updateSessionActivity($orderUuid);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'item_added' => $validated['item_name'],
+                'quantity' => $validated['quantity'],
+            ],
+        ]);
+    }
+
+    /**
+     * Remove item from cart
+     */
+    public function removeFromCart(Request $request, string $orderUuid): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_id' => 'required|integer',
+            'item_name' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+            'reason' => 'nullable|string',
+        ]);
+        
+        OrderAggregate::retrieve($orderUuid)
+            ->removeFromCart(
+                itemId: $validated['item_id'],
+                itemName: $validated['item_name'],
+                removedQuantity: $validated['quantity'],
+                removalReason: $validated['reason'] ?? 'user_action'
+            )
+            ->persist();
+        
+        $this->updateSessionActivity($orderUuid);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'item_removed' => $validated['item_name'],
+                'quantity' => $validated['quantity'],
+            ],
+        ]);
+    }
+
+    /**
+     * Update cart item (quantity, notes, modifiers)
+     */
+    public function updateCartItem(Request $request, string $orderUuid): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_id' => 'required|integer',
+            'item_name' => 'required|string',
+            'modification_type' => 'required|string|in:quantity_changed,notes_updated,modifiers_changed',
+            'changes' => 'required|array',
+        ]);
+        
+        OrderAggregate::retrieve($orderUuid)
+            ->modifyCartItem(
+                itemId: $validated['item_id'],
+                itemName: $validated['item_name'],
+                modificationType: $validated['modification_type'],
+                changes: $validated['changes']
+            )
+            ->persist();
+        
+        $this->updateSessionActivity($orderUuid);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'item_updated' => $validated['item_name'],
+                'modification' => $validated['modification_type'],
+            ],
+        ]);
+    }
+
+    /**
+     * Get current session state (for recovery/polling)
+     */
+    public function getSessionState(string $orderUuid): JsonResponse
+    {
+        // Check cache first
+        $sessionData = Cache::get("order_session:{$orderUuid}");
+        
+        if (!$sessionData) {
+            // Try to recover from event store
+            try {
+                $aggregate = OrderAggregate::retrieve($orderUuid);
+                $snapshot = $aggregate->snapshot();
+                
+                if (!$snapshot) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Session not found',
+                    ], 404);
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'order_uuid' => $orderUuid,
+                        'status' => $snapshot->aggregateState['status'] ?? 'unknown',
+                        'cart_items' => $snapshot->aggregateState['cartItems'] ?? [],
+                        'customer_info' => $snapshot->aggregateState['customerInfo'] ?? [],
+                        'serving_type' => $snapshot->aggregateState['servingType'] ?? null,
+                        'payment_method' => $snapshot->aggregateState['paymentMethod'] ?? null,
+                        'metadata' => $snapshot->aggregateState['metadata'] ?? [],
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Session not found',
+                ], 404);
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'data' => array_merge($sessionData, [
+                'is_expired' => now()->greaterThan($sessionData['last_activity']->addHours(2)),
+            ]),
+        ]);
+    }
+
+    /**
+     * Recover an abandoned session
+     */
+    public function recoverSession(Request $request, string $orderUuid): JsonResponse
+    {
+        try {
+            $aggregate = OrderAggregate::retrieve($orderUuid);
+            
+            // Check if session can be recovered
+            $snapshot = $aggregate->snapshot();
+            if (!$snapshot || $snapshot->aggregateState['status'] === 'abandoned') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Session cannot be recovered',
+                ], 400);
+            }
+            
+            // Update session activity
+            $this->updateSessionActivity($orderUuid);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'order_uuid' => $orderUuid,
+                    'status' => 'recovered',
+                    'cart_items' => $snapshot->aggregateState['cartItems'] ?? [],
+                    'customer_info' => $snapshot->aggregateState['customerInfo'] ?? [],
+                    'serving_type' => $snapshot->aggregateState['servingType'] ?? null,
+                    'payment_method' => $snapshot->aggregateState['paymentMethod'] ?? null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to recover session',
+            ], 500);
+        }
+    }
+
+    /**
+     * Save draft order
+     */
+    public function saveDraft(Request $request, string $orderUuid): JsonResponse
+    {
+        $autoSaved = $request->input('auto_saved', false);
+        
+        OrderAggregate::retrieve($orderUuid)
+            ->saveDraft($autoSaved)
+            ->persist();
+        
+        $this->updateSessionActivity($orderUuid);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'draft_saved' => true,
+                'auto_saved' => $autoSaved,
+                'saved_at' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Convert cart to confirmed order
+     */
+    public function convertToOrder(Request $request, string $orderUuid): JsonResponse
+    {
+        try {
+            $aggregate = OrderAggregate::retrieve($orderUuid);
+            
+            // Convert cart to order
+            $aggregate->convertCartToOrder();
+            
+            // Set payment method if provided
+            if ($request->has('payment_method')) {
+                $aggregate->setPaymentMethod($request->input('payment_method'));
+            }
+            
+            // Confirm the order
+            $aggregate->confirmOrder();
+            $aggregate->persist();
+            
+            // Get the created order
+            $order = Order::where('uuid', $orderUuid)->first();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'order_uuid' => $orderUuid,
+                    'order_number' => $order->order_number ?? 'PENDING',
+                    'status' => 'confirmed',
+                    'total' => $order->total ?? 0,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Update session activity timestamp
+     */
+    private function updateSessionActivity(string $orderUuid): void
+    {
+        $sessionData = Cache::get("order_session:{$orderUuid}");
+        if ($sessionData) {
+            $sessionData['last_activity'] = now();
+            Cache::put("order_session:{$orderUuid}", $sessionData, now()->addHours(24));
+        }
     }
 
     /**

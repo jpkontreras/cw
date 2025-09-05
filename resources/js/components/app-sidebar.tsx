@@ -48,8 +48,8 @@ const mainNavItems: NavItem[] = [
         icon: List,
       },
       {
-        title: 'Create Order',
-        href: '/orders/create',
+        title: 'New Order',
+        href: '/orders/new',
         icon: Plus,
       },
       {
