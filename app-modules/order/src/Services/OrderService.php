@@ -19,17 +19,12 @@ use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Contracts\OrderServiceInterface;
 use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\OrderData;
-use Colame\Order\Data\OrderItemData;
 use Colame\Order\Data\OrderWithRelationsData;
 use Colame\Order\Data\UpdateOrderData;
-use Colame\Order\Events\OrderCreated;
-use Colame\Order\Events\OrderStatusChanged;
-use Colame\Order\Exceptions\InvalidOrderException;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Models\Order;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
+use Colame\Order\Aggregates\OrderAggregate;
 
 /**
  * Order service implementation
@@ -43,6 +38,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         private ItemRepositoryInterface $itemRepository,
         private OrderCalculationService $calculationService,
         private OrderValidationService $validationService,
+        private EventSourcedOrderService $eventSourcedService,
     ) {
         parent::__construct($features);
     }
@@ -54,85 +50,20 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     {
         $this->logAction('Creating order', ['userId' => $data->userId, 'locationId' => $data->locationId]);
 
-        return DB::transaction(function () use ($data) {
-            // Validate order items
-            $this->validationService->validateOrderItems($data->items->toArray());
+        // Validate order items
+        $this->validationService->validateOrderItems($data->items->toArray());
 
-            // Generate order number
-            $orderNumber = 'ORD-' . date('Ymd') . '-' . str_pad((string)mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-
-            // Create order
-            $orderData = [
-                'order_number' => $orderNumber,
-                'user_id' => $data->userId,
-                'location_id' => $data->locationId,
-                'status' => Order::STATUS_DRAFT,
-                'type' => $data->type,
-                'priority' => 'normal',
-                'table_number' => $data->tableNumber,
-                'customer_name' => $data->customerName,
-                'customer_phone' => $data->customerPhone,
-                'customer_email' => $data->customerEmail,
-                'delivery_address' => $data->deliveryAddress,
-                'notes' => $data->notes,
-                'special_instructions' => $data->specialInstructions,
-                'payment_status' => Order::PAYMENT_PENDING,
-                'metadata' => $data->metadata,
-                'subtotal' => 0,
-                'tax' => 0,
-                'tip' => 0,
-                'discount' => 0,
-                'total' => 0,
-            ];
-
-            $order = $this->orderRepository->create($orderData);
-
-            // Create order items
-            foreach ($data->items as $itemData) {
-                // Get item details from item repository
-                $item = $this->itemRepository->find($itemData->itemId);
-                if (!$item) {
-                    throw new InvalidOrderException("Item with ID {$itemData->itemId} not found");
-                }
-                
-                // Get price based on location if provided
-                $unitPrice = $itemData->unitPrice ?: $this->itemRepository->getCurrentPrice(
-                    $itemData->itemId, 
-                    $data->locationId
-                );
-                
-                $this->orderItemRepository->create([
-                    'order_id' => $order->id,
-                    'item_id' => $itemData->itemId,
-                    'item_name' => $item->name,
-                    'quantity' => $itemData->quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $itemData->quantity * $unitPrice,
-                    'notes' => $itemData->notes,
-                    'modifiers' => $itemData->modifiers,
-                    'metadata' => $itemData->metadata,
-                    'status' => 'pending',
-                    'kitchen_status' => 'pending',
-                ]);
-            }
-
-            // Calculate totals
-            $totals = $this->calculationService->calculateOrderTotals($order->id);
-            $this->orderRepository->update($order->id, $totals);
-
-            // Apply offers if provided
-            if ($data->offerCodes) {
-                $order = $this->applyOffers($order->id, $data->offerCodes);
-            }
-
-            // Reload order with items
-            $order = $this->orderRepository->find($order->id);
-
-            // Fire event
-            Event::dispatch(new OrderCreated($order));
-
-            return $order;
-        });
+        // Use event sourcing to create the order
+        $orderUuid = $this->eventSourcedService->createOrder($data);
+        
+        // Get the order from projection
+        $order = Order::where('uuid', $orderUuid)->first();
+        
+        if (!$order) {
+            throw new OrderNotFoundException("Order {$orderUuid} not found after creation");
+        }
+        
+        return OrderData::from($order);
     }
 
     /**
@@ -152,41 +83,56 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
 
         $this->logAction('Updating order', ['orderId' => $id]);
 
-        return DB::transaction(function () use ($id, $data) {
-            $updateData = [];
+        // Get order UUID
+        $orderModel = Order::find($id);
+        if (!$orderModel || !$orderModel->uuid) {
+            throw new OrderNotFoundException("Order UUID not found for ID {$id}");
+        }
 
-            if (!($data->notes instanceof \Spatie\LaravelData\Optional)) {
-                $updateData['notes'] = $data->notes;
+        // Use event sourcing to update customer info
+        $aggregate = OrderAggregate::retrieve($orderModel->uuid);
+        
+        // Update customer information if provided
+        if (!($data->customerName instanceof \Spatie\LaravelData\Optional) ||
+            !($data->customerPhone instanceof \Spatie\LaravelData\Optional) ||
+            !($data->notes instanceof \Spatie\LaravelData\Optional)) {
+            
+            $aggregate->updateCustomerInfo(
+                customerName: !($data->customerName instanceof \Spatie\LaravelData\Optional) ? $data->customerName : null,
+                customerPhone: !($data->customerPhone instanceof \Spatie\LaravelData\Optional) ? $data->customerPhone : null,
+                notes: !($data->notes instanceof \Spatie\LaravelData\Optional) ? $data->notes : null,
+                updatedBy: request()->user()?->email ?? 'system'
+            );
+        }
+        
+        // Update items if provided
+        if ($data->hasItemsUpdate()) {
+            $updatedItems = [];
+            $deletedItemIds = [];
+            
+            foreach ($data->items as $item) {
+                if (isset($item['id']) && isset($item['quantity'])) {
+                    if ($item['quantity'] > 0) {
+                        $updatedItems[] = $item;
+                    } else {
+                        $deletedItemIds[] = $item['id'];
+                    }
+                }
             }
-
-            if (!($data->customerName instanceof \Spatie\LaravelData\Optional)) {
-                $updateData['customer_name'] = $data->customerName;
+            
+            if (!empty($updatedItems) || !empty($deletedItemIds)) {
+                $aggregate->updateOrderItems(
+                    updatedItems: $updatedItems,
+                    deletedItemIds: $deletedItemIds,
+                    updatedBy: request()->user()?->email ?? 'system'
+                );
             }
-
-            if (!($data->customerPhone instanceof \Spatie\LaravelData\Optional)) {
-                $updateData['customer_phone'] = $data->customerPhone;
-            }
-
-            if (!($data->metadata instanceof \Spatie\LaravelData\Optional)) {
-                $updateData['metadata'] = $data->metadata;
-            }
-
-            // Update order details
-            if (!empty($updateData)) {
-                $this->orderRepository->update($id, $updateData);
-            }
-
-            // Update items if provided
-            if ($data->hasItemsUpdate()) {
-                $this->updateOrderItems($id, $data->items);
-                
-                // Recalculate totals
-                $totals = $this->calculationService->calculateOrderTotals($id);
-                $this->orderRepository->update($id, $totals);
-            }
-
-            return $this->orderRepository->find($id);
-        });
+        }
+        
+        $aggregate->persist();
+        
+        // Return updated order from projection
+        return $this->orderRepository->find($id);
     }
 
     /**
@@ -232,7 +178,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function confirmOrder(int $id): OrderData
     {
-        return $this->updateOrderStatus($id, Order::STATUS_CONFIRMED, 'placed');
+        return $this->transitionOrderStatus($id, Order::STATUS_CONFIRMED, __('order.status.confirmed'));
     }
 
     /**
@@ -240,7 +186,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function startPreparingOrder(int $id): OrderData
     {
-        return $this->updateOrderStatus($id, Order::STATUS_PREPARING, 'confirmed');
+        return $this->transitionOrderStatus($id, Order::STATUS_PREPARING, __('order.status.preparing'));
     }
 
     /**
@@ -248,7 +194,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function markOrderReady(int $id): OrderData
     {
-        return $this->updateOrderStatus($id, Order::STATUS_READY, 'preparing');
+        return $this->transitionOrderStatus($id, Order::STATUS_READY, __('order.status.ready'));
     }
 
     /**
@@ -256,7 +202,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function completeOrder(int $id): OrderData
     {
-        return $this->updateOrderStatus($id, Order::STATUS_COMPLETED, 'ready');
+        return $this->transitionOrderStatus($id, Order::STATUS_COMPLETED, __('order.status.completed'));
     }
 
     /**
@@ -276,13 +222,20 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
 
         $this->logAction('Cancelling order', ['orderId' => $id, 'reason' => $reason]);
 
-        $this->orderRepository->updateStatus($id, Order::STATUS_CANCELLED, $reason);
+        // Get order UUID
+        $orderModel = Order::find($id);
+        if (!$orderModel || !$orderModel->uuid) {
+            throw new OrderNotFoundException("Order UUID not found for ID {$id}");
+        }
         
-        $order = $this->orderRepository->find($id);
+        // Use event sourcing to cancel
+        $this->eventSourcedService->cancelOrder(
+            $orderModel->uuid,
+            $reason,
+            request()->user()?->email ?? 'system'
+        );
         
-        Event::dispatch(new OrderStatusChanged($order, $order->status, Order::STATUS_CANCELLED));
-
-        return $order;
+        return $this->orderRepository->find($id);
     }
 
     /**
@@ -372,9 +325,9 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     }
 
     /**
-     * Update order status with validation
+     * Transition order status using event sourcing
      */
-    private function updateOrderStatus(int $id, string $newStatus, string $expectedCurrentStatus): OrderData
+    public function transitionOrderStatus(int $id, string $newStatus, ?string $reason = null): OrderData
     {
         $order = $this->orderRepository->find($id);
         
@@ -382,25 +335,28 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             throw new OrderNotFoundException("Order {$id} not found");
         }
 
-        if ($order->status !== $expectedCurrentStatus && $expectedCurrentStatus !== null) {
-            throw new InvalidOrderStateException(
-                "Order must be in status '{$expectedCurrentStatus}' to transition to '{$newStatus}'"
-            );
-        }
-
-        $this->logAction('Updating order status', [
+        $this->logAction('Transitioning order status', [
             'orderId' => $id,
             'from' => $order->status,
             'to' => $newStatus
         ]);
 
-        $this->orderRepository->updateStatus($id, $newStatus);
+        // Get order UUID
+        $orderModel = Order::find($id);
+        if (!$orderModel || !$orderModel->uuid) {
+            throw new OrderNotFoundException("Order UUID not found for ID {$id}");
+        }
         
-        $updatedOrder = $this->orderRepository->find($id);
+        // Use event sourcing to transition status
+        $aggregate = OrderAggregate::retrieve($orderModel->uuid);
+        $aggregate->transitionStatus(
+            $newStatus,
+            $reason,
+            request()->user()?->email ?? 'system'
+        );
+        $aggregate->persist();
         
-        Event::dispatch(new OrderStatusChanged($updatedOrder, $order->status, $newStatus));
-
-        return $updatedOrder;
+        return $this->orderRepository->find($id);
     }
 
     /**

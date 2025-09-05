@@ -16,10 +16,16 @@ export const ORDER_STATUS_CONFIG: Record<
     label: 'Draft',
     color: 'secondary',
     icon: 'edit',
-    next: 'placed',
+    next: 'started',
   },
-  placed: {
-    label: 'Placed',
+  started: {
+    label: 'Started',
+    color: 'default',
+    icon: 'play-circle',
+    next: 'items_added',
+  },
+  items_added: {
+    label: 'Items Added',
     color: 'default',
     icon: 'shopping-cart',
     next: 'confirmed',

@@ -8,6 +8,7 @@ import type { SimplePagination } from '@/types/pagination';
 export type Order = Colame.Order.Data.OrderData & {
   // Additional properties or overrides if needed
   id: string | number; // Allow both string and number for compatibility
+  uuid?: string; // UUID for event sourcing
   status: OrderStatus;
   type: OrderType;
   priority: 'normal' | 'high';
@@ -44,7 +45,11 @@ export interface OrderItemModifier {
 
 export type OrderStatus =
   | 'draft'
-  | 'placed'
+  | 'started'
+  | 'items_added'
+  | 'items_validated'
+  | 'promotions_calculated'
+  | 'price_calculated'
   | 'confirmed'
   | 'preparing'
   | 'ready'

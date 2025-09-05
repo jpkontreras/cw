@@ -36,16 +36,25 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'item_id',
+        'menu_section_id',
+        'menu_item_id',
         'item_name',
+        'base_item_name',
         'quantity',
+        'base_price',
         'unit_price',
+        'modifiers_total',
         'total_price',
         'status',
         'kitchen_status',
         'course',
         'notes',
+        'special_instructions',
         'modifiers',
+        'modifier_history',
+        'modifier_count',
         'metadata',
+        'modified_at',
         'prepared_at',
         'served_at',
     ];
@@ -56,11 +65,18 @@ class OrderItem extends Model
     protected $casts = [
         'order_id' => 'integer',
         'item_id' => 'integer',
+        'menu_section_id' => 'integer',
+        'menu_item_id' => 'integer',
         'quantity' => 'integer',
+        'base_price' => 'integer',  // Store as integer (minor units)
         'unit_price' => 'integer',  // Store as integer (minor units)
+        'modifiers_total' => 'integer',  // Store as integer (minor units)
         'total_price' => 'integer',  // Store as integer (minor units)
         'modifiers' => 'array',
+        'modifier_history' => 'array',
+        'modifier_count' => 'integer',
         'metadata' => 'array',
+        'modified_at' => 'datetime',
         'prepared_at' => 'datetime',
         'served_at' => 'datetime',
     ];

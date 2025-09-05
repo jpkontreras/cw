@@ -41,35 +41,50 @@ class OrderItemRepository implements OrderItemRepositoryInterface
 
     /**
      * Create order item
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function create(array $data): OrderItemData
     {
-        $item = OrderItem::create($data);
-        return OrderItemData::from($item);
+        throw new \RuntimeException(
+            'Direct order item creation is not allowed. Use EventSourcedOrderService to add items through event sourcing.'
+        );
     }
 
     /**
      * Update order item
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function update(int $id, array $data): bool
     {
-        return OrderItem::where('id', $id)->update($data) > 0;
+        throw new \RuntimeException(
+            'Direct order item updates are not allowed. Use EventSourcedOrderService to modify items through event sourcing.'
+        );
     }
 
     /**
      * Update order item status
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function updateStatus(int $id, string $status): bool
     {
-        return OrderItem::where('id', $id)->update(['status' => $status]) > 0;
+        throw new \RuntimeException(
+            'Direct status updates are not allowed. Use EventSourcedOrderService to update item status through event sourcing.'
+        );
     }
 
     /**
      * Delete order item
+     * @deprecated Items should not be deleted directly
+     * @throws \RuntimeException
      */
     public function delete(int $id): bool
     {
-        return OrderItem::destroy($id) > 0;
+        throw new \RuntimeException(
+            'Direct item deletion is not allowed. Use EventSourcedOrderService to remove items through event sourcing.'
+        );
     }
 
     /**

@@ -434,6 +434,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       type: orderTypeMap[customerInfo.orderType] || 'dineIn', // Map to backend expected format
       items: orderItems.map(item => ({
         itemId: item.id, // Changed from item_id to itemId
+        name: item.name, // Include item name
+        unitPrice: item.price * 100, // Convert to cents (backend expects minor units)
         quantity: item.quantity,
         notes: item.notes,
         modifiers: item.modifiers || []

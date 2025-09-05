@@ -100,4 +100,14 @@ interface OrderServiceInterface
      * Get order statistics
      */
     public function getOrderStats(array $filters = []): array;
+
+    /**
+     * Transition order status
+     */
+    public function transitionOrderStatus(int $id, string $newStatus, ?string $reason = null): OrderData;
+
+    /**
+     * Get dashboard data
+     */
+    public function getDashboardData(array $filters = []): array;
 }

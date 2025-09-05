@@ -147,9 +147,28 @@ export const formatDuration = (minutes: number): string => {
 };
 
 // Formatting utilities
-export const formatOrderNumber = (orderNumber: string | undefined): string => {
-  if (!orderNumber) return '#undefined';
-  return `#${orderNumber}`;
+export const formatOrderNumber = (orderNumber: string | undefined | null, status?: OrderStatus): string => {
+  if (!orderNumber) return 'New Order';
+  
+  // Add status indicator for non-confirmed orders
+  if (status && !isOrderInSafeState(status)) {
+    return `${orderNumber} •`; // Orange dot for warning states
+  }
+  
+  return orderNumber;
+};
+
+// Check if order is in a "safe" state (preparing or later)
+export const isOrderInSafeState = (status: OrderStatus): boolean => {
+  const safeStates: OrderStatus[] = ['confirmed', 'preparing', 'ready', 'delivering', 'delivered', 'completed'];
+  return safeStates.includes(status);
+};
+
+// Get status indicator color
+export const getStatusIndicatorColor = (status: OrderStatus): string => {
+  if (status === 'cancelled' || status === 'refunded') return 'text-red-500';
+  if (isOrderInSafeState(status)) return 'text-green-500';
+  return 'text-orange-500'; // Warning color for draft/started/items_added states
 };
 
 export const formatCurrency = (amount: number | undefined | null): string => {

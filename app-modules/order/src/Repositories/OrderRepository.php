@@ -7,13 +7,9 @@ namespace Colame\Order\Repositories;
 use App\Core\Traits\ValidatesPagination;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Data\OrderData;
-use Colame\Order\Data\OrderItemData;
 use Colame\Order\Models\Order;
-use Colame\Order\Models\OrderItem;
-use Colame\Order\Models\OrderStatusHistory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
 
@@ -96,75 +92,50 @@ class OrderRepository implements OrderRepositoryInterface
 
     /**
      * Create new order
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function create(array $data): OrderData
     {
-        return DB::transaction(function () use ($data) {
-            $order = Order::create($data);
-            
-            // Create initial status history
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'from_status' => '',
-                'to_status' => $order->status,
-                'user_id' => $data['user_id'] ?? null,
-                'reason' => 'Order created',
-            ]);
-            
-            return $this->modelToData($order);
-        });
+        throw new \RuntimeException(
+            'Direct order creation is not allowed. Use EventSourcedOrderService to create orders through event sourcing.'
+        );
     }
 
     /**
      * Update order
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function update(int $id, array $data): bool
     {
-        return Order::where('id', $id)->update($data) > 0;
+        throw new \RuntimeException(
+            'Direct order updates are not allowed. Use EventSourcedOrderService to modify orders through event sourcing.'
+        );
     }
 
     /**
      * Update order status
+     * @deprecated Use EventSourcedOrderService instead
+     * @throws \RuntimeException
      */
     public function updateStatus(int $id, string $status, ?string $reason = null): bool
     {
-        return DB::transaction(function () use ($id, $status, $reason) {
-            $order = Order::find($id);
-            
-            if (!$order) {
-                return false;
-            }
-            
-            $oldStatus = $order->status;
-            $order->status = $status;
-            
-            if ($reason && $status === Order::STATUS_CANCELLED) {
-                $order->cancel_reason = $reason;
-            }
-            
-            $saved = $order->save();
-            
-            if ($saved) {
-                // Record status change
-                OrderStatusHistory::create([
-                    'order_id' => $id,
-                    'from_status' => $oldStatus,
-                    'to_status' => $status,
-                    'user_id' => auth()->id(),
-                    'reason' => $reason,
-                ]);
-            }
-            
-            return $saved;
-        });
+        throw new \RuntimeException(
+            'Direct status updates are not allowed. Use EventSourcedOrderService to transition order status through event sourcing.'
+        );
     }
 
     /**
      * Delete order
+     * @deprecated Orders should not be deleted, only cancelled
+     * @throws \RuntimeException
      */
     public function delete(int $id): bool
     {
-        return Order::destroy($id) > 0;
+        throw new \RuntimeException(
+            'Order deletion is not allowed. Orders should be cancelled instead of deleted to maintain audit trail.'
+        );
     }
 
     /**

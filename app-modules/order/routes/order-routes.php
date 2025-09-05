@@ -52,6 +52,11 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         
         // Receipt
         Route::get('/{order}/receipt', [WebOrderController::class, 'receipt'])->name('receipt')->where('order', '[0-9]+');
+        
+        // Event Sourcing - Time Travel and State Management
+        Route::post('/{order}/events/state-at', [WebOrderController::class, 'getStateAtTimestamp'])->name('events.state-at')->where('order', '[0-9]+');
+        Route::post('/{order}/events/replay', [WebOrderController::class, 'replayEvents'])->name('events.replay')->where('order', '[0-9]+');
+        Route::post('/{order}/events/add', [WebOrderController::class, 'addEvent'])->name('events.add')->where('order', '[0-9]+');
     });
 });
 

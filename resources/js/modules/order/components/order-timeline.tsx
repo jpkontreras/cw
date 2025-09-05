@@ -13,7 +13,10 @@ interface OrderTimelineProps {
 }
 
 export function OrderTimeline({ order, statusHistory, variant = 'default', showTimestamps = true, className = '' }: OrderTimelineProps) {
-  const statuses = ['placed', 'confirmed', 'preparing', 'ready', 'delivering', 'delivered', 'completed'];
+  // Use simplified timeline for display (hide intermediate event-sourcing states)
+  const statuses = order.type === 'delivery' 
+    ? ['confirmed', 'preparing', 'ready', 'delivering', 'delivered', 'completed']
+    : ['confirmed', 'preparing', 'ready', 'completed'];
   const currentStatusIndex = statuses.indexOf(order.status);
 
   const statusIcons = {

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Colame\Order\Http\Controllers\Api\OrderFlowController;
+use Colame\Order\Http\Controllers\Api\EventStreamController;
 
 Route::prefix('orders/flow')->group(function () {
     // Start new order
@@ -28,3 +29,19 @@ Route::prefix('orders/flow')->group(function () {
         Route::get('/state', [OrderFlowController::class, 'getOrderState']);
     });
 });
+
+// Event Stream API - Currently handled via web routes for Inertia
+// These routes can be uncommented when API access is needed for mobile/external clients
+// Route::prefix('orders/{orderUuid}/events')->group(function () {
+//     // Get full event stream
+//     Route::get('/', [EventStreamController::class, 'getEventStream']);
+//     
+//     // Get order state at specific timestamp
+//     Route::get('/state-at', [EventStreamController::class, 'getStateAtTimestamp']);
+//     
+//     // Replay events between timestamps
+//     Route::get('/replay', [EventStreamController::class, 'replayEvents']);
+//     
+//     // Get event statistics
+//     Route::get('/statistics', [EventStreamController::class, 'getStatistics']);
+// });

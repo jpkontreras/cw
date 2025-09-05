@@ -14,8 +14,8 @@ use Colame\Order\Models\Order;
 use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Illuminate\Support\Str;
-use Money\Money;
-use Money\Currency;
+use Akaunting\Money\Money;
+use Akaunting\Money\Currency;
 
 /**
  * Event-sourced order service for creation and modification
@@ -49,16 +49,18 @@ class EventSourcedOrderService
         
         // Add items to the order
         if ($data->items && count($data->items) > 0) {
-            $items = $data->items->map(function ($item) {
-                return [
+            $items = [];
+            foreach ($data->items as $item) {
+                $items[] = [
                     'item_id' => $item->itemId,
+                    'name' => $item->name ?? null,  // Include item name
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unitPrice,
-                    'notes' => $item->notes,
+                    'notes' => $item->notes ?? null,
                     'modifiers' => $item->modifiers ?? [],
                     'metadata' => $item->metadata ?? [],
                 ];
-            })->toArray();
+            }
             
             $aggregate->addItems($items);
         }
@@ -91,10 +93,7 @@ class EventSourcedOrderService
         if ($data->priceAdjustment) {
             $aggregate->adjustPrice(
                 adjustmentType: $data->priceAdjustment['type'],
-                amount: new Money(
-                    $data->priceAdjustment['amount'],
-                    new Currency('CLP')
-                ),
+                amount: Money::CLP($data->priceAdjustment['amount']),
                 reason: $data->priceAdjustment['reason'],
                 authorizedBy: $data->modifiedBy
             );
@@ -264,7 +263,7 @@ class EventSourcedOrderService
             $total += $item['quantity'] * $item['unit_price'];
         }
         
-        return new Money($total, new Currency('CLP'));
+        return Money::CLP($total);
     }
     
     private function calculatePromotions($aggregate): array
@@ -282,7 +281,7 @@ class EventSourcedOrderService
         $subtotal = $aggregate->getTotal()->getAmount();
         $tax = (int) round($subtotal * 0.19);
         
-        return new Money($tax, new Currency('CLP'));
+        return Money::CLP($tax);
     }
     
     private function calculateTotal($aggregate, Money $tax): Money

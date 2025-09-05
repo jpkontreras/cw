@@ -6,7 +6,7 @@ namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
 use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Array;
+use Spatie\LaravelData\Attributes\Validation\ArrayType;
 use Spatie\LaravelData\Attributes\Validation\Nullable;
 use Spatie\LaravelData\Attributes\Validation\In;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
@@ -14,23 +14,23 @@ use Spatie\LaravelData\Attributes\Validation\Numeric;
 class ModifyOrderData extends BaseData
 {
     public function __construct(
-        #[Array]
-        #[Nullable]
-        public ?array $itemsToAdd = null,
-        
-        #[Array]
-        #[Nullable]
-        public ?array $itemsToRemove = null,
-        
-        #[Array]
-        #[Nullable]
-        public ?array $itemsToModify = null,
-        
         #[Required]
         public string $reason,
         
         #[Required]
         public string $modifiedBy,
+        
+        #[ArrayType]
+        #[Nullable]
+        public ?array $itemsToAdd = null,
+        
+        #[ArrayType]
+        #[Nullable]
+        public ?array $itemsToRemove = null,
+        
+        #[ArrayType]
+        #[Nullable]
+        public ?array $itemsToModify = null,
         
         #[Nullable]
         public ?array $priceAdjustment = null

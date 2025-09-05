@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Illuminate\Support\Str;
+use Spatie\ModelStates\HasStates;
+use Colame\Order\States\OrderState;
+use Colame\Order\States\Transitions\ToConfirmed;
+use Colame\Order\States\Transitions\ToCancelled;
 
 /**
  * Order model
@@ -18,7 +22,7 @@ use Illuminate\Support\Str;
  */
 class Order extends Model
 {
-    use HasFactory, SoftDeletes, Searchable;
+    use HasFactory, SoftDeletes, Searchable, HasStates;
 
     /**
      * The table associated with the model
@@ -80,6 +84,7 @@ class Order extends Model
      * The attributes that should be cast
      */
     protected $casts = [
+        'status' => OrderState::class,  // Cast to state object
         'user_id' => 'integer',
         'location_id' => 'integer',
         'waiter_id' => 'integer',
@@ -107,7 +112,7 @@ class Order extends Model
      * Default values for attributes
      */
     protected $attributes = [
-        'status' => 'draft',
+        'status' => 'draft',  // Default state string
         'type' => 'dine_in',
         'priority' => 'normal',
         'payment_status' => 'pending',
@@ -119,7 +124,19 @@ class Order extends Model
     ];
 
     /**
-     * Order statuses
+     * Register model states
+     */
+    protected function registerStates(): void
+    {
+        $this->addState('status', OrderState::config()
+            ->default(\Colame\Order\States\DraftState::class)
+            ->registerTransition(ToConfirmed::class)
+            ->registerTransition(ToCancelled::class)
+        );
+    }
+    
+    /**
+     * Order statuses (legacy constants for compatibility)
      */
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PLACED = 'placed';
@@ -247,7 +264,8 @@ class Order extends Model
      */
     public function canBeModified(): bool
     {
-        return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_PLACED]);
+        // Use state object method
+        return $this->status->canBeModified();
     }
 
     /**
@@ -255,11 +273,41 @@ class Order extends Model
      */
     public function canBeCancelled(): bool
     {
-        return in_array($this->status, [
-            self::STATUS_DRAFT,
-            self::STATUS_PLACED,
-            self::STATUS_CONFIRMED
-        ]);
+        // Use state object method
+        return $this->status->canBeCancelled();
+    }
+    
+    /**
+     * Check if order can add items
+     */
+    public function canAddItems(): bool
+    {
+        return $this->status->canAddItems();
+    }
+    
+    /**
+     * Check if payment can be processed
+     */
+    public function canProcessPayment(): bool
+    {
+        return $this->status->canProcessPayment();
+    }
+    
+    /**
+     * Check if order affects kitchen
+     */
+    public function affectsKitchen(): bool
+    {
+        return $this->status->affectsKitchen();
+    }
+    
+    /**
+     * Transition to a new state
+     */
+    public function transitionTo(string $stateClass): self
+    {
+        $this->status->transitionTo($stateClass);
+        return $this;
     }
 
     /**

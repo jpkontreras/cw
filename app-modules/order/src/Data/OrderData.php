@@ -20,7 +20,8 @@ class OrderData extends BaseData
 {
     public function __construct(
         public readonly int $id,
-        public readonly string $orderNumber,
+        public readonly ?string $uuid,
+        public readonly ?string $orderNumber,
         public readonly ?int $userId,
         public readonly int $locationId,
         public readonly string $status,
@@ -86,10 +87,13 @@ class OrderData extends BaseData
     {
         return new self(
             id: $order->id,
+            uuid: $order->uuid,
             orderNumber: $order->order_number,
             userId: $order->user_id,
             locationId: $order->location_id,
-            status: $order->status,
+            status: $order->status instanceof \Spatie\ModelStates\State 
+                ? $order->status->getValue() 
+                : (string) $order->status,
             type: $order->type,
             priority: $order->priority,
             subtotal: $order->subtotal,

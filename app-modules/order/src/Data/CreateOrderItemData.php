@@ -17,6 +17,7 @@ class CreateOrderItemData extends BaseData
     public function __construct(
         #[MapInputName('itemId')]
         public readonly int $itemId,
+        public readonly ?string $name = null,  // Item name
         public readonly int $quantity,
         #[MapInputName('unitPrice')]
         public readonly int $unitPrice = 0,  // In minor units
