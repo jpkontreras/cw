@@ -18,7 +18,8 @@ class Item extends Model
         'sku',
         'barcode',
         'base_price',
-        'base_cost',
+        'sale_price',
+        'cost',
         'preparation_time',
         'is_active',
         'is_available',
@@ -35,8 +36,9 @@ class Item extends Model
     ];
     
     protected $casts = [
-        'base_price' => 'decimal:2',
-        'base_cost' => 'decimal:2',
+        'base_price' => 'integer',  // Store as integer (minor units)
+        'sale_price' => 'integer',  // Store as integer (minor units)
+        'cost' => 'integer',         // Store as integer (minor units)
         'preparation_time' => 'integer',
         'is_active' => 'boolean',
         'is_available' => 'boolean',
@@ -52,7 +54,7 @@ class Item extends Model
     ];
     
     protected $attributes = [
-        'base_cost' => 0,
+        'cost' => 0,
         'preparation_time' => 0,
         'is_active' => true,
         'is_available' => true,

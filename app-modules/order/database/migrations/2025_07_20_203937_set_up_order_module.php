@@ -10,6 +10,7 @@ return new class() extends Migration {
 		// Create orders table
 		Schema::create('orders', function(Blueprint $table) {
 			$table->id();
+			$table->uuid('uuid')->unique(); // UUID for event sourcing
 			$table->string('order_number')->unique();
 			$table->unsignedBigInteger('user_id')->nullable(); // Nullable for guest orders
 			$table->unsignedBigInteger('location_id');
@@ -27,19 +28,25 @@ return new class() extends Migration {
 			$table->integer('table_number')->nullable();
 			$table->unsignedBigInteger('waiter_id')->nullable();
 			
-			// Financial
-			$table->decimal('subtotal', 10, 2)->default(0);
-			$table->decimal('tax_amount', 10, 2)->default(0);
-			$table->decimal('tip_amount', 10, 2)->default(0);
-			$table->decimal('discount_amount', 10, 2)->default(0);
-			$table->decimal('total_amount', 10, 2)->default(0);
+			// Financial (using integers for event sourcing - store amounts in cents)
+			$table->integer('subtotal')->default(0);
+			$table->integer('tax')->default(0);
+			$table->integer('tip')->default(0);
+			$table->integer('discount')->default(0);
+			$table->integer('total')->default(0);
 			$table->string('payment_status', 20)->default('pending'); // pending, partial, paid, refunded
+			$table->string('payment_method')->nullable(); // cash, card, transfer, other
 			
 			// Additional Info
 			$table->text('notes')->nullable();
 			$table->text('special_instructions')->nullable();
-			$table->text('cancel_reason')->nullable();
+			$table->text('cancellation_reason')->nullable();
 			$table->json('metadata')->nullable();
+			
+			// Event Sourcing & Modification Tracking
+			$table->integer('modification_count')->default(0);
+			$table->timestamp('last_modified_at')->nullable();
+			$table->string('last_modified_by')->nullable();
 			
 			// Timestamps
 			$table->timestamp('placed_at')->nullable();
@@ -55,6 +62,7 @@ return new class() extends Migration {
 			$table->softDeletes();
 			
 			// Indexes
+			$table->index('uuid');
 			$table->index('user_id');
 			$table->index('location_id');
 			$table->index('waiter_id');
@@ -64,6 +72,7 @@ return new class() extends Migration {
 			$table->index(['location_id', 'status']);
 			$table->index('placed_at');
 			$table->index('order_number');
+			$table->index('last_modified_at');
 		});
 
 		// Create order_items table
@@ -73,8 +82,8 @@ return new class() extends Migration {
 			$table->unsignedBigInteger('item_id');
 			$table->string('item_name');
 			$table->integer('quantity')->default(1);
-			$table->decimal('unit_price', 10, 2);
-			$table->decimal('total_price', 10, 2);
+			$table->integer('unit_price'); // Stored in minor units (cents, fils, etc.)
+			$table->integer('total_price'); // Stored in minor units (cents, fils, etc.)
 			$table->string('status', 50)->default('pending');
 			$table->string('kitchen_status', 50)->default('pending'); // pending, preparing, ready, served
 			$table->string('course', 20)->nullable(); // starter, main, dessert, beverage
@@ -113,7 +122,7 @@ return new class() extends Migration {
 			$table->id();
 			$table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
 			$table->string('method', 50); // cash, credit_card, debit_card, mobile_payment, gift_card, other
-			$table->decimal('amount', 10, 2);
+			$table->integer('amount'); // Stored in minor units (cents, fils, etc.)
 			$table->string('status', 20)->default('pending'); // pending, completed, failed, refunded
 			$table->string('reference_number')->nullable();
 			$table->json('processor_response')->nullable();

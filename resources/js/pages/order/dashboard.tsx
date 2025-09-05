@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import type { OrderDashboardPageProps } from '@/modules/order';
-import { formatCurrency, getStatusColor, getStatusLabel } from '@/modules/order';
+import { formatCurrency } from '@/lib/format';
+import { getStatusColor, getStatusLabel } from '@/modules/order';
 import { Head } from '@inertiajs/react';
 import {
   Activity,

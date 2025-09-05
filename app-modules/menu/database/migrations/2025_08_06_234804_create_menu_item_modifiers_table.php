@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('modifier_id')->nullable(); // Specific modifier, null for entire group
             $table->boolean('is_required')->default(false);
             $table->boolean('is_available')->default(true);
-            $table->decimal('price_override', 8, 2)->nullable();
+            $table->integer('price_override')->nullable(); // Stored in minor units (cents, fils, etc.)
             $table->integer('min_selections')->nullable();
             $table->integer('max_selections')->nullable();
             $table->boolean('is_default')->default(false);

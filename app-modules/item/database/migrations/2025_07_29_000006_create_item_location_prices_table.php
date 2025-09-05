@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('item_id')->constrained()->cascadeOnDelete();
             $table->foreignId('item_variant_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('location_id')->index(); // Foreign key to location module
-            $table->decimal('price', 10, 2);
+            $table->integer('price'); // Stored in minor units (cents, fils, etc.)
             $table->string('currency', 3)->default('CLP');
             $table->date('valid_from')->nullable();
             $table->date('valid_until')->nullable();

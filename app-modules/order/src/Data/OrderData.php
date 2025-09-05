@@ -26,11 +26,11 @@ class OrderData extends BaseData
         public readonly string $status,
         public readonly string $type,
         public readonly string $priority,
-        public readonly float $subtotal,
-        public readonly float $taxAmount,
-        public readonly float $tipAmount,
-        public readonly float $discountAmount,
-        public readonly float $totalAmount,
+        public readonly int $subtotal,
+        public readonly int $tax,
+        public readonly int $tip,
+        public readonly int $discount,
+        public readonly int $total,
         public readonly string $paymentStatus,
         public readonly ?string $customerName = null,
         public readonly ?string $customerPhone = null,
@@ -93,10 +93,10 @@ class OrderData extends BaseData
             type: $order->type,
             priority: $order->priority,
             subtotal: $order->subtotal,
-            taxAmount: $order->tax_amount,
-            tipAmount: $order->tip_amount,
-            discountAmount: $order->discount_amount,
-            totalAmount: $order->total_amount,
+            tax: $order->tax,
+            tip: $order->tip,
+            discount: $order->discount,
+            total: $order->total,
             paymentStatus: $order->payment_status,
             customerName: $order->customer_name,
             customerPhone: $order->customer_phone,
@@ -256,10 +256,10 @@ class OrderData extends BaseData
      * Get remaining amount to pay
      */
     #[Computed]
-    public function remainingAmount(): float
+    public function remainingAmount(): int
     {
         // This would need to be calculated based on payment transactions
         // For now, return total if not paid
-        return $this->isPaid() ? 0.0 : $this->totalAmount;
+        return $this->isPaid() ? 0 : $this->total;
     }
 }

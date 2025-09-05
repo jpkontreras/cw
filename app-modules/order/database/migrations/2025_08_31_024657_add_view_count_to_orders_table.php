@@ -17,7 +17,8 @@ return new class extends Migration
             $table->id();
             $table->uuid('search_id');
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable();
+            // Foreign key will be added after users table is created
             $table->timestamp('created_at');
             
             $table->index(['search_id']);

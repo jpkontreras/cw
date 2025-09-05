@@ -14,6 +14,8 @@ use Colame\Order\Events\TipAdded;
 use Colame\Order\Events\PaymentMethodSet;
 use Colame\Order\Events\OrderConfirmed;
 use Colame\Order\Events\OrderCancelled;
+use Colame\Order\Events\ItemsModified;
+use Colame\Order\Events\PriceAdjusted;
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderItem;
 use Colame\Order\Models\OrderPromotion;
@@ -240,5 +242,121 @@ class OrderProjector extends Projector
             'cancellation_reason' => $event->reason,
             'cancelled_at' => $event->cancelledAt,
         ]);
+    }
+
+    public function onItemsModified(ItemsModified $event): void
+    {
+        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        
+        if (!$order) {
+            return;
+        }
+
+        DB::transaction(function () use ($order, $event) {
+            // Handle removed items
+            if (!empty($event->removedItems)) {
+                OrderItem::where('order_id', $order->id)
+                    ->whereIn('item_id', $event->removedItems)
+                    ->delete();
+            }
+            
+            // Handle modified items
+            foreach ($event->modifiedItems as $modification) {
+                OrderItem::where('order_id', $order->id)
+                    ->where('item_id', $modification['item_id'])
+                    ->update([
+                        'quantity' => $modification['quantity'] ?? null,
+                        'notes' => $modification['notes'] ?? null,
+                        'modifiers' => $modification['modifiers'] ?? null,
+                        'total_price' => ($modification['quantity'] ?? 1) * ($modification['unit_price'] ?? 0),
+                    ]);
+            }
+            
+            // Handle added items
+            foreach ($event->addedItems as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'item_id' => $item['item_id'],
+                    'item_name' => $item['name'] ?? 'Item ' . $item['item_id'],
+                    'quantity' => $item['quantity'] ?? 1,
+                    'unit_price' => $item['unit_price'] ?? 0,
+                    'total_price' => ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0),
+                    'notes' => $item['notes'] ?? null,
+                    'modifiers' => $item['modifiers'] ?? [],
+                    'status' => 'pending',
+                    'kitchen_status' => 'pending',
+                ]);
+            }
+            
+            // Update order totals and metadata
+            $order->update([
+                'total' => $event->newTotal,
+                'last_modified_at' => $event->modifiedAt,
+                'last_modified_by' => $event->modifiedBy,
+                'modification_count' => ($order->modification_count ?? 0) + 1,
+            ]);
+            
+            // Store modification history in metadata
+            $metadata = $order->metadata ?? [];
+            $metadata['modifications'] = $metadata['modifications'] ?? [];
+            $metadata['modifications'][] = [
+                'timestamp' => $event->modifiedAt->toISOString(),
+                'modified_by' => $event->modifiedBy,
+                'reason' => $event->reason,
+                'added_count' => count($event->addedItems),
+                'removed_count' => count($event->removedItems),
+                'modified_count' => count($event->modifiedItems),
+                'amount_difference' => $event->getAmountDifference(),
+            ];
+            $order->metadata = $metadata;
+            $order->save();
+        });
+    }
+
+    public function onPriceAdjusted(PriceAdjusted $event): void
+    {
+        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        
+        if (!$order) {
+            return;
+        }
+        
+        // Update order based on adjustment type
+        switch ($event->adjustmentType) {
+            case 'discount':
+                $order->discount = ($order->discount ?? 0) + $event->amount;
+                $order->total = $order->total - $event->amount;
+                break;
+                
+            case 'surcharge':
+                $order->total = $order->total + $event->amount;
+                break;
+                
+            case 'correction':
+                // Direct total replacement
+                $order->total = $event->amount;
+                break;
+                
+            case 'tip':
+                $order->tip = ($order->tip ?? 0) + $event->amount;
+                $order->total = $order->total + $event->amount;
+                break;
+        }
+        
+        // Store adjustment history in metadata
+        $metadata = $order->metadata ?? [];
+        $metadata['price_adjustments'] = $metadata['price_adjustments'] ?? [];
+        $metadata['price_adjustments'][] = [
+            'timestamp' => $event->adjustedAt->toISOString(),
+            'type' => $event->adjustmentType,
+            'amount' => $event->amount,
+            'reason' => $event->reason,
+            'authorized_by' => $event->authorizedBy,
+            'authorization_code' => $event->authorizationCode,
+            'affects_payment' => $event->affectsPayment,
+        ];
+        $order->metadata = $metadata;
+        
+        $order->save();
     }
 }

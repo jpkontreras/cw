@@ -204,8 +204,8 @@ class OrderRepository implements OrderRepositoryInterface
                 COUNT(*) as total_orders,
                 COUNT(CASE WHEN status = ? THEN 1 END) as completed_orders,
                 COUNT(CASE WHEN status = ? THEN 1 END) as cancelled_orders,
-                AVG(total_amount) as average_order_value,
-                SUM(total_amount) as total_revenue,
+                AVG(total) as average_order_value,
+                SUM(total) as total_revenue,
                 AVG(TIMESTAMPDIFF(MINUTE, placed_at, completed_at)) as average_completion_time
             ', [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])
             ->first();

@@ -25,7 +25,7 @@ class ItemLocationPriceData extends BaseData
         public readonly int $locationId,
 
         #[Required, Numeric, Min(0)]
-        public readonly float $price,
+        public readonly int $price,  // In minor units
 
         #[Size(3)]
         public readonly string $currency = 'CLP',

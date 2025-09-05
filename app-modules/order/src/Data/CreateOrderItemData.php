@@ -19,7 +19,7 @@ class CreateOrderItemData extends BaseData
         public readonly int $itemId,
         public readonly int $quantity,
         #[MapInputName('unitPrice')]
-        public readonly float $unitPrice = 0,
+        public readonly int $unitPrice = 0,  // In minor units
         public readonly ?string $notes = null,
         public readonly ?array $modifiers = null,
         public readonly ?array $metadata = null,
@@ -27,12 +27,13 @@ class CreateOrderItemData extends BaseData
 
     /**
      * Calculate line total
+     * @return int Total in minor units
      */
-    public function getLineTotal(): float
+    public function getLineTotal(): int
     {
         $modifiersTotal = 0;
         if ($this->modifiers) {
-            $modifiersTotal = array_sum(array_map(fn($mod) => (float)($mod['price'] ?? 0), $this->modifiers));
+            $modifiersTotal = array_sum(array_map(fn($mod) => (int)($mod['price'] ?? 0), $this->modifiers));
         }
         
         return ($this->unitPrice + $modifiersTotal) * $this->quantity;
@@ -46,7 +47,7 @@ class CreateOrderItemData extends BaseData
         return [
             'modifiers.*.id' => ['required_with:modifiers', 'integer'],
             'modifiers.*.name' => ['required_with:modifiers', 'string'],
-            'modifiers.*.price' => ['required_with:modifiers', 'numeric', 'min:0'],
+            'modifiers.*.price' => ['required_with:modifiers', 'integer', 'min:0'],
         ];
     }
 

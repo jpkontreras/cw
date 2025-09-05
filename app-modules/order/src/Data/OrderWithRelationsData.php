@@ -47,20 +47,20 @@ class OrderWithRelationsData extends BaseData
         }
 
         $totalPaid = array_sum(array_map(fn($payment) => $payment->amount ?? 0, $this->payments));
-        return $totalPaid >= $this->order->totalAmount;
+        return $totalPaid >= $this->order->total;
     }
 
     /**
      * Get remaining payment amount
      */
-    public function getRemainingAmount(): float
+    public function getRemainingAmount(): int
     {
         if (!$this->payments) {
-            return $this->order->totalAmount;
+            return $this->order->total;
         }
 
         $totalPaid = array_sum(array_map(fn($payment) => $payment->amount ?? 0, $this->payments));
-        return max(0, $this->order->totalAmount - $totalPaid);
+        return max(0, $this->order->total - $totalPaid);
     }
 
     /**

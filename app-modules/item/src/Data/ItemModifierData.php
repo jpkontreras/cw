@@ -22,7 +22,7 @@ class ItemModifierData extends BaseData
         public readonly string $name,
 
         #[Numeric]
-        public readonly float $priceAdjustment = 0,
+        public readonly int $priceAdjustment = 0,  // In minor units
 
         #[Numeric, Min(1)]
         public readonly int $maxQuantity = 1,
@@ -41,22 +41,25 @@ class ItemModifierData extends BaseData
 
     /**
      * Calculate total price impact for given quantity
+     * @return int Price impact in minor units
      */
-    public function calculatePriceImpact(int $quantity = 1): float
+    public function calculatePriceImpact(int $quantity = 1): int
     {
         return $this->priceAdjustment * min($quantity, $this->maxQuantity);
     }
 
     /**
      * Get display name with price
+     * Note: Use formatCurrency() from the frontend for proper formatting
      */
-    public function getDisplayName(string $currency = 'CLP'): string
+    public function getDisplayName(): string
     {
-        if ($this->priceAdjustment === 0.0) {
+        if ($this->priceAdjustment === 0) {
             return $this->name;
         }
 
         $sign = $this->priceAdjustment > 0 ? '+' : '';
-        return sprintf('%s (%s%s %s)', $this->name, $sign, number_format($this->priceAdjustment, 0), $currency);
+        // Just return the name with a sign indicator, formatting should be done in frontend
+        return sprintf('%s (%s)', $this->name, $sign);
     }
 }

@@ -18,7 +18,7 @@ return new class extends Migration
             // Plan information
             $table->string('plan_id'); // basic, pro, enterprise
             $table->string('plan_name');
-            $table->decimal('price', 10, 2);
+            $table->integer('price'); // Stored in minor units (cents, fils, etc.)
             $table->string('currency', 3)->default('CLP');
             $table->enum('billing_cycle', ['monthly', 'yearly', 'lifetime'])->default('monthly');
             

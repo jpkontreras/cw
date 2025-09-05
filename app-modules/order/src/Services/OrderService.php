@@ -79,10 +79,10 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
                 'payment_status' => Order::PAYMENT_PENDING,
                 'metadata' => $data->metadata,
                 'subtotal' => 0,
-                'tax_amount' => 0,
-                'tip_amount' => 0,
-                'discount_amount' => 0,
-                'total_amount' => 0,
+                'tax' => 0,
+                'tip' => 0,
+                'discount' => 0,
+                'total' => 0,
             ];
 
             $order = $this->orderRepository->create($orderData);
@@ -498,7 +498,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         
         $revenueToday = clone $dateQuery;
         $revenueToday = $revenueToday->whereIn('status', ['completed', 'delivered'])
-                                     ->sum('total_amount');
+                                     ->sum('total');
 
         $avgOrderValue = $totalOrders > 0 ? $revenueToday / $totalOrders : 0;
         
@@ -582,7 +582,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $completedOrders = $completedOrders->whereIn('status', ['completed', 'delivered'])->count();
         
         $revenue = clone $dateQuery;
-        $revenue = $revenue->whereIn('status', ['completed', 'delivered'])->sum('total_amount');
+        $revenue = $revenue->whereIn('status', ['completed', 'delivered'])->sum('total');
         
         $activeOrders = clone $query;
         $activeOrders = $activeOrders->whereNotIn('status', ['completed', 'cancelled', 'refunded'])->count();
@@ -619,7 +619,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             $revenue = clone $query;
             $revenue = $revenue->whereRaw('HOUR(created_at) = ?', [$hour])
                               ->whereIn('status', ['completed', 'delivered'])
-                              ->sum('total_amount');
+                              ->sum('total');
             
             $hourlyData[] = [
                 'hour' => $hour,
@@ -639,7 +639,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $this->applyDateFilter($query, $period);
         
         return $query->groupBy('type')
-            ->selectRaw('type, COUNT(*) as count, SUM(total_amount) as revenue')
+            ->selectRaw('type, COUNT(*) as count, SUM(total) as revenue')
             ->get()
             ->toArray();
     }

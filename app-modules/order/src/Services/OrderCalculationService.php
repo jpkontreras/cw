@@ -24,6 +24,7 @@ class OrderCalculationService
 
     /**
      * Calculate order totals
+     * All amounts are in minor units (cents, fils, etc.)
      */
     public function calculateOrderTotals(int $orderId): array
     {
@@ -31,11 +32,11 @@ class OrderCalculationService
         
         $subtotal = 0;
         foreach ($items as $item) {
-            $subtotal += $item->totalPrice;
+            $subtotal += $item->totalPrice; // Already in minor units
         }
 
         // Calculate tax (this would come from location/tax service in real implementation)
-        $taxAmount = $subtotal * self::DEFAULT_TAX_RATE;
+        $taxAmount = (int)($subtotal * self::DEFAULT_TAX_RATE);
 
         // Get discount amount (would come from applied offers)
         $discountAmount = 0;
@@ -44,22 +45,25 @@ class OrderCalculationService
         $totalAmount = $subtotal + $taxAmount - $discountAmount;
 
         return [
-            'subtotal' => round($subtotal, 2),
-            'tax_amount' => round($taxAmount, 2),
-            'discount_amount' => round($discountAmount, 2),
-            'total_amount' => round($totalAmount, 2),
+            'subtotal' => $subtotal,
+            'tax' => $taxAmount,
+            'discount' => $discountAmount,
+            'total' => $totalAmount,
         ];
     }
 
     /**
      * Calculate item price with modifiers
+     * @param int $basePrice Base price in minor units
+     * @param array $modifiers Array of modifiers with 'price' key in minor units
+     * @return int Total price in minor units
      */
-    public function calculateItemPrice(float $basePrice, array $modifiers = []): float
+    public function calculateItemPrice(int $basePrice, array $modifiers = []): int
     {
         $modifiersTotal = 0;
         
         foreach ($modifiers as $modifier) {
-            $modifiersTotal += (float)($modifier['price'] ?? 0);
+            $modifiersTotal += (int)($modifier['price'] ?? 0);
         }
 
         return $basePrice + $modifiersTotal;
@@ -67,14 +71,17 @@ class OrderCalculationService
 
     /**
      * Apply discount to order
+     * @param int $totalAmount Total amount in minor units
+     * @param float $discountPercentage Discount percentage (0-100)
+     * @return int Discounted amount in minor units
      */
-    public function applyDiscount(float $totalAmount, float $discountPercentage): float
+    public function applyDiscount(int $totalAmount, float $discountPercentage): int
     {
         if ($discountPercentage < 0 || $discountPercentage > 100) {
             throw new \InvalidArgumentException('Discount percentage must be between 0 and 100');
         }
 
-        return $totalAmount * (1 - $discountPercentage / 100);
+        return (int)($totalAmount * (1 - $discountPercentage / 100));
     }
 
     /**
@@ -126,9 +133,9 @@ class OrderCalculationService
             'itemCount' => count($items),
             'totalQuantity' => array_sum(array_map(fn($item) => $item->quantity, $items)),
             'subtotal' => $order->subtotal,
-            'tax' => $order->taxAmount,
-            'discount' => $order->discountAmount,
-            'total' => $order->totalAmount,
+            'tax' => $order->tax,
+            'discount' => $order->discount,
+            'total' => $order->total,
             'estimatedPrepTime' => $this->calculateEstimatedPrepTime($items),
         ];
     }

@@ -25,7 +25,7 @@ class ItemLocationPrice extends Model
         'item_id' => 'integer',
         'item_variant_id' => 'integer',
         'location_id' => 'integer',
-        'price' => 'decimal:2',
+        'price' => 'integer',  // Store as integer (minor units)
         'valid_from' => 'date',
         'valid_until' => 'date',
         'available_days' => 'array',

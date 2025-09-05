@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/currency-input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -59,13 +60,12 @@ export function EditItemDialog({ item, onClose, onSave }: EditItemDialogProps) {
 
           <div>
             <Label htmlFor="item-price">Price Override</Label>
-            <Input
+            <CurrencyInput
               id="item-price"
-              type="number"
-              step="0.01"
-              value={item.item.priceOverride || ''}
-              onChange={(e) => handleChange('priceOverride', e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder={item.item.baseItem?.basePrice?.toString()}
+              value={item.item.priceOverride || null}
+              onChange={(value) => handleChange('priceOverride', value || undefined)}
+              showSymbol={true}
+              placeholder={item.item.baseItem?.basePrice ? String(item.item.baseItem.basePrice) : '0.00'}
             />
           </div>
 

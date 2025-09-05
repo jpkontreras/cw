@@ -30,7 +30,7 @@ class UpdateMenuItemData extends BaseData
         public readonly string|null|Optional $displayDescription = new Optional(),
         
         #[Numeric, Min(0)]
-        public readonly float|null|Optional $priceOverride = new Optional(),
+        public readonly int|null|Optional $price = new Optional(),  // In minor units
         
         #[BooleanType]
         public readonly bool|Optional $isActive = new Optional(),

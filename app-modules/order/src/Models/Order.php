@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
+use Illuminate\Support\Str;
 
 /**
  * Order model
@@ -23,7 +24,7 @@ class Order extends Model
      * The table associated with the model
      */
     protected $table = 'orders';
-    
+
     /**
      * Create a new factory instance for the model.
      */
@@ -36,6 +37,7 @@ class Order extends Model
      * The attributes that are mass assignable
      */
     protected $fillable = [
+        'uuid',
         'order_number',
         'user_id',
         'location_id',
@@ -49,14 +51,19 @@ class Order extends Model
         'table_number',
         'waiter_id',
         'subtotal',
-        'tax_amount',
-        'tip_amount',
-        'discount_amount',
-        'total_amount',
+        'tax',
+        'tip',
+        'discount',
+        'total',
         'payment_status',
         'notes',
         'special_instructions',
         'cancel_reason',
+        'cancellation_reason',
+        'payment_method',
+        'modification_count',
+        'last_modified_at',
+        'last_modified_by',
         'metadata',
         'placed_at',
         'confirmed_at',
@@ -77,11 +84,12 @@ class Order extends Model
         'location_id' => 'integer',
         'waiter_id' => 'integer',
         'table_number' => 'integer',
-        'subtotal' => 'float',
-        'tax_amount' => 'float',
-        'tip_amount' => 'float',
-        'discount_amount' => 'float',
-        'total_amount' => 'float',
+        'subtotal' => 'integer',  // Store as integer (minor units)
+        'tax' => 'integer',       // Store as integer (minor units)
+        'tip' => 'integer',       // Store as integer (minor units)
+        'discount' => 'integer',  // Store as integer (minor units)
+        'total' => 'integer',     // Store as integer (minor units)
+        'modification_count' => 'integer',
         'metadata' => 'array',
         'placed_at' => 'datetime',
         'confirmed_at' => 'datetime',
@@ -92,6 +100,7 @@ class Order extends Model
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'scheduled_at' => 'datetime',
+        'last_modified_at' => 'datetime',
     ];
 
     /**
@@ -103,10 +112,10 @@ class Order extends Model
         'priority' => 'normal',
         'payment_status' => 'pending',
         'subtotal' => 0,
-        'tax_amount' => 0,
-        'tip_amount' => 0,
-        'discount_amount' => 0,
-        'total_amount' => 0,
+        'tax' => 0,
+        'tip' => 0,
+        'discount' => 0,
+        'total' => 0,
     ];
 
     /**
@@ -171,6 +180,13 @@ class Order extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        // Auto-generate UUID for new orders
+        static::creating(function (Order $order) {
+            if (empty($order->uuid)) {
+                $order->uuid = Str::uuid()->toString();
+            }
+        });
 
         // Set placed_at when status changes to placed
         static::updating(function (Order $order) {
@@ -264,7 +280,7 @@ class Order extends Model
             'table_number' => $this->table_number,
             'location_id' => $this->location_id,
             'waiter_id' => $this->waiter_id,
-            'total_amount' => $this->total_amount,
+            'total' => $this->total,
             'payment_status' => $this->payment_status,
             'notes' => $this->notes,
             'special_instructions' => $this->special_instructions,

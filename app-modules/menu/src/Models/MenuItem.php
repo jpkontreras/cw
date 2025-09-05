@@ -19,7 +19,7 @@ class MenuItem extends Model
         'item_id',
         'display_name',
         'display_description',
-        'price_override',
+        'price',
         'is_active',
         'is_featured',
         'is_recommended',
@@ -40,7 +40,7 @@ class MenuItem extends Model
         'menu_id' => 'integer',
         'menu_section_id' => 'integer',
         'item_id' => 'integer',
-        'price_override' => 'float',
+        'price' => 'integer',  // Store as integer (minor units)
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'is_recommended' => 'boolean',

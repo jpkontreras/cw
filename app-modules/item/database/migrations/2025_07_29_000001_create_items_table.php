@@ -15,8 +15,9 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('sku')->nullable()->unique()->index();
             $table->string('barcode')->nullable()->unique()->index();
-            $table->decimal('base_price', 10, 2)->nullable();
-            $table->decimal('base_cost', 10, 2)->default(0)->nullable();
+            $table->integer('base_price')->nullable(); // Stored in minor units (cents, fils, etc.)
+            $table->integer('sale_price')->nullable(); // Promotional price in minor units
+            $table->integer('cost')->default(0)->nullable(); // Stored in minor units (cents, fils, etc.)
             $table->integer('preparation_time')->default(0)->nullable(); // in minutes
             $table->boolean('is_active')->default(true)->index();
             $table->boolean('is_available')->default(true)->index();

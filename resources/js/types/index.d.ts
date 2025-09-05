@@ -23,12 +23,36 @@ export interface NavItem {
   items?: NavItem[];
 }
 
+export interface CurrencyConfig {
+  code: string;
+  precision: number;
+  subunit: number;
+  symbol: string;
+  symbolFirst: boolean;
+  decimalMark: string;
+  thousandsSeparator: string;
+}
+
+export interface Business {
+  id: number;
+  name: string;
+  currency: string;
+  [key: string]: unknown;
+}
+
+export interface BusinessData {
+  current: Business | null;
+  businesses: Business[];
+  currency: CurrencyConfig;
+}
+
 export interface SharedData {
   name: string;
   quote: { message: string; author: string };
   auth: Auth;
   ziggy: Config & { location: string };
   sidebarOpen: boolean;
+  business?: BusinessData;
   [key: string]: unknown;
 }
 

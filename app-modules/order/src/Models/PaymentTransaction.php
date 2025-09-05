@@ -53,7 +53,7 @@ class PaymentTransaction extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'amount' => 'float',
+        'amount' => 'integer',  // Store as integer (minor units)
         'processed_at' => 'datetime',
         'metadata' => 'array',
     ];

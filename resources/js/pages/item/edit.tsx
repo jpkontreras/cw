@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -176,8 +177,8 @@ export default function ItemEdit({ item, categories, item_types, features, avail
     description: item.description || '',
     type: item.type || 'product',
     category_id: item.category_id ? item.category_id.toString() : '',
-    base_price: basePrice ? basePrice.toString() : '',
-    base_cost: baseCost ? baseCost.toString() : '',
+    base_price: basePrice ?? null,  // Store as integer (minor units)
+    base_cost: baseCost ?? null,    // Store as integer (minor units)
     sku: item.sku || '',
     barcode: item.barcode || '',
     track_inventory: trackInventory ?? true,
@@ -345,20 +346,14 @@ export default function ItemEdit({ item, categories, item_types, features, avail
                             Price
                             <span className="text-xs text-muted-foreground ml-2">(Optional)</span>
                           </Label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              $
-                            </span>
-                            <Input
-                              id="base_price"
-                              type="number"
-                              step="0.01"
-                              value={data.base_price}
-                              onChange={(e) => setData('base_price', e.target.value)}
-                              className={cn('pl-8', errors.base_price ? 'border-destructive' : '')}
-                              placeholder="0.00"
-                            />
-                          </div>
+                          <CurrencyInput
+                            id="base_price"
+                            value={data.base_price}
+                            onChange={(value) => setData('base_price', value)}
+                            showSymbol={true}
+                            className={cn(errors.base_price ? 'border-destructive' : '')}
+                            placeholder="0.00"
+                          />
                           {errors.base_price && (
                             <p className="text-sm text-destructive">{errors.base_price}</p>
                           )}
@@ -702,19 +697,30 @@ export default function ItemEdit({ item, categories, item_types, features, avail
                                     <div className="grid gap-4 md:grid-cols-2">
                                       <div className="space-y-2">
                                         <Label>Price Adjustment</Label>
-                                        <div className="relative">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                            {variant.price_adjustment >= 0 ? '+$' : '-$'}
-                                          </span>
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={Math.abs(variant.price_adjustment)}
-                                            onChange={(e) => {
-                                              const value = parseFloat(e.target.value) || 0;
-                                              updateVariant(index, 'price_adjustment', variant.price_adjustment >= 0 ? value : -value);
+                                        <div className="flex items-center gap-2">
+                                          <Select
+                                            value={variant.price_adjustment >= 0 ? 'add' : 'subtract'}
+                                            onValueChange={(value) => {
+                                              const absValue = Math.abs(variant.price_adjustment);
+                                              updateVariant(index, 'price_adjustment', value === 'add' ? absValue : -absValue);
                                             }}
-                                            className="pl-10"
+                                          >
+                                            <SelectTrigger className="w-24">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="add">+</SelectItem>
+                                              <SelectItem value="subtract">−</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                          <CurrencyInput
+                                            value={Math.abs(variant.price_adjustment)}
+                                            onChange={(value) => {
+                                              const absValue = value || 0;
+                                              updateVariant(index, 'price_adjustment', variant.price_adjustment >= 0 ? absValue : -absValue);
+                                            }}
+                                                            showSymbol={true}
+                                            className="flex-1"
                                           />
                                         </div>
                                         <p className="text-xs text-muted-foreground">
@@ -841,20 +847,13 @@ export default function ItemEdit({ item, categories, item_types, features, avail
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="base_cost">Base Cost</Label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              $
-                            </span>
-                            <Input
-                              id="base_cost"
-                              type="number"
-                              step="0.01"
-                              value={data.base_cost}
-                              onChange={(e) => setData('base_cost', e.target.value)}
-                              className="pl-8"
-                              placeholder="0.00"
-                            />
-                          </div>
+                          <CurrencyInput
+                            id="base_cost"
+                            value={data.base_cost}
+                            onChange={(value) => setData('base_cost', value)}
+                            showSymbol={true}
+                            placeholder="0.00"
+                          />
                           <p className="text-xs text-muted-foreground">
                             Your cost to produce/acquire this item
                           </p>
@@ -865,12 +864,12 @@ export default function ItemEdit({ item, categories, item_types, features, avail
                           <div className="p-3 bg-muted rounded-lg">
                             <div className="text-2xl font-semibold">
                               {data.base_price && data.base_cost
-                                ? `${Math.round(((parseFloat(data.base_price) - parseFloat(data.base_cost)) / parseFloat(data.base_price)) * 100)}%`
+                                ? `${Math.round(((data.base_price - data.base_cost) / data.base_price) * 100)}%`
                                 : '—'}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
                               {data.base_price && data.base_cost
-                                ? `$${(parseFloat(data.base_price) - parseFloat(data.base_cost)).toFixed(2)} profit per item`
+                                ? `${formatCurrency(data.base_price - data.base_cost)} profit per item`
                                 : 'Set price and cost to calculate'}
                             </p>
                           </div>

@@ -53,9 +53,22 @@ class BusinessInertiaShareProvider extends ServiceProvider
                 $businessesCollection = $businessRepository->getUserBusinesses($user->id);
                 $businesses = $businessesCollection->toArray();
                 
+                // Get currency configuration for the current business
+                $currencyCode = $currentBusiness?->currency ?? 'CLP';
+                $currencyConfig = config("money.currencies.{$currencyCode}", config('money.currencies.CLP'));
+                
                 return [
                     'current' => $currentBusiness?->toArray(),
                     'businesses' => $businesses,
+                    'currency' => [
+                        'code' => $currencyCode,
+                        'precision' => $currencyConfig['precision'] ?? 2,
+                        'subunit' => $currencyConfig['subunit'] ?? 100,
+                        'symbol' => $currencyConfig['symbol'] ?? '$',
+                        'symbolFirst' => $currencyConfig['symbol_first'] ?? true,
+                        'decimalMark' => $currencyConfig['decimal_mark'] ?? '.',
+                        'thousandsSeparator' => $currencyConfig['thousands_separator'] ?? ',',
+                    ],
                 ];
             } catch (\Exception $e) {
                 Log::debug('Business data error in BusinessInertiaShareProvider: ' . $e->getMessage());

@@ -18,7 +18,7 @@ class ItemModifier extends Model
     
     protected $casts = [
         'modifier_group_id' => 'integer',
-        'price_adjustment' => 'decimal:2',
+        'price_adjustment' => 'integer',  // Store as integer (minor units)
         'max_quantity' => 'integer',
         'is_default' => 'boolean',
         'is_active' => 'boolean',

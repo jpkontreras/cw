@@ -1,25 +1,165 @@
+import { CurrencyConfig, SharedData } from '@/types';
+
+declare global {
+  interface Window {
+    $page?: {
+      props: SharedData;
+    };
+  }
+}
+
+/**
+ * Parse user input string to integer value in minor units (cents, fils, etc.)
+ * Handles different locale formats (1,234.56 vs 1.234,56)
+ * @param input - User input string
+ * @param currencyConfig - Currency configuration
+ * @returns Parsed value in minor units or null if invalid
+ */
+export function parseCurrencyInput(
+  input: string | null | undefined,
+  currencyConfig?: CurrencyConfig
+): number | null {
+  if (!input || input === '') return null;
+  
+  // Get currency configuration from Inertia props if not provided
+  if (!currencyConfig && typeof window !== 'undefined' && window.$page) {
+    currencyConfig = window.$page.props.business?.currency;
+  }
+  
+  const config = currencyConfig || {
+    code: 'CLP',
+    precision: 0,
+    subunit: 1,
+    symbol: '$',
+    symbolFirst: true,
+    decimalMark: ',',
+    thousandsSeparator: '.',
+  };
+  
+  // Remove currency symbols, spaces, and keep only numbers, decimal/thousand separators, and minus
+  let cleaned = input.replace(/[^\d,.\-]/g, '');
+  
+  // Handle different decimal/thousand separator formats
+  if (config.decimalMark === ',' && config.thousandsSeparator === '.') {
+    // European format: 1.234,56
+    // Remove thousand separators (.) and replace decimal mark (,) with (.)
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (config.decimalMark === '.' && config.thousandsSeparator === ',') {
+    // US/UK format: 1,234.56
+    // Remove thousand separators (,)
+    cleaned = cleaned.replace(/,/g, '');
+  } else if (config.decimalMark === ',' && config.thousandsSeparator === ' ') {
+    // Some European formats: 1 234,56
+    // Replace decimal mark (,) with (.)
+    cleaned = cleaned.replace(',', '.');
+  }
+  
+  // Parse to float
+  const parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return null;
+  
+  // Convert to minor units (multiply by subunit)
+  return Math.round(parsed * config.subunit);
+}
+
+/**
+ * Format integer value from minor units to display string
+ * @param value - Value in minor units (cents, fils, etc.)
+ * @param currencyConfig - Currency configuration
+ * @param includeSymbol - Whether to include currency symbol
+ * @returns Formatted string for display in input
+ */
+export function formatCurrencyForInput(
+  value: number | null | undefined,
+  currencyConfig?: CurrencyConfig,
+  includeSymbol: boolean = false
+): string {
+  if (value === null || value === undefined) return '';
+  
+  // Get currency configuration from Inertia props if not provided
+  if (!currencyConfig && typeof window !== 'undefined' && window.$page) {
+    currencyConfig = window.$page.props.business?.currency;
+  }
+  
+  const config = currencyConfig || {
+    code: 'CLP',
+    precision: 0,
+    subunit: 1,
+    symbol: '$',
+    symbolFirst: true,
+    decimalMark: ',',
+    thousandsSeparator: '.',
+  };
+  
+  // Convert from minor units to major units
+  const majorUnits = value / config.subunit;
+  
+  // Format with proper decimal places
+  let formatted = majorUnits.toFixed(config.precision);
+  
+  // Replace decimal separator if needed
+  if (config.decimalMark !== '.') {
+    formatted = formatted.replace('.', config.decimalMark);
+  }
+  
+  // Add thousands separator
+  const parts = formatted.split(config.decimalMark);
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, config.thousandsSeparator);
+  formatted = parts.join(config.decimalMark);
+  
+  // Add symbol if requested
+  if (includeSymbol) {
+    if (config.symbolFirst) {
+      formatted = `${config.symbol}${formatted}`;
+    } else {
+      formatted = `${formatted} ${config.symbol}`;
+    }
+  }
+  
+  return formatted;
+}
+
 /**
  * Format a number as currency
- * @param amount - The amount to format
- * @param currency - The currency code (default: CLP)
+ * @param amount - The amount to format (in minor units - cents, fils, etc.)
+ * @param currencyConfig - Optional currency configuration from backend
  * @param locale - The locale for formatting (default: es-CL)
  * @returns Formatted currency string
  */
 export function formatCurrency(
   amount: number | null | undefined,
-  currency: string = 'CLP',
+  currencyConfig?: CurrencyConfig,
   locale: string = 'es-CL'
 ): string {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return '—';
   }
   
+  // Get currency configuration from Inertia props if not provided
+  if (!currencyConfig && typeof window !== 'undefined' && window.$page) {
+    currencyConfig = window.$page.props.business?.currency;
+  }
+  
+  // Use defaults if still no config
+  const config = currencyConfig || {
+    code: 'CLP',
+    precision: 0,
+    subunit: 1,
+    symbol: '$',
+    symbolFirst: true,
+    decimalMark: ',',
+    thousandsSeparator: '.',
+  };
+  
+  // Convert from minor units to major currency units
+  const amountInMajorUnits = amount / config.subunit;
+  
   return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+    currency: config.code,
+    minimumFractionDigits: config.precision,
+    maximumFractionDigits: config.precision,
+  }).format(amountInMajorUnits);
 }
 
 /**

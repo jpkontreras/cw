@@ -24,7 +24,7 @@ class MenuItemModifierOptionData extends BaseData
     public function __construct(
         public string $id,
         public string $name,
-        public ?float $priceAdjustment = null,
+        public ?int $priceAdjustment = null,  // In minor units
         public bool $isDefault = false,
         public ?int $maxQuantity = null,
         public ?string $group = null,

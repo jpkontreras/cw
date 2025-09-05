@@ -24,7 +24,7 @@ class ItemVariantData extends BaseData
         public readonly ?string $sku,
 
         #[Numeric]
-        public readonly float $priceAdjustment = 0,
+        public readonly int $priceAdjustment = 0,  // In minor units
 
         #[Numeric, Min(0.1)]
         public readonly float $sizeMultiplier = 1,
@@ -46,8 +46,10 @@ class ItemVariantData extends BaseData
 
     /**
      * Calculate the variant price based on base price
+     * @param int $basePrice Base price in minor units
+     * @return int Price in minor units
      */
-    public function calculatePrice(float $basePrice): float
+    public function calculatePrice(int $basePrice): int
     {
         return $basePrice + $this->priceAdjustment;
     }

@@ -15,6 +15,8 @@ use Colame\Order\Events\PaymentMethodSet;
 use Colame\Order\Events\OrderModified;
 use Colame\Order\Events\OrderCancelled;
 use Colame\Order\Events\TipAdded;
+use Colame\Order\Events\ItemsModified;
+use Colame\Order\Events\PriceAdjusted;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Colame\Order\Exceptions\ItemsNotFoundException;
 use Colame\Order\Data\OrderItemData;
@@ -200,6 +202,153 @@ class OrderAggregate extends AggregateRoot
         return $this;
     }
 
+    /**
+     * Modify order items (add, remove, or update)
+     */
+    public function modifyItems(
+        array $toAdd = [],
+        array $toRemove = [],
+        array $toModify = [],
+        string $modifiedBy = '',
+        string $reason = ''
+    ): self {
+        // Check if order can be modified based on status
+        if (!$this->canBeModified()) {
+            throw new InvalidOrderStateException("Cannot modify order in status: {$this->status}");
+        }
+
+        // Calculate previous total
+        $previousTotal = $this->total->getAmount();
+        
+        // Calculate new items and total
+        $newItems = $this->calculateModifiedItems($toAdd, $toRemove, $toModify);
+        $newTotal = $this->calculateNewTotal($newItems);
+        
+        // Determine if kitchen notification is needed
+        $requiresKitchenNotification = $this->shouldNotifyKitchen();
+        
+        $this->recordThat(new ItemsModified(
+            aggregateRootUuid: $this->uuid(),
+            addedItems: $toAdd,
+            removedItems: $toRemove,
+            modifiedItems: $toModify,
+            modifiedBy: $modifiedBy,
+            reason: $reason,
+            modifiedAt: now(),
+            requiresKitchenNotification: $requiresKitchenNotification,
+            previousTotal: $previousTotal,
+            newTotal: $newTotal
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Adjust order price (discount, surcharge, correction)
+     */
+    public function adjustPrice(
+        string $adjustmentType,
+        Money $amount,
+        string $reason,
+        string $authorizedBy,
+        ?string $authorizationCode = null
+    ): self {
+        // Validate adjustment type
+        if (!in_array($adjustmentType, ['discount', 'surcharge', 'correction', 'tip'])) {
+            throw new InvalidOrderStateException("Invalid adjustment type: {$adjustmentType}");
+        }
+
+        // Check if order can have price adjusted
+        if ($this->status === 'cancelled' || $this->status === 'refunded') {
+            throw new InvalidOrderStateException("Cannot adjust price for order in status: {$this->status}");
+        }
+
+        // Determine if this affects payment
+        $affectsPayment = !empty($this->paymentMethod) && $this->status !== 'draft';
+        
+        $this->recordThat(new PriceAdjusted(
+            aggregateRootUuid: $this->uuid(),
+            adjustmentType: $adjustmentType,
+            amount: $amount->getAmount(),
+            currency: $amount->getCurrency()->getCode(),
+            reason: $reason,
+            authorizedBy: $authorizedBy,
+            affectsPayment: $affectsPayment,
+            adjustedAt: now(),
+            authorizationCode: $authorizationCode,
+            metadata: [
+                'original_total' => $this->total->getAmount(),
+                'original_status' => $this->status,
+            ]
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Check if order can be modified
+     */
+    public function canBeModified(): bool
+    {
+        return in_array($this->status, [
+            'draft', 'started', 'items_added', 'items_validated', 
+            'promotions_calculated', 'price_calculated', 'confirmed'
+        ]);
+    }
+
+    /**
+     * Check if kitchen should be notified of changes
+     */
+    private function shouldNotifyKitchen(): bool
+    {
+        return in_array($this->status, ['confirmed', 'preparing']);
+    }
+
+    /**
+     * Calculate modified items list
+     */
+    private function calculateModifiedItems(array $toAdd, array $toRemove, array $toModify): array
+    {
+        $items = $this->items;
+        
+        // Remove items
+        foreach ($toRemove as $itemId) {
+            $items = array_filter($items, fn($item) => $item['item_id'] !== $itemId);
+        }
+        
+        // Modify existing items
+        foreach ($toModify as $modification) {
+            $itemId = $modification['item_id'];
+            foreach ($items as &$item) {
+                if ($item['item_id'] === $itemId) {
+                    $item['quantity'] = $modification['quantity'] ?? $item['quantity'];
+                    $item['notes'] = $modification['notes'] ?? $item['notes'];
+                    $item['modifiers'] = $modification['modifiers'] ?? $item['modifiers'];
+                    break;
+                }
+            }
+        }
+        
+        // Add new items
+        foreach ($toAdd as $newItem) {
+            $items[] = $newItem;
+        }
+        
+        return $items;
+    }
+
+    /**
+     * Calculate new total for modified items
+     */
+    private function calculateNewTotal(array $items): int
+    {
+        $total = 0;
+        foreach ($items as $item) {
+            $total += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
+        }
+        return $total;
+    }
+
     protected function applyOrderStarted(OrderStarted $event): void
     {
         $this->status = 'started';
@@ -277,6 +426,64 @@ class OrderAggregate extends AggregateRoot
     protected function applyOrderCancelled(OrderCancelled $event): void
     {
         $this->status = 'cancelled';
+    }
+
+    protected function applyItemsModified(ItemsModified $event): void
+    {
+        // Apply added items
+        foreach ($event->addedItems as $item) {
+            $this->items[] = $item;
+        }
+        
+        // Apply removed items
+        $this->items = array_filter($this->items, function($item) use ($event) {
+            return !in_array($item['item_id'] ?? $item['id'] ?? null, $event->removedItems);
+        });
+        
+        // Apply modified items
+        foreach ($event->modifiedItems as $modification) {
+            $itemId = $modification['item_id'];
+            foreach ($this->items as &$item) {
+                if (($item['item_id'] ?? $item['id'] ?? null) === $itemId) {
+                    $item = array_merge($item, $modification);
+                    break;
+                }
+            }
+        }
+        
+        // Update total
+        $this->total = new Money($event->newTotal, new Currency('CLP'));
+        
+        // Mark that items need re-validation if already validated
+        if ($this->itemsValidated) {
+            $this->itemsValidated = false;
+        }
+    }
+
+    protected function applyPriceAdjusted(PriceAdjusted $event): void
+    {
+        $adjustment = new Money($event->amount, new Currency($event->currency));
+        
+        switch ($event->adjustmentType) {
+            case 'discount':
+                $this->discount = $this->discount->add($adjustment);
+                $this->total = $this->total->subtract($adjustment);
+                break;
+                
+            case 'surcharge':
+                $this->total = $this->total->add($adjustment);
+                break;
+                
+            case 'correction':
+                // Direct total adjustment
+                $this->total = new Money($event->amount, new Currency($event->currency));
+                break;
+                
+            case 'tip':
+                $this->tip = $this->tip->add($adjustment);
+                $this->total = $this->total->add($adjustment);
+                break;
+        }
     }
 
     private function calculatePromotionDiscount(array $promotions): int

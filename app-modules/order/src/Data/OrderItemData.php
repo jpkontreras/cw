@@ -23,8 +23,8 @@ class OrderItemData extends BaseData
         public readonly int $itemId,
         public readonly string $itemName,
         public readonly int $quantity,
-        public readonly float $unitPrice,
-        public readonly float $totalPrice,
+        public readonly int $unitPrice,  // In minor units
+        public readonly int $totalPrice,  // In minor units
         public readonly string $status,
         public readonly string $kitchenStatus,
         public readonly ?string $course = null,
@@ -65,9 +65,10 @@ class OrderItemData extends BaseData
 
     /**
      * Calculate line total
+     * @return int Total in minor units
      */
     #[Computed]
-    public function lineTotal(): float
+    public function lineTotal(): int
     {
         return $this->quantity * $this->unitPrice;
     }
@@ -87,15 +88,16 @@ class OrderItemData extends BaseData
 
     /**
      * Get total modifiers price
+     * @return int Total in minor units
      */
     #[Computed]
-    public function modifiersTotal(): float
+    public function modifiersTotal(): int
     {
         if (!$this->modifiers) {
-            return 0.0;
+            return 0;
         }
 
-        return array_sum(array_map(fn($mod) => (float)($mod['price'] ?? 0), $this->modifiers));
+        return array_sum(array_map(fn($mod) => (int)($mod['price'] ?? 0), $this->modifiers));
     }
 
     /**

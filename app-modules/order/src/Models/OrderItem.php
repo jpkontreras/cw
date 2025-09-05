@@ -57,8 +57,8 @@ class OrderItem extends Model
         'order_id' => 'integer',
         'item_id' => 'integer',
         'quantity' => 'integer',
-        'unit_price' => 'float',
-        'total_price' => 'float',
+        'unit_price' => 'integer',  // Store as integer (minor units)
+        'total_price' => 'integer',  // Store as integer (minor units)
         'modifiers' => 'array',
         'metadata' => 'array',
         'prepared_at' => 'datetime',
@@ -123,7 +123,7 @@ class OrderItem extends Model
                 $modifiersTotal = 0;
                 if ($item->modifiers) {
                     foreach ($item->modifiers as $modifier) {
-                        $modifiersTotal += (float)($modifier['price'] ?? 0);
+                        $modifiersTotal += (int)($modifier['price'] ?? 0); // Already in minor units
                     }
                 }
                 $item->total_price = ($item->unit_price + $modifiersTotal) * $item->quantity;

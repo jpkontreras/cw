@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/currency-input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import type { Order, OrderItem, PaymentTransaction } from '@/modules/order';
-import { formatCurrency, formatOrderNumber, getPaymentStatusColor, getPaymentStatusLabel } from '@/modules/order';
+import { formatCurrency } from '@/lib/format';
+import { formatOrderNumber, getPaymentStatusColor, getPaymentStatusLabel } from '@/modules/order';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
   AlertCircle,
@@ -144,7 +146,7 @@ export default function PaymentPage({
   const [paymentMode, setPaymentMode] = useState<'full' | 'split'>('full');
   const [selectedMethod, setSelectedMethod] = useState('cash');
   const [tipPercentage, setTipPercentage] = useState(suggestedTip);
-  const [customTipAmount, setCustomTipAmount] = useState('');
+  const [customTipAmount, setCustomTipAmount] = useState<number | null>(null);
   const [useCustomTip, setUseCustomTip] = useState(false);
   const [splitPeople, setSplitPeople] = useState<SplitAssignment[]>([
     { userId: '1', name: 'Person 1', items: [], subtotal: 0, tax: 0, tip: 0, total: 0, paid: false },
@@ -164,7 +166,7 @@ export default function PaymentPage({
   // Calculate tip amount
   const tipAmount = useMemo(() => {
     if (useCustomTip && customTipAmount) {
-      return parseFloat(customTipAmount);
+      return customTipAmount; // Already in minor units
     }
     return (order.subtotal * tipPercentage) / 100;
   }, [order.subtotal, tipPercentage, useCustomTip, customTipAmount]);
@@ -427,16 +429,13 @@ export default function PaymentPage({
                     </RadioGroup>
 
                     {useCustomTip && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500">$</span>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={customTipAmount}
-                          onChange={(e) => setCustomTipAmount(e.target.value)}
-                          className="max-w-32"
-                        />
-                      </div>
+                      <CurrencyInput
+                        value={customTipAmount}
+                        onChange={(value) => setCustomTipAmount(value)}
+                        showSymbol={true}
+                        placeholder="0.00"
+                        className="max-w-32"
+                      />
                     )}
                   </CardContent>
                 </Card>

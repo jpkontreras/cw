@@ -24,7 +24,7 @@ class MenuItemData extends BaseData
         public readonly ?string $displayName,
         public readonly ?string $displayDescription,
         #[Numeric]
-        public readonly ?float $priceOverride,
+        public readonly ?int $price,  // In minor units
         public readonly bool $isActive = true,
         public readonly bool $isFeatured = false,
         public readonly bool $isRecommended = false,
@@ -75,12 +75,12 @@ class MenuItemData extends BaseData
         $displayName = $item->display_name ?: ($itemDetails?->name ?? null);
         $displayDescription = $item->display_description ?: ($itemDetails?->description ?? null);
         
-        // Ensure price is properly cast to float or null
+        // Get price as integer (already in minor units from database)
         $price = null;
-        if ($item->price_override !== null) {
-            $price = is_numeric($item->price_override) ? (float) $item->price_override : null;
+        if ($item->price !== null) {
+            $price = (int) $item->price;
         } elseif ($itemDetails && isset($itemDetails->basePrice)) {
-            $price = is_numeric($itemDetails->basePrice) ? (float) $itemDetails->basePrice : null;
+            $price = (int) $itemDetails->basePrice;
         }
         
         // Use image override if set, otherwise use provided item details
@@ -93,7 +93,7 @@ class MenuItemData extends BaseData
             itemId: $item->item_id,
             displayName: $displayName,
             displayDescription: $displayDescription,
-            priceOverride: $price,
+            price: $price,
             isActive: $item->is_active,
             isFeatured: $item->is_featured,
             isRecommended: $item->is_recommended,

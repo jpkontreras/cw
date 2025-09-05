@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/currency-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -149,7 +150,7 @@ export default function PricingIndex({
   const { data, setData, post, put, processing, errors, reset } = useForm({
     name: '',
     type: 'percentage_discount',
-    value: '',
+    value: null as number | null,  // Store as number (integer for fixed amounts, float for percentages)
     priority: '0',
     start_date: '',
     end_date: '',
@@ -771,15 +772,31 @@ export default function PricingIndex({
                     <Label htmlFor="value">
                       Value <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      step="0.01"
-                      value={data.value}
-                      onChange={(e) => setData('value', e.target.value)}
-                      placeholder={data.type === 'percentage_discount' ? '20' : '5.00'}
-                      className={errors.value ? 'border-destructive' : ''}
-                    />
+                    {data.type === 'percentage_discount' ? (
+                      <div className="relative">
+                        <Input
+                          id="value"
+                          type="number"
+                          step="0.01"
+                          value={data.value || ''}
+                          onChange={(e) => setData('value', parseFloat(e.target.value) || null)}
+                          placeholder="20"
+                          className={cn('pr-8', errors.value ? 'border-destructive' : '')}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          %
+                        </span>
+                      </div>
+                    ) : (
+                      <CurrencyInput
+                        id="value"
+                        value={data.value}
+                        onChange={(value) => setData('value', value)}
+                        showSymbol={true}
+                        placeholder="0.00"
+                        className={errors.value ? 'border-destructive' : ''}
+                      />
+                    )}
                     {errors.value && (
                       <p className="text-sm text-destructive">{errors.value}</p>
                     )}

@@ -36,7 +36,7 @@ class CreateMenuItemData extends BaseData
         public readonly ?string $displayDescription = null,
         
         #[Nullable, Numeric, Min(0)]
-        public readonly ?float $priceOverride = null,
+        public readonly ?int $price = null,  // In minor units
         
         #[BooleanType]
         public readonly bool $isActive = true,

@@ -10,6 +10,8 @@ use Colame\Order\Contracts\OrderServiceInterface;
 use Colame\Order\Data\CreateOrderData;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Data\UpdateOrderData;
+use Colame\Order\Data\ModifyOrderData;
+use Colame\Order\Services\EventSourcedOrderService;
 use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
 use Colame\Order\Services\OrderStatusService;
@@ -31,8 +33,11 @@ class OrderController extends Controller
         private OrderServiceInterface $orderService,
         private OrderStatusService $statusService,
         private ItemRepositoryInterface $itemRepository,
-        private ?TaxonomyServiceInterface $taxonomyService = null
-    ) {}
+        private ?TaxonomyServiceInterface $taxonomyService = null,
+        private ?EventSourcedOrderService $eventService = null
+    ) {
+        $this->eventService = $eventService ?? app(EventSourcedOrderService::class);
+    }
 
     /**
      * Display a listing of orders
@@ -168,29 +173,47 @@ class OrderController extends Controller
             abort(404, 'Order not found');
         }
 
-        if (!$orderWithRelations->order->canBeModified()) {
+        // Get modification permissions using event service
+        $permissions = $this->eventService->getModificationPermissions(
+            $order->uuid, 
+            request()->user()->id
+        );
+
+        if (!$permissions['canModify']) {
             return redirect()
                 ->route('orders.show', $order->id)
                 ->with('error', 'Order cannot be modified');
         }
 
+        // Add canBeModified method to order data for compatibility
+        $orderData = $orderWithRelations->order->toArray();
+        $orderData['canBeModified'] = fn() => $permissions['canModify'];
+
         return Inertia::render('order/edit', [
-            'order' => $orderWithRelations,
+            'order' => $orderData,
+            'permissions' => $permissions,
         ]);
     }
 
     /**
-     * Update the specified order
+     * Update the specified order using event sourcing
      */
     public function update(Request $request, Order $order): RedirectResponse
     {
         try {
-            $data = UpdateOrderData::validateAndCreate($request->all());
-            $updatedOrder = $this->orderService->updateOrder($order->id, $data);
+            // Add user info to the modification data
+            $payload = array_merge($request->all(), [
+                'modifiedBy' => $request->user()->email ?? 'User #' . $request->user()->id
+            ]);
+            
+            $data = ModifyOrderData::validateAndCreate($payload);
+            
+            // Use event-sourced service for modifications
+            $this->eventService->modifyOrder($order->uuid, $data);
 
             return redirect()
-                ->route('orders.show', $updatedOrder->id)
-                ->with('success', 'Order updated successfully');
+                ->route('orders.show', $order->id)
+                ->with('success', 'Order modified successfully');
         } catch (ValidationException $e) {
             return redirect()
                 ->back()

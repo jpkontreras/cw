@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('item_id'); // References item module
             $table->string('display_name')->nullable(); // Override item name for this menu
             $table->text('display_description')->nullable(); // Override item description
-            $table->decimal('price_override', 10, 2)->nullable(); // Menu-specific pricing
+            $table->integer('price')->nullable(); // Menu-specific pricing in minor units (cents, fils, etc.)
             $table->boolean('is_active')->default(true);
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_recommended')->default(false);
