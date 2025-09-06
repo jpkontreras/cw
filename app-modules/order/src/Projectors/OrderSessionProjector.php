@@ -109,7 +109,7 @@ class OrderSessionProjector extends Projector
             'event_data' => json_encode([
                 'item_id' => $event->itemId,
                 'item_name' => $event->itemName,
-                'price' => $event->price,
+                // NO PRICE - not needed for session tracking
                 'category' => $event->category,
                 'source' => $event->viewSource,
                 'duration' => $event->viewDurationSeconds,
@@ -137,7 +137,7 @@ class OrderSessionProjector extends Projector
                 'item_id' => $event->itemId,
                 'item_name' => $event->itemName,
                 'quantity' => $event->quantity,
-                'unit_price' => $event->unitPrice,
+                // NO UNIT_PRICE - pricing calculated at checkout
                 'category' => $event->category,
                 'source' => $event->addedFrom,
             ]),
@@ -154,7 +154,7 @@ class OrderSessionProjector extends Projector
             ]);
 
         $this->updateSessionActivity($event->aggregateRootUuid);
-        $this->updateCartValue($event->aggregateRootUuid);
+        $this->updateCartItemsCount($event->aggregateRootUuid);
         
         // Track conversion funnel
         $this->trackAnalytics($event->aggregateRootUuid, 'cart_started', [
@@ -181,7 +181,7 @@ class OrderSessionProjector extends Projector
         ]);
 
         $this->updateSessionActivity($event->aggregateRootUuid);
-        $this->updateCartValue($event->aggregateRootUuid);
+        $this->updateCartItemsCount($event->aggregateRootUuid);
     }
 
     /**
@@ -202,7 +202,7 @@ class OrderSessionProjector extends Projector
         ]);
 
         $this->updateSessionActivity($event->aggregateRootUuid);
-        $this->updateCartValue($event->aggregateRootUuid);
+        $this->updateCartItemsCount($event->aggregateRootUuid);
     }
 
     /**
@@ -299,7 +299,7 @@ class OrderSessionProjector extends Projector
             'event_type' => 'draft_saved',
             'event_data' => json_encode([
                 'items_count' => count($event->cartItems),
-                'subtotal' => $event->subtotal,
+                // NO SUBTOTAL - pricing calculated at checkout
                 'auto_saved' => $event->autoSaved,
             ]),
             'created_at' => now(),
@@ -313,7 +313,7 @@ class OrderSessionProjector extends Projector
                 'customer_info' => json_encode($event->customerInfo),
                 'serving_type' => $event->servingType,
                 'payment_method' => $event->paymentMethod,
-                'subtotal' => $event->subtotal,
+                // NO SUBTOTAL - pricing calculated at checkout
                 'auto_saved' => $event->autoSaved,
                 'saved_at' => now(),
                 'updated_at' => now(),
@@ -335,7 +335,7 @@ class OrderSessionProjector extends Projector
                 'abandonment_reason' => $event->reason,
                 'session_duration' => $event->sessionDurationSeconds,
                 'cart_items_count' => $event->itemsInCart,
-                'cart_value' => $event->cartValue,
+                // NO cart_value - pricing not tracked in sessions
                 'abandoned_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -344,7 +344,7 @@ class OrderSessionProjector extends Projector
         $this->trackAnalytics($event->aggregateRootUuid, 'session_abandoned', [
             'reason' => $event->reason,
             'duration_seconds' => $event->sessionDurationSeconds,
-            'cart_value' => $event->cartValue,
+            // NO cart_value - pricing not tracked in sessions
             'items_count' => $event->itemsInCart,
             'last_activity' => $event->lastActivity,
         ]);
@@ -367,17 +367,16 @@ class OrderSessionProjector extends Projector
     }
 
     /**
-     * Update cart value in session
+     * Update cart items count in session (NO PRICING)
      */
-    private function updateCartValue(string $sessionId): void
+    private function updateCartItemsCount(string $sessionId): void
     {
-        // Calculate cart value from events
+        // Calculate cart items count from events - NO PRICING
         $cartEvents = DB::table('order_session_events')
             ->where('session_id', $sessionId)
             ->whereIn('event_type', ['cart_add', 'cart_remove', 'cart_modify'])
             ->get();
 
-        $cartValue = 0;
         $itemsCount = 0;
         $cart = [];
 
@@ -394,31 +393,27 @@ class OrderSessionProjector extends Projector
                         unset($cart[$data['item_id']]);
                     }
                     break;
+                case 'cart_modify':
+                    if (isset($data['changes'])) {
+                        $cart[$data['item_id']] = max(0, $data['changes']['to'] ?? 0);
+                        if ($cart[$data['item_id']] === 0) {
+                            unset($cart[$data['item_id']]);
+                        }
+                    }
+                    break;
             }
         }
 
-        // Calculate totals
-        foreach ($cart as $itemId => $quantity) {
+        // Only count items - NO PRICING
+        foreach ($cart as $quantity) {
             $itemsCount += $quantity;
-            // Get item price from last cart_add event
-            $lastAdd = DB::table('order_session_events')
-                ->where('session_id', $sessionId)
-                ->where('event_type', 'cart_add')
-                ->whereRaw("(event_data->>'item_id')::int = ?", [$itemId])
-                ->orderBy('created_at', 'desc')
-                ->first();
-            
-            if ($lastAdd) {
-                $data = json_decode($lastAdd->event_data, true);
-                $cartValue += $quantity * $data['unit_price'];
-            }
         }
 
         DB::table('order_sessions')
             ->where('uuid', $sessionId)
             ->update([
                 'cart_items_count' => $itemsCount,
-                'cart_value' => $cartValue,
+                // NO cart_value - removed completely
                 'updated_at' => now(),
             ]);
     }

@@ -35,7 +35,8 @@ export const CartPopover: React.FC<CartPopoverProps> = ({
   className
 }) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Prices are fetched fresh from backend items table for display
+  const totalPrice = items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
 
   if (items.length === 0) {
     return null;
@@ -93,7 +94,7 @@ export const CartPopover: React.FC<CartPopoverProps> = ({
                       {item.name}
                     </h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      ${item.price.toLocaleString('es-CL')} c/u
+                      ${(item.price || 0).toLocaleString('es-CL')} c/u
                     </p>
                     {item.notes && (
                       <p className="text-xs text-muted-foreground italic mt-1">

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
+import { EventTrackingEngine, EventType } from '../services/EventTrackingEngine';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -165,11 +166,52 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   const searchIdRef = useRef<string | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const sessionActivityRef = useRef<NodeJS.Timeout | null>(null);
+  const trackingEngineRef = useRef<EventTrackingEngine | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   
   // Check for existing session on mount (but don't create new one)
   useEffect(() => {
-    // Only try to recover if we don't already have a session UUID
-    if (!initialSessionUuid) {
+    // If we have an initial session UUID, initialize tracking engine for it
+    if (initialSessionUuid) {
+      console.log('[OrderContext] Initializing tracking engine for existing session:', initialSessionUuid);
+      const token = `${initialSessionUuid}-${Date.now()}`;
+      setSessionToken(token);
+      
+      trackingEngineRef.current = new EventTrackingEngine({
+        sessionId: initialSessionUuid,
+        sessionToken: token,
+        endpoint: '/orders/session/sync',
+        onError: (error) => {
+          console.error('Tracking error:', error);
+        },
+        onStateUpdate: (state) => {
+          // Update local state with server-authoritative data
+          console.log('[OrderContext] State update from server:', state);
+          
+          // Update cart items with server prices
+          if (state.cart_items) {
+            setOrderItems(state.cart_items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              price: item.price, // Server-provided price
+              quantity: item.quantity,
+              category: item.category,
+              available: item.available,
+            })));
+          }
+        }
+      });
+      console.log('[OrderContext] Tracking engine initialized for existing session');
+      
+      // Hydrate the session - get current state from server
+      console.log('[OrderContext] Hydrating session from server');
+      trackingEngineRef.current.track(EventType.SESSION_HYDRATE, {
+        source: 'page_load',
+        timestamp: Date.now()
+      });
+      trackingEngineRef.current.flush(); // Force immediate sync to get state
+    } else {
+      // Try to recover existing session from localStorage
       checkAndRecoverExistingSession();
     }
     
@@ -180,6 +222,10 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       }
       if (sessionActivityRef.current) {
         clearTimeout(sessionActivityRef.current);
+      }
+      if (trackingEngineRef.current) {
+        trackingEngineRef.current.destroy();
+        trackingEngineRef.current = null;
       }
     };
   }, []);
@@ -247,6 +293,53 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
           setOrderUuid(existingUuid);
           setSessionStatus('recovered');
           
+          // Initialize tracking engine for recovered session
+          const token = response.data.data.session_token || `${existingUuid}-${Date.now()}`;
+          setSessionToken(token);
+          
+          if (trackingEngineRef.current) {
+            trackingEngineRef.current.destroy();
+          }
+          
+          trackingEngineRef.current = new EventTrackingEngine({
+            sessionId: existingUuid,
+            sessionToken: token,
+            endpoint: '/orders/session/sync',
+            onError: (error) => {
+              console.error('Tracking error:', error);
+            },
+            onStateUpdate: (state) => {
+              // Update local state with server-authoritative data
+              console.log('[OrderContext] State update from server:', state);
+              
+              // Update cart items with server prices
+              if (state.cart_items) {
+                setOrderItems(state.cart_items.map((item: any) => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price, // Server-provided price
+                  quantity: item.quantity,
+                  category: item.category,
+                  available: item.available,
+                })));
+              }
+            }
+          });
+          
+          // Track session recovery
+          trackingEngineRef.current.track(EventType.SESSION_RECOVERED, {
+            sessionAge: Date.now() - new Date(response.data.data.started_at).getTime(),
+            itemsCount: response.data.data.cart_items?.length || 0
+          });
+          
+          // Hydrate to get latest state from server
+          console.log('[OrderContext] Hydrating recovered session');
+          trackingEngineRef.current.track(EventType.SESSION_HYDRATE, {
+            source: 'session_recovery',
+            timestamp: Date.now()
+          });
+          trackingEngineRef.current.flush();
+          
           // Restore cart items and customer info
           const sessionData = response.data.data;
           if (sessionData.cart_items) {
@@ -297,8 +390,55 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       
       if (response.data.success) {
         const uuid = response.data.data.uuid || response.data.data.order_uuid;
+        const token = response.data.data.session_token || `${uuid}-${Date.now()}`;
+        
         setOrderUuid(uuid);
+        setSessionToken(token);
         setSessionStatus('active');
+        
+        // Initialize tracking engine
+        if (trackingEngineRef.current) {
+          trackingEngineRef.current.destroy();
+        }
+        
+        console.log('[OrderContext] Initializing EventTrackingEngine for session:', uuid);
+        trackingEngineRef.current = new EventTrackingEngine({
+          sessionId: uuid,
+          sessionToken: token,
+          endpoint: '/orders/session/sync',
+          onError: (error) => {
+            console.error('Tracking error:', error);
+          },
+          onStateUpdate: (state) => {
+            // Update local state with server-authoritative data
+            console.log('[OrderContext] State update from server:', state);
+            
+            // Update cart items with server prices
+            if (state.cart_items) {
+              setOrderItems(state.cart_items.map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                price: item.price, // Server-provided price
+                quantity: item.quantity,
+                category: item.category,
+                available: item.available,
+              })));
+            }
+            
+            // Update session status if needed
+            if (state.status) {
+              setSessionStatus(state.status === 'active' ? 'active' : 'error');
+            }
+          }
+        });
+        console.log('[OrderContext] EventTrackingEngine initialized');
+        
+        // Track session started
+        trackingEngineRef.current.track(EventType.SESSION_STARTED, {
+          orderType: orderType || 'unspecified',
+          locationId: 1,
+          platform: 'web'
+        });
         
         // Store in localStorage
         localStorage.setItem('order_session', JSON.stringify({
@@ -309,8 +449,9 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         // If order type was provided, track it
         if (orderType) {
           setCustomerInfo(prev => ({ ...prev, orderType }));
-          await trackEvent('serving_type', {
+          trackingEngineRef.current.track(EventType.SERVING_TYPE_CHANGED, {
             type: orderType,
+            previous: null
           });
         }
         
@@ -325,19 +466,31 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     }
   };
   
-  // Track event to backend
+  // Track event using the tracking engine
   const trackEvent = useCallback(async (eventType: string, data: any) => {
-    if (!orderUuid) return;
-    
-    try {
-      await axios.post(`/orders/session/${orderUuid}/track`, {
-        event_type: eventType,
-        data: data,
-      });
-    } catch (error) {
-      console.error(`Failed to track ${eventType} event:`, error);
+    if (!trackingEngineRef.current) {
+      console.warn('Tracking engine not initialized');
+      return;
     }
-  }, [orderUuid]);
+    
+    // Map string event types to EventType enum
+    const eventTypeMap: Record<string, EventType> = {
+      'search': EventType.SEARCH_PERFORMED,
+      'serving_type': EventType.SERVING_TYPE_CHANGED,
+      'customer_info': EventType.CUSTOMER_INFO_PROVIDED,
+      'payment_method': EventType.PAYMENT_METHOD_SELECTED,
+      'category_browse': EventType.CATEGORY_SELECTED,
+      'item_view': EventType.ITEM_VIEWED,
+      'draft_save': EventType.DRAFT_SAVED,
+    };
+    
+    const mappedType = eventTypeMap[eventType];
+    if (mappedType) {
+      trackingEngineRef.current.track(mappedType, data);
+    } else {
+      console.warn(`Unknown event type: ${eventType}`);
+    }
+  }, []);
   
   // Save draft order
   const saveDraftOrder = useCallback(async (autoSaved: boolean = false) => {
@@ -607,20 +760,32 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       return [...prevItems, { ...item, quantity: 1 }];
     });
     
-    // Track to backend if session is active
-    if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
-      try {
-        await axios.post(`/orders/session/${orderUuid}/cart/add`, {
-          item_id: item.id,
-          item_name: item.name,
-          quantity: newQuantity === 1 ? 1 : 1, // Always add 1 at a time
-          unit_price: item.price,
-          category: item.category,
+    // ALL operations go through tracking engine - no direct API calls!
+    if (trackingEngineRef.current) {
+      console.log('[OrderContext] Tracking engine exists, tracking event');
+      // Track as item_added for first item, item_modified for subsequent
+      if (existingItem) {
+        console.log('[OrderContext] Tracking ITEM_MODIFIED for existing item');
+        trackingEngineRef.current.track(EventType.ITEM_MODIFIED, {
+          itemId: item.id,
+          previousQuantity: existingItem.quantity,
+          newQuantity: existingItem.quantity + 1,
           source: isSearchMode ? 'search' : 'browse',
         });
-      } catch (error) {
-        console.error('Failed to track cart addition:', error);
+      } else {
+        console.log('[OrderContext] Tracking ITEM_ADDED for new item');
+        trackingEngineRef.current.track(EventType.ITEM_ADDED, {
+          itemId: item.id,
+          quantity: 1,
+          source: isSearchMode ? 'search' : 'browse',
+          // NEVER send price from client - server will look it up
+        });
       }
+      
+      // Force immediate sync for better UX
+      trackingEngineRef.current.flush();
+    } else {
+      console.log('[OrderContext] No tracking engine available!');
     }
     
     setIsSearchMode(false);
@@ -629,6 +794,14 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   };
 
   const removeItemFromOrder = (itemId: number) => {
+    const item = orderItems.find(i => i.id === itemId);
+    if (item && trackingEngineRef.current) {
+      trackingEngineRef.current.track(EventType.ITEM_REMOVED, {
+        itemId: itemId,
+        quantity: item.quantity,
+        reason: 'user_removed'
+      });
+    }
     setOrderItems(prevItems => prevItems.filter(item => item.id !== itemId));
   };
 
@@ -636,6 +809,16 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     if (quantity <= 0) {
       removeItemFromOrder(itemId);
       return;
+    }
+    
+    const item = orderItems.find(i => i.id === itemId);
+    if (item && trackingEngineRef.current) {
+      trackingEngineRef.current.track(EventType.ITEM_MODIFIED, {
+        itemId: itemId,
+        previousQuantity: item.quantity,
+        newQuantity: quantity,
+        source: 'manual_adjustment'
+      });
     }
     
     setOrderItems(prevItems =>

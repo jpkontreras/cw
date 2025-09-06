@@ -130,7 +130,7 @@ class OrderSessionService
                 itemId: $data['item_id'],
                 itemName: $data['item_name'],
                 quantity: $data['quantity'],
-                unitPrice: $data['unit_price'],
+                unitPrice: 0, // Placeholder - real price calculated at checkout
                 category: $data['category'] ?? null,
                 modifiers: $data['modifiers'] ?? [],
                 notes: $data['notes'] ?? null,
@@ -160,7 +160,7 @@ class OrderSessionService
     public function updateCartItem(string $orderUuid, array $data): void
     {
         OrderAggregate::retrieve($orderUuid)
-            ->modifyCart(
+            ->modifyCartItem(
                 $data['item_id'],
                 $data['item_name'],
                 $data['modification_type'],
@@ -201,7 +201,7 @@ class OrderSessionService
                                     'id' => $data['item_id'],
                                     'name' => $data['item_name'],
                                     'quantity' => 0,
-                                    'unit_price' => $data['unit_price'],
+                                    // NO PRICE STORED - will be fetched fresh from items table
                                     'category' => $data['category'] ?? null,
                                 ];
                             }
@@ -211,6 +211,20 @@ class OrderSessionService
                         case 'cart_remove':
                             if (isset($cart[$data['item_id']])) {
                                 $cart[$data['item_id']]['quantity'] -= $data['quantity'];
+                                if ($cart[$data['item_id']]['quantity'] <= 0) {
+                                    unset($cart[$data['item_id']]);
+                                }
+                            }
+                            break;
+                            
+                        case 'cart_modify':
+                            if (isset($cart[$data['item_id']]) && isset($data['changes'])) {
+                                // Apply quantity change from modification
+                                $from = $data['changes']['from'] ?? 0;
+                                $to = $data['changes']['to'] ?? 0;
+                                $cart[$data['item_id']]['quantity'] = $to;
+                                
+                                // Remove item if quantity becomes 0 or negative
                                 if ($cart[$data['item_id']]['quantity'] <= 0) {
                                     unset($cart[$data['item_id']]);
                                 }
@@ -304,12 +318,25 @@ class OrderSessionService
         // Convert the session to an actual order
         $aggregate = OrderAggregate::retrieve($orderUuid);
         
-        // Add all cart items as order items
-        foreach ($state['cart_items'] as $item) {
+        // Add all cart items as order items - fetch fresh prices from database
+        $itemIds = array_column($state['cart_items'], 'id');
+        $items = \Colame\Item\Models\Item::whereIn('id', $itemIds)->get()->keyBy('id');
+        
+        $orderTotal = 0;
+        foreach ($state['cart_items'] as $cartItem) {
+            $item = $items[$cartItem['id']] ?? null;
+            if (!$item) {
+                continue; // Skip if item no longer exists
+            }
+            
+            // Get fresh price from database - NEVER from session
+            $currentPrice = $item->sale_price ?? $item->base_price;
+            $orderTotal += $currentPrice * $cartItem['quantity'];
+            
             $aggregate->addItems([[
-                'item_id' => $item['id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
+                'item_id' => $cartItem['id'],
+                'quantity' => $cartItem['quantity'],
+                'unit_price' => $currentPrice, // Fresh price from database
                 'notes' => null,
             ]]);
         }
@@ -333,7 +360,7 @@ class OrderSessionService
         return [
             'order_uuid' => $orderUuid,
             'status' => 'confirmed',
-            'total' => $state['cart_value'],
+            'total' => $orderTotal, // Fresh calculated total from database prices
         ];
     }
 }

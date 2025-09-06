@@ -2,6 +2,7 @@
 
 use Colame\Order\Http\Controllers\Web\OrderController as WebOrderController;
 use Colame\Order\Http\Controllers\Web\OrderFlowController as WebOrderFlowController;
+use Colame\Order\Http\Controllers\Web\OrderSyncController as WebOrderSyncController;
 use Colame\Order\Http\Controllers\Api\OrderController as ApiOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,13 +43,10 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
             
             // Session operations
             Route::prefix('{orderUuid}')->group(function () {
-                // Track generic events
-                Route::post('/track', [WebOrderFlowController::class, 'trackEvent'])->name('track');
-                
-                // Cart operations
-                Route::post('/cart/add', [WebOrderFlowController::class, 'addToCart'])->name('cart.add');
-                Route::post('/cart/remove', [WebOrderFlowController::class, 'removeFromCart'])->name('cart.remove');
-                Route::post('/cart/update', [WebOrderFlowController::class, 'updateCartItem'])->name('cart.update');
+                // SINGLE sync endpoint for ALL operations
+                Route::post('/sync', [WebOrderSyncController::class, 'sync'])
+                    ->name('sync')
+                    ->middleware('throttle:60,1'); // 60 requests per minute
                 
                 // Session management
                 Route::get('/state', [WebOrderFlowController::class, 'getSessionState'])->name('state');

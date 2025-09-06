@@ -163,7 +163,8 @@ class OrderFlowController extends Controller
     public function convertToOrder(Request $request, string $orderUuid): JsonResponse
     {
         $validated = $request->validate([
-            'customer_name' => 'required|string',
+            'payment_method' => 'nullable|string|in:cash,card,transfer',
+            'customer_name' => 'nullable|string',
             'customer_phone' => 'nullable|string',
             'customer_email' => 'nullable|email',
             'notes' => 'nullable|string',
@@ -171,6 +172,10 @@ class OrderFlowController extends Controller
         
         $result = $this->sessionService->convertToOrder($orderUuid, $validated);
         
-        return response()->json($result);
+        if (isset($result['success']) && $result['success']) {
+            return response()->json($result);
+        }
+        
+        return response()->json($result, isset($result['error']) ? 400 : 200);
     }
 }
