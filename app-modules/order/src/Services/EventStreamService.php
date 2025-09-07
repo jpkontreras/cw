@@ -213,7 +213,7 @@ class EventStreamService
             'userName' => $userName,
             'description' => $description,
             'icon' => $this->getEventIcon($eventName),
-            'color' => $this->getEventColor($eventName),
+            'color' => $this->getEventColor($eventName, $eventProperties),
             'createdAt' => Carbon::parse($storedEvent->created_at)->toIso8601String(),
             'timestamp' => Carbon::parse($storedEvent->created_at)->format('g:i:s A'),
             'relativeTime' => Carbon::parse($storedEvent->created_at)->diffForHumans(),
@@ -225,26 +225,32 @@ class EventStreamService
      */
     private function getEventDescription(string $eventName, array $properties): string
     {
+        // Handle status transition events with more detail
+        if ($eventName === 'OrderStatusTransitioned' || $eventName === 'OrderStatusChanged') {
+            return $this->formatStatusTransitionDescription($properties);
+        }
+        
         $descriptions = [
             'OrderStarted' => 'Order was created',
-            'ItemsAddedToOrder' => sprintf('Added %d items to order', count($properties['items'] ?? [])),
+            'ItemsAddedToOrder' => $this->formatItemsAddedDescription($properties),
             'ItemsValidated' => 'Items were validated',
-            'ItemsModified' => 'Order items were modified',
+            'ItemsModified' => $this->formatItemsModifiedDescription($properties),
             'PromotionsCalculated' => 'Promotions were calculated',
-            'PromotionApplied' => 'Promotion was applied',
+            'PromotionApplied' => sprintf('Promotion applied: %s', $properties['promotionName'] ?? 'Discount'),
             'PromotionRemoved' => 'Promotion was removed',
             'PriceCalculated' => sprintf('Price calculated: %s', $this->formatMoney($properties['total'] ?? 0)),
             'TipAdded' => sprintf('Tip added: %s', $this->formatMoney($properties['tipAmount'] ?? 0)),
-            'PaymentMethodSet' => sprintf('Payment method set to %s', $properties['paymentMethod'] ?? 'unknown'),
+            'PaymentMethodSet' => sprintf('Payment method: %s', ucfirst($properties['paymentMethod'] ?? 'unknown')),
             'OrderConfirmed' => 'Order was confirmed',
             'OrderCancelled' => sprintf('Order cancelled: %s', $properties['reason'] ?? 'No reason'),
-            'OrderStatusTransitioned' => sprintf('Status changed to %s', $properties['newStatus'] ?? 'unknown'),
-            'PaymentProcessed' => sprintf('Payment processed: %s', $this->formatMoney($properties['amount'] ?? 0)),
+            'PaymentProcessed' => sprintf('Payment processed: %s via %s', $this->formatMoney($properties['amount'] ?? 0), ucfirst($properties['method'] ?? 'card')),
             'PaymentFailed' => sprintf('Payment failed: %s', $properties['failureReason'] ?? 'Unknown error'),
-            'CustomerInfoUpdated' => 'Customer information updated',
+            'CustomerInfoUpdated' => $this->formatCustomerInfoUpdatedDescription($properties),
             'OrderItemsUpdated' => 'Order items updated',
             'ItemModifiersChanged' => sprintf('Modifiers changed for %s', $properties['itemName'] ?? 'item'),
             'PriceAdjusted' => sprintf('Price adjusted: %s', $properties['reason'] ?? 'No reason'),
+            'SpecialInstructionsAdded' => sprintf('Special instructions: %s', $properties['instructions'] ?? ''),
+            'NoteAdded' => sprintf('Note: %s', $properties['note'] ?? ''),
         ];
         
         return $descriptions[$eventName] ?? $eventName;
@@ -269,6 +275,7 @@ class EventStreamService
             'OrderConfirmed' => 'check-circle-2',
             'OrderCancelled' => 'x-circle',
             'OrderStatusTransitioned' => 'arrow-right-circle',
+            'OrderStatusChanged' => 'arrow-right-circle', // Handle both event names
             'PaymentProcessed' => 'check-square',
             'PaymentFailed' => 'alert-triangle',
             'CustomerInfoUpdated' => 'user',
@@ -283,8 +290,31 @@ class EventStreamService
     /**
      * Get color for event type
      */
-    private function getEventColor(string $eventName): string
+    private function getEventColor(string $eventName, array $properties = []): string
     {
+        // Special handling for status transitions - color based on new status
+        if ($eventName === 'OrderStatusTransitioned' || $eventName === 'OrderStatusChanged') {
+            $newStatus = $properties['newStatus'] ?? null;
+            switch ($newStatus) {
+                case 'placed':
+                    return 'blue';
+                case 'confirmed':
+                    return 'green';
+                case 'preparing':
+                    return 'orange';
+                case 'ready':
+                    return 'purple';
+                case 'completed':
+                    return 'green';
+                case 'cancelled':
+                    return 'red';
+                case 'refunded':
+                    return 'red';
+                default:
+                    return 'gray';
+            }
+        }
+        
         $colors = [
             'OrderStarted' => 'blue',
             'ItemsAddedToOrder' => 'green',
@@ -298,7 +328,6 @@ class EventStreamService
             'PaymentMethodSet' => 'blue',
             'OrderConfirmed' => 'green',
             'OrderCancelled' => 'red',
-            'OrderStatusTransitioned' => 'blue',
             'PaymentProcessed' => 'green',
             'PaymentFailed' => 'red',
             'CustomerInfoUpdated' => 'blue',
@@ -316,5 +345,133 @@ class EventStreamService
     private function formatMoney(int $amount): string
     {
         return '$' . number_format($amount / 100, 2);
+    }
+    
+    /**
+     * Format description for ItemsAddedToOrder event
+     */
+    private function formatItemsAddedDescription(array $properties): string
+    {
+        $items = $properties['items'] ?? [];
+        if (empty($items)) {
+            return 'No items added';
+        }
+        
+        $totalQuantity = 0;
+        $itemDescriptions = [];
+        
+        foreach ($items as $item) {
+            $quantity = $item['quantity'] ?? 1;
+            $totalQuantity += $quantity;
+            $name = $item['name'] ?? $item['item_name'] ?? 'Item';
+            $price = isset($item['price']) ? $this->formatMoney($item['price']) : '';
+            
+            $desc = $quantity > 1 ? "{$quantity}x {$name}" : $name;
+            if ($price) {
+                $desc .= " ({$price})";
+            }
+            $itemDescriptions[] = $desc;
+        }
+        
+        // If there are many items, summarize
+        if (count($itemDescriptions) > 3) {
+            return sprintf('Added %d items (%d total)', count($items), $totalQuantity);
+        }
+        
+        return 'Added: ' . implode(', ', $itemDescriptions);
+    }
+    
+    /**
+     * Format description for ItemsModified event
+     */
+    private function formatItemsModifiedDescription(array $properties): string
+    {
+        $modifications = [];
+        
+        if (isset($properties['added'])) {
+            $count = count($properties['added']);
+            $modifications[] = "{$count} added";
+        }
+        
+        if (isset($properties['removed'])) {
+            $count = count($properties['removed']);
+            $modifications[] = "{$count} removed";
+        }
+        
+        if (isset($properties['modified'])) {
+            $count = count($properties['modified']);
+            $modifications[] = "{$count} modified";
+        }
+        
+        if (empty($modifications)) {
+            return 'Order items were modified';
+        }
+        
+        return 'Items: ' . implode(', ', $modifications);
+    }
+    
+    /**
+     * Format description for CustomerInfoUpdated event
+     */
+    private function formatCustomerInfoUpdatedDescription(array $properties): string
+    {
+        $updates = [];
+        
+        if (isset($properties['name'])) {
+            $updates[] = "Name: {$properties['name']}";
+        }
+        
+        if (isset($properties['phone'])) {
+            $updates[] = "Phone updated";
+        }
+        
+        if (isset($properties['email'])) {
+            $updates[] = "Email updated";
+        }
+        
+        if (empty($updates)) {
+            return 'Customer information updated';
+        }
+        
+        return implode(', ', $updates);
+    }
+    
+    /**
+     * Format description for status transition events
+     */
+    private function formatStatusTransitionDescription(array $properties): string
+    {
+        $oldStatus = $properties['oldStatus'] ?? $properties['previousStatus'] ?? null;
+        $newStatus = $properties['newStatus'] ?? $properties['status'] ?? 'unknown';
+        $reason = $properties['reason'] ?? null;
+        
+        // Format status names for display
+        $statusLabels = [
+            'draft' => 'Draft',
+            'placed' => 'Placed',
+            'confirmed' => 'Confirmed',
+            'preparing' => 'Preparing',
+            'ready' => 'Ready',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+            'refunded' => 'Refunded',
+        ];
+        
+        $newStatusLabel = $statusLabels[$newStatus] ?? ucfirst($newStatus);
+        
+        // Build description based on available information
+        if ($oldStatus && isset($statusLabels[$oldStatus])) {
+            $oldStatusLabel = $statusLabels[$oldStatus];
+            $description = sprintf('Status changed: %s → %s', $oldStatusLabel, $newStatusLabel);
+        } else {
+            $description = sprintf('Status changed to %s', $newStatusLabel);
+        }
+        
+        // Add reason if provided
+        if ($reason) {
+            $description .= sprintf(' (%s)', $reason);
+        }
+        
+        return $description;
     }
 }

@@ -1,0 +1,13 @@
+https://spatie.be/docs/laravel-model-states/v2/01-introduction
+https://spatie.be/docs/laravel-model-states/v2/working-with-states/01-configuring-states
+https://spatie.be/docs/laravel-model-states/v2/working-with-states/02-serializing-states
+https://spatie.be/docs/laravel-model-states/v2/working-with-states/03-listing-states
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/01-configuring-transitions
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/02-custom-transition-classes
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/03-dependency-injection-in-transition-classes
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/04-retrieving-transitionable-states
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/05-transition-events
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/06-custom-default-transition-class
+https://spatie.be/docs/laravel-model-states/v2/querybuilder-support/01-state-scopes
+https://spatie.be/docs/laravel-model-states/v2/request-validation/01-state-validation-rule
+https://spatie.be/docs/laravel-model-states/v2/working-with-transitions/01-configuring-transitions

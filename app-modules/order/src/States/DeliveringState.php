@@ -21,6 +21,16 @@ class DeliveringState extends OrderState
         return 'blue';
     }
     
+    public function icon(): string
+    {
+        return 'truck';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Start Delivery';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -34,10 +44,5 @@ class DeliveringState extends OrderState
     public function canProcessPayment(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [DeliveredState::class];
     }
 }

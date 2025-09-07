@@ -27,7 +27,7 @@ class OrderRepositoryTest extends TestCase
         $data = [
             'user_id' => 1,
             'location_id' => 1,
-            'status' => Order::STATUS_DRAFT,
+            'status' => 'draft',
             'subtotal' => 100.00,
             'tax_amount' => 10.00,
             'discount_amount' => 0.00,
@@ -63,27 +63,27 @@ class OrderRepositoryTest extends TestCase
 
     public function test_can_update_order_status(): void
     {
-        $order = Order::factory()->create(['status' => Order::STATUS_DRAFT]);
+        $order = Order::factory()->create(['status' => 'draft']);
 
-        $updated = $this->repository->updateStatus($order->id, Order::STATUS_PLACED);
+        $updated = $this->repository->updateStatus($order->id, 'placed');
 
         $this->assertTrue($updated);
         
         $updatedOrder = Order::find($order->id);
-        $this->assertEquals(Order::STATUS_PLACED, $updatedOrder->status);
+        $this->assertEquals('placed', $updatedOrder->status);
         $this->assertNotNull($updatedOrder->placed_at);
     }
 
     public function test_can_get_orders_by_status(): void
     {
-        Order::factory()->count(3)->create(['status' => Order::STATUS_PLACED]);
-        Order::factory()->count(2)->create(['status' => Order::STATUS_COMPLETED]);
+        Order::factory()->count(3)->create(['status' => 'placed']);
+        Order::factory()->count(2)->create(['status' => 'completed']);
 
-        $placedOrders = $this->repository->getByStatus(Order::STATUS_PLACED);
+        $placedOrders = $this->repository->getByStatus('placed');
 
         $this->assertCount(3, $placedOrders);
         foreach ($placedOrders as $order) {
-            $this->assertEquals(Order::STATUS_PLACED, $order->status);
+            $this->assertEquals('placed', $order->status);
         }
     }
 
@@ -92,21 +92,21 @@ class OrderRepositoryTest extends TestCase
         $locationId = 1;
         
         // Create orders with different statuses
-        Order::factory()->create(['location_id' => $locationId, 'status' => Order::STATUS_DRAFT]);
-        Order::factory()->create(['location_id' => $locationId, 'status' => Order::STATUS_CONFIRMED]);
-        Order::factory()->create(['location_id' => $locationId, 'status' => Order::STATUS_PREPARING]);
-        Order::factory()->create(['location_id' => $locationId, 'status' => Order::STATUS_READY]);
-        Order::factory()->create(['location_id' => $locationId, 'status' => Order::STATUS_COMPLETED]);
-        Order::factory()->create(['location_id' => 2, 'status' => Order::STATUS_CONFIRMED]); // Different location
+        Order::factory()->create(['location_id' => $locationId, 'status' => 'draft']);
+        Order::factory()->create(['location_id' => $locationId, 'status' => 'confirmed']);
+        Order::factory()->create(['location_id' => $locationId, 'status' => 'preparing']);
+        Order::factory()->create(['location_id' => $locationId, 'status' => 'ready']);
+        Order::factory()->create(['location_id' => $locationId, 'status' => 'completed']);
+        Order::factory()->create(['location_id' => 2, 'status' => 'confirmed']); // Different location
 
         $kitchenOrders = $this->repository->getActiveKitchenOrders($locationId);
 
         $this->assertCount(3, $kitchenOrders); // Only confirmed, preparing, and ready orders
         
         $statuses = array_map(fn($order) => $order->status, $kitchenOrders);
-        $this->assertContains(Order::STATUS_CONFIRMED, $statuses);
-        $this->assertContains(Order::STATUS_PREPARING, $statuses);
-        $this->assertContains(Order::STATUS_READY, $statuses);
+        $this->assertContains('confirmed', $statuses);
+        $this->assertContains('preparing', $statuses);
+        $this->assertContains('ready', $statuses);
     }
 
     public function test_search_is_case_insensitive(): void

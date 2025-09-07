@@ -21,6 +21,16 @@ class PreparingState extends OrderState
         return 'yellow';
     }
     
+    public function icon(): string
+    {
+        return 'clock';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Start Preparing';
+    }
+    
     public function canBeModified(): bool
     {
         return false; // No modifications while preparing
@@ -39,10 +49,5 @@ class PreparingState extends OrderState
     public function affectsKitchen(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [ReadyState::class, CancelledState::class];
     }
 }

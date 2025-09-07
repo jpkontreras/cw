@@ -21,6 +21,16 @@ class PriceCalculatedState extends OrderState
         return 'blue';
     }
     
+    public function icon(): string
+    {
+        return 'dollar-sign';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Calculate Price';
+    }
+    
     public function canBeModified(): bool
     {
         return true;
@@ -34,10 +44,5 @@ class PriceCalculatedState extends OrderState
     public function canProcessPayment(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [ConfirmedState::class, CancelledState::class];
     }
 }

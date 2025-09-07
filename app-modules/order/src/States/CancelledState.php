@@ -21,6 +21,16 @@ class CancelledState extends OrderState
         return 'red';
     }
     
+    public function icon(): string
+    {
+        return 'x-circle';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Cancel Order';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -34,10 +44,5 @@ class CancelledState extends OrderState
     public function canProcessPayment(): bool
     {
         return false;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return []; // Terminal state
     }
 }

@@ -21,6 +21,16 @@ class DeliveredState extends OrderState
         return 'green';
     }
     
+    public function icon(): string
+    {
+        return 'check-circle-2';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Mark Delivered';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -34,10 +44,5 @@ class DeliveredState extends OrderState
     public function canProcessPayment(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [CompletedState::class];
     }
 }

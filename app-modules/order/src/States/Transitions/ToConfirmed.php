@@ -24,7 +24,7 @@ class ToConfirmed extends Transition
     public function handle(): Order
     {
         // Update the state
-        $this->order->state->transitionTo(ConfirmedState::class);
+        $this->order->status->transitionTo(ConfirmedState::class);
         
         // Record event in event sourcing
         if ($this->order->uuid) {

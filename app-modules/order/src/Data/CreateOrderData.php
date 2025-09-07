@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
@@ -29,7 +30,8 @@ class CreateOrderData extends BaseData
         #[MapInputName('userId')]
         public readonly ?int $userId = null,
         #[MapInputName('tableNumber')]
-        public readonly ?int $tableNumber = null,
+        #[WithCast(\Colame\Order\Casts\IntToStringCast::class)]
+        public readonly ?string $tableNumber = null,
         #[MapInputName('customerName')]
         public readonly ?string $customerName = null,
         #[MapInputName('customerPhone')]

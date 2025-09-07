@@ -19,21 +19,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { 
   Plus, 
   ShoppingCart, 
   Percent, 
   DollarSign, 
-  User, 
   MessageSquare,
   AlertCircle,
   Package,
   ArrowRightCircle,
   X,
-  Check
+  CreditCard,
+  FileText,
+  UserCheck
 } from 'lucide-react';
 import { useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
@@ -71,8 +70,24 @@ const eventTypes = [
     allowedStatuses: ['draft', 'pending'],
   },
   {
+    value: 'update_customer',
+    label: 'Customer Info',
+    icon: UserCheck,
+    description: 'Update customer details',
+    color: 'orange',
+    allowedStatuses: ['draft', 'pending', 'confirmed'],
+  },
+  {
+    value: 'set_payment_method',
+    label: 'Payment Method',
+    icon: CreditCard,
+    description: 'Set payment type (cash, card, etc)',
+    color: 'blue',
+    allowedStatuses: ['draft', 'pending', 'confirmed'],
+  },
+  {
     value: 'apply_promotion',
-    label: 'Apply Promotion',
+    label: 'Apply Discount',
     icon: Percent,
     description: 'Apply a discount or promotion',
     color: 'purple',
@@ -87,26 +102,26 @@ const eventTypes = [
     allowedStatuses: ['draft', 'pending', 'confirmed'],
   },
   {
-    value: 'update_customer',
-    label: 'Update Customer',
-    icon: User,
-    description: 'Update customer information',
-    color: 'orange',
-    allowedStatuses: ['draft', 'pending'],
+    value: 'special_instructions',
+    label: 'Special Instructions',
+    icon: FileText,
+    description: 'Add cooking or delivery instructions',
+    color: 'teal',
+    allowedStatuses: ['draft', 'pending', 'confirmed'],
   },
   {
     value: 'add_note',
-    label: 'Add Note',
+    label: 'Internal Note',
     icon: MessageSquare,
-    description: 'Add a note to the order',
+    description: 'Add internal staff note',
     color: 'gray',
-    allowedStatuses: ['draft', 'pending', 'confirmed', 'preparing'],
+    allowedStatuses: ['draft', 'pending', 'confirmed', 'preparing', 'ready'],
   },
   {
     value: 'change_status',
-    label: 'Change Status',
+    label: 'Update Status',
     icon: ArrowRightCircle,
-    description: 'Transition order status',
+    description: 'Move order to next stage',
     color: 'indigo',
     allowedStatuses: ['draft', 'pending', 'confirmed', 'preparing', 'ready'],
   },
@@ -132,6 +147,8 @@ export function AddEventDialog({
     customerPhone: '',
     customerEmail: '',
     note: '',
+    specialInstructions: '',
+    paymentMethod: '',
     newStatus: '',
     reason: '',
   });
@@ -151,39 +168,43 @@ export function AddEventDialog({
     
     // Use web route if orderId is provided, otherwise use API
     let endpoint = '';
-    let data = {};
+    const requestData = {
+      eventType: selectedEventType,
+      ...form.data,
+    };
     
     if (orderId) {
       // Use web route for event sourcing
       endpoint = `/orders/${orderId}/events/add`;
-      data = {
-        eventType: selectedEventType,
-        ...form.data,
-      };
     } else {
       // Use API routes (for external/mobile clients)
       switch (selectedEventType) {
         case 'add_items':
           endpoint = `/api/orders/flow/${orderUuid}/items`;
-          data = { items: form.data.items };
           break;
         case 'apply_promotion':
           endpoint = `/api/orders/flow/${orderUuid}/promotion`;
-          data = { promotionId: form.data.promotionId };
           break;
         case 'add_tip':
           endpoint = `/api/orders/flow/${orderUuid}/tip`;
-          data = { 
-            amount: form.data.tipAmount,
-            percentage: form.data.tipPercentage 
-          };
+          break;
+        case 'set_payment_method':
+          endpoint = `/api/orders/flow/${orderUuid}/payment`;
+          break;
+        case 'update_customer':
+          endpoint = `/api/orders/flow/${orderUuid}/customer`;
+          break;
+        case 'special_instructions':
+          endpoint = `/api/orders/flow/${orderUuid}/instructions`;
+          break;
+        case 'add_note':
+          endpoint = `/api/orders/flow/${orderUuid}/note`;
           break;
         case 'change_status':
           if (form.data.newStatus === 'confirmed') {
             endpoint = `/api/orders/flow/${orderUuid}/confirm`;
           } else if (form.data.newStatus === 'cancelled') {
             endpoint = `/api/orders/flow/${orderUuid}/cancel`;
-            data = { reason: form.data.reason };
           }
           break;
         default:
@@ -193,17 +214,17 @@ export function AddEventDialog({
     }
     
     // Submit the form
-    form.post(endpoint, {
+    form.transform(() => requestData).post(endpoint, {
       preserveScroll: true,
       onSuccess: () => {
-        toast.success('Event added successfully');
+        toast.success('Action recorded successfully');
         setOpen(false);
         form.reset();
         setSelectedEventType(null);
         onEventAdded?.();
       },
       onError: (errors) => {
-        toast.error('Failed to add event');
+        toast.error('Failed to record action');
         console.error(errors);
       },
     });
@@ -366,6 +387,7 @@ export function AddEventDialog({
               <Label htmlFor="customerName">Customer Name</Label>
               <Input
                 id="customerName"
+                placeholder="Enter customer name"
                 value={form.data.customerName}
                 onChange={(e) => form.setData('customerName', e.target.value)}
               />
@@ -375,17 +397,59 @@ export function AddEventDialog({
               <Input
                 id="customerPhone"
                 type="tel"
+                placeholder="+56 9 1234 5678"
                 value={form.data.customerPhone}
                 onChange={(e) => form.setData('customerPhone', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="customerEmail">Email</Label>
+              <Label htmlFor="customerEmail">Email (Optional)</Label>
               <Input
                 id="customerEmail"
                 type="email"
+                placeholder="customer@example.com"
                 value={form.data.customerEmail}
                 onChange={(e) => form.setData('customerEmail', e.target.value)}
+              />
+            </div>
+          </div>
+        );
+        
+      case 'set_payment_method':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Payment Method</Label>
+              <Select
+                value={form.data.paymentMethod}
+                onValueChange={(value) => form.setData('paymentMethod', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="credit_card">Credit Card</SelectItem>
+                  <SelectItem value="debit_card">Debit Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="mobile_payment">Mobile Payment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+        
+      case 'special_instructions':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="specialInstructions">Special Instructions</Label>
+              <Textarea
+                id="specialInstructions"
+                rows={4}
+                placeholder="E.g., No onions, extra spicy, deliver to back door..."
+                value={form.data.specialInstructions}
+                onChange={(e) => form.setData('specialInstructions', e.target.value)}
               />
             </div>
           </div>
@@ -395,11 +459,11 @@ export function AddEventDialog({
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="note">Note</Label>
+              <Label htmlFor="note">Internal Note</Label>
               <Textarea
                 id="note"
                 rows={4}
-                placeholder="Add your note here..."
+                placeholder="Add internal note for staff (not visible to customer)..."
                 value={form.data.note}
                 onChange={(e) => form.setData('note', e.target.value)}
               />
@@ -465,16 +529,16 @@ export function AddEventDialog({
       <DialogTrigger asChild>
         {children || (
           <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Event
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Record Action</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Add Order Event</DialogTitle>
+          <DialogTitle>Record Order Action</DialogTitle>
           <DialogDescription>
-            Add a new event to modify the order state
+            Select an action to update the order
           </DialogDescription>
         </DialogHeader>
         
@@ -483,8 +547,8 @@ export function AddEventDialog({
             <div className="space-y-6">
               {/* Event Type Selection */}
               <div>
-                <Label>Event Type</Label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
+                <Label>Select Action Type</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                   {availableEventTypes.map((type) => {
                     const Icon = type.icon;
                     const isSelected = selectedEventType === type.value;
@@ -546,7 +610,7 @@ export function AddEventDialog({
               type="submit"
               disabled={!selectedEventType || form.processing}
             >
-              {form.processing ? 'Adding...' : 'Add Event'}
+              {form.processing ? 'Recording...' : 'Record Action'}
             </Button>
           </div>
         </form>

@@ -88,7 +88,7 @@ class OrderFactory extends Factory
     public function draft(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_DRAFT,
+            'status' => 'draft',
         ]);
     }
 
@@ -98,7 +98,7 @@ class OrderFactory extends Factory
     public function placed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_PLACED,
+            'status' => 'placed',
             'placed_at' => $this->faker->dateTimeBetween('-30 minutes', 'now'),
             'payment_status' => 'pending',
         ]);
@@ -112,7 +112,7 @@ class OrderFactory extends Factory
         $placedAt = $this->faker->dateTimeBetween('-45 minutes', '-30 minutes');
         
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_CONFIRMED,
+            'status' => 'confirmed',
             'placed_at' => $placedAt,
             'confirmed_at' => $this->faker->dateTimeBetween($placedAt, '-25 minutes'),
             'payment_status' => $this->faker->randomElement(['pending', 'paid']),
@@ -128,7 +128,7 @@ class OrderFactory extends Factory
         $confirmedAt = (clone $placedAt)->modify('+' . $this->faker->numberBetween(2, 5) . ' minutes');
         
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_PREPARING,
+            'status' => 'preparing',
             'placed_at' => $placedAt,
             'confirmed_at' => $confirmedAt,
             'preparing_at' => $this->faker->dateTimeBetween($confirmedAt, '-30 minutes'),
@@ -146,7 +146,7 @@ class OrderFactory extends Factory
         $preparingAt = (clone $confirmedAt)->modify('+' . $this->faker->numberBetween(3, 8) . ' minutes');
         
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_READY,
+            'status' => 'ready',
             'placed_at' => $placedAt,
             'confirmed_at' => $confirmedAt,
             'preparing_at' => $preparingAt,
@@ -166,7 +166,7 @@ class OrderFactory extends Factory
         $readyAt = (clone $preparingAt)->modify('+' . $this->faker->numberBetween(15, 25) . ' minutes');
         
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_COMPLETED,
+            'status' => 'completed',
             'placed_at' => $placedAt,
             'confirmed_at' => $confirmedAt,
             'preparing_at' => $preparingAt,
@@ -182,7 +182,7 @@ class OrderFactory extends Factory
     public function cancelled(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Order::STATUS_CANCELLED,
+            'status' => 'cancelled',
             'cancel_reason' => $this->faker->randomElement([
                 'Customer request',
                 'Out of stock',

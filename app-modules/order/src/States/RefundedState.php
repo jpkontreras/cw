@@ -21,6 +21,16 @@ class RefundedState extends OrderState
         return 'purple';
     }
     
+    public function icon(): string
+    {
+        return 'rotate-ccw';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Refund Order';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -34,10 +44,5 @@ class RefundedState extends OrderState
     public function canProcessPayment(): bool
     {
         return false;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return []; // Terminal state
     }
 }

@@ -419,7 +419,7 @@ class OrderAggregate extends AggregateRoot
     }
 
     public function addItems(array $items): self {
-        if (!in_array($this->status, ['draft', 'started', 'items_added'])) {
+        if (!in_array($this->status, ['draft', 'started', 'items_added', 'cart_building'])) {
             throw new InvalidOrderStateException("Cannot add items in status: {$this->status}");
         }
 
@@ -1041,7 +1041,28 @@ class OrderAggregate extends AggregateRoot
     protected function applyItemsAddedToOrder(ItemsAddedToOrder $event): void
     {
         $this->status = 'items_added';
-        $this->items = array_merge($this->items, $event->items);
+        // Merge items intelligently to avoid duplicates
+        // Group by item_id and combine quantities
+        $existingItems = [];
+        foreach ($this->items as $item) {
+            $itemId = $item['item_id'] ?? $item['id'] ?? uniqid();
+            $existingItems[$itemId] = $item;
+        }
+        
+        // Add or update with new items
+        foreach ($event->items as $newItem) {
+            $itemId = $newItem['item_id'] ?? $newItem['id'] ?? uniqid();
+            if (isset($existingItems[$itemId])) {
+                // Update quantity if item already exists
+                $existingItems[$itemId]['quantity'] = 
+                    ($existingItems[$itemId]['quantity'] ?? 1) + ($newItem['quantity'] ?? 1);
+            } else {
+                // Add new item
+                $existingItems[$itemId] = $newItem;
+            }
+        }
+        
+        $this->items = array_values($existingItems);
         $this->itemsValidated = false;
     }
 

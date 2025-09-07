@@ -104,8 +104,8 @@ class OrderSessionService
             case 'customer_info':
                 $aggregate->enterCustomerInfo(
                     $data['fields'],
-                    $data['is_complete'] ?? false,
-                    $data['validation_errors'] ?? []
+                    $data['validation_errors'] ?? [],
+                    $data['is_complete'] ?? false
                 );
                 break;
                 
@@ -323,6 +323,7 @@ class OrderSessionService
         $items = \Colame\Item\Models\Item::whereIn('id', $itemIds)->get()->keyBy('id');
         
         $orderTotal = 0;
+        $orderItems = [];
         foreach ($state['cart_items'] as $cartItem) {
             $item = $items[$cartItem['id']] ?? null;
             if (!$item) {
@@ -333,15 +334,26 @@ class OrderSessionService
             $currentPrice = $item->sale_price ?? $item->base_price;
             $orderTotal += $currentPrice * $cartItem['quantity'];
             
-            $aggregate->addItems([[
+            $orderItems[] = [
                 'item_id' => $cartItem['id'],
                 'quantity' => $cartItem['quantity'],
                 'unit_price' => $currentPrice, // Fresh price from database
                 'notes' => null,
-            ]]);
+            ];
         }
         
-        // Confirm the order
+        // Add items to the order
+        $aggregate->addItems($orderItems);
+        
+        // Validate the items with subtotal
+        $subtotal = \Akaunting\Money\Money::CLP($orderTotal);
+        $aggregate->markItemsAsValidated($orderItems, $subtotal);
+        
+        // Set payment method (default to cash for now - should come from session or request)
+        $paymentMethod = $state['payment_method'] ?? 'cash';
+        $aggregate->setPaymentMethod($paymentMethod);
+        
+        // Now confirm the order
         $aggregate->confirmOrder();
         $aggregate->persist();
         

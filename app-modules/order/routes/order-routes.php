@@ -105,6 +105,7 @@ Route::middleware(['api', 'auth:sanctum'])->prefix('api/v1')->group(function () 
         // Status management
         Route::patch('/{order}/status', [ApiOrderController::class, 'updateStatus'])->name('update-status');
         Route::post('/{order}/cancel', [ApiOrderController::class, 'cancel'])->name('cancel');
+        Route::get('/{order}/next-states', [ApiOrderController::class, 'getNextStates'])->name('next-states');
         
         // Item management
         Route::patch('/{order}/items/{item}/status', [ApiOrderController::class, 'updateItemStatus'])->name('update-item-status');

@@ -24,6 +24,16 @@ abstract class OrderState extends State
     abstract public function color(): string;
     
     /**
+     * Get the icon name for UI display (Lucide icon name)
+     */
+    abstract public function icon(): string;
+    
+    /**
+     * Get the action label when transitioning TO this state
+     */
+    abstract public function actionLabel(): string;
+    
+    /**
      * Check if the order can be modified in this state
      */
     public function canBeModified(): bool
@@ -64,11 +74,12 @@ abstract class OrderState extends State
     }
     
     /**
-     * Get the next possible states
+     * Get the next possible states dynamically from the state machine
      */
     public function getNextPossibleStates(): array
     {
-        return [];
+        // Use the built-in transitionableStates() method from spatie/laravel-model-states
+        return $this->transitionableStates();
     }
     
     /**
@@ -78,20 +89,27 @@ abstract class OrderState extends State
     {
         return parent::config()
             ->default(DraftState::class)
+            
+            // Main flow transitions (simplified for regular orders)
+            ->allowTransition(DraftState::class, ConfirmedState::class) // Direct confirmation for regular orders
+            ->allowTransition(ConfirmedState::class, PreparingState::class)
+            ->allowTransition(PreparingState::class, ReadyState::class)
+            ->allowTransition(ReadyState::class, CompletedState::class)
+            
+            // Delivery flow
+            ->allowTransition(ReadyState::class, DeliveringState::class)
+            ->allowTransition(DeliveringState::class, DeliveredState::class)
+            ->allowTransition(DeliveredState::class, CompletedState::class)
+            
+            // Event-sourced detailed flow (for orders created through event sourcing)
             ->allowTransition(DraftState::class, StartedState::class)
             ->allowTransition(StartedState::class, ItemsAddedState::class)
             ->allowTransition(ItemsAddedState::class, ItemsValidatedState::class)
             ->allowTransition(ItemsValidatedState::class, PromotionsCalculatedState::class)
             ->allowTransition(PromotionsCalculatedState::class, PriceCalculatedState::class)
             ->allowTransition(PriceCalculatedState::class, ConfirmedState::class)
-            ->allowTransition(ConfirmedState::class, PreparingState::class)
-            ->allowTransition(PreparingState::class, ReadyState::class)
-            ->allowTransition(ReadyState::class, DeliveringState::class)
-            ->allowTransition(ReadyState::class, CompletedState::class)
-            ->allowTransition(DeliveringState::class, DeliveredState::class)
-            ->allowTransition(DeliveredState::class, CompletedState::class)
             
-            // Cancellation transitions
+            // Cancellation transitions (from any early state)
             ->allowTransition(DraftState::class, CancelledState::class)
             ->allowTransition(StartedState::class, CancelledState::class)
             ->allowTransition(ItemsAddedState::class, CancelledState::class)

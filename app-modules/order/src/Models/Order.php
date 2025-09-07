@@ -84,7 +84,7 @@ class Order extends Model
      * The attributes that should be cast
      */
     protected $casts = [
-        'status' => OrderState::class,  // Cast to state object
+        'status' => OrderState::class,  // Cast status to OrderState
         'user_id' => 'integer',
         'location_id' => 'integer',
         'waiter_id' => 'integer',
@@ -123,47 +123,6 @@ class Order extends Model
         'total' => 0,
     ];
 
-    /**
-     * Register model states
-     */
-    protected function registerStates(): void
-    {
-        $this->addState('status', OrderState::config()
-            ->default(\Colame\Order\States\DraftState::class)
-            ->registerTransition(ToConfirmed::class)
-            ->registerTransition(ToCancelled::class)
-        );
-    }
-    
-    /**
-     * Order statuses (legacy constants for compatibility)
-     */
-    public const STATUS_DRAFT = 'draft';
-    public const STATUS_PLACED = 'placed';
-    public const STATUS_CONFIRMED = 'confirmed';
-    public const STATUS_PREPARING = 'preparing';
-    public const STATUS_READY = 'ready';
-    public const STATUS_DELIVERING = 'delivering';
-    public const STATUS_DELIVERED = 'delivered';
-    public const STATUS_COMPLETED = 'completed';
-    public const STATUS_CANCELLED = 'cancelled';
-    public const STATUS_REFUNDED = 'refunded';
-
-    /**
-     * Valid order statuses
-     */
-    public const VALID_STATUSES = [
-        self::STATUS_DRAFT,
-        self::STATUS_PLACED,
-        self::STATUS_CONFIRMED,
-        self::STATUS_PREPARING,
-        self::STATUS_READY,
-        self::STATUS_DELIVERING,
-        self::STATUS_DELIVERED,
-        self::STATUS_COMPLETED,
-        self::STATUS_CANCELLED,
-        self::STATUS_REFUNDED,
-    ];
 
     /**
      * Order types
@@ -208,23 +167,26 @@ class Order extends Model
         // Set placed_at when status changes to placed
         static::updating(function (Order $order) {
             if ($order->isDirty('status')) {
-                switch ($order->status) {
-                    case self::STATUS_PLACED:
+                // Get the string value from the State object
+                $statusValue = $order->status instanceof OrderState ? $order->status->getValue() : $order->status;
+                
+                switch ($statusValue) {
+                    case 'placed':
                         $order->placed_at = now();
                         break;
-                    case self::STATUS_CONFIRMED:
+                    case 'confirmed':
                         $order->confirmed_at = now();
                         break;
-                    case self::STATUS_PREPARING:
+                    case 'preparing':
                         $order->preparing_at = now();
                         break;
-                    case self::STATUS_READY:
+                    case 'ready':
                         $order->ready_at = now();
                         break;
-                    case self::STATUS_COMPLETED:
+                    case 'completed':
                         $order->completed_at = now();
                         break;
-                    case self::STATUS_CANCELLED:
+                    case 'cancelled':
                         $order->cancelled_at = now();
                         break;
                 }
@@ -344,6 +306,8 @@ class Order extends Model
     public function shouldBeSearchable(): bool
     {
         // Don't index draft orders
-        return $this->status !== self::STATUS_DRAFT;
+        // Get the string value from the State object
+        $statusValue = $this->status instanceof OrderState ? $this->status->getValue() : $this->status;
+        return $statusValue !== 'draft';
     }
 }

@@ -21,6 +21,16 @@ class PromotionsCalculatedState extends OrderState
         return 'blue';
     }
     
+    public function icon(): string
+    {
+        return 'percent';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Calculate Promotions';
+    }
+    
     public function canBeModified(): bool
     {
         return true;
@@ -29,10 +39,5 @@ class PromotionsCalculatedState extends OrderState
     public function canBeCancelled(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [PriceCalculatedState::class, CancelledState::class];
     }
 }

@@ -21,6 +21,16 @@ class ConfirmedState extends OrderState
         return 'green';
     }
     
+    public function icon(): string
+    {
+        return 'check-circle';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Confirm Order';
+    }
+    
     public function canBeModified(): bool
     {
         return true; // Still allow modifications but with restrictions
@@ -39,10 +49,5 @@ class ConfirmedState extends OrderState
     public function affectsKitchen(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [PreparingState::class, CancelledState::class];
     }
 }

@@ -292,4 +292,99 @@ class OrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
+    
+    /**
+     * Get next possible states for an order with complete metadata
+     */
+    public function getNextStates(int $id): JsonResponse
+    {
+        try {
+            $order = Order::find($id);
+            
+            if (!$order) {
+                return response()->json([
+                    'error' => [
+                        'code' => 'ORDER_NOT_FOUND',
+                        'message' => 'Order not found',
+                    ],
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+            // Get the current state information
+            $currentState = [
+                'value' => $order->status->getValue(),
+                'display_name' => $order->status->displayName(),
+                'color' => $order->status->color(),
+                'icon' => $order->status->icon(),
+                'can_be_modified' => $order->status->canBeModified(),
+                'can_be_cancelled' => $order->status->canBeCancelled(),
+            ];
+            
+            // Get the transitionable states - returns array of state names or classes
+            $nextStateClasses = $order->status->transitionableStates();
+            
+            // Map state names to full class names
+            $stateNameToClass = [
+                'draft' => \Colame\Order\States\DraftState::class,
+                'started' => \Colame\Order\States\StartedState::class,
+                'items_added' => \Colame\Order\States\ItemsAddedState::class,
+                'items_validated' => \Colame\Order\States\ItemsValidatedState::class,
+                'promotions_calculated' => \Colame\Order\States\PromotionsCalculatedState::class,
+                'price_calculated' => \Colame\Order\States\PriceCalculatedState::class,
+                'confirmed' => \Colame\Order\States\ConfirmedState::class,
+                'preparing' => \Colame\Order\States\PreparingState::class,
+                'ready' => \Colame\Order\States\ReadyState::class,
+                'delivering' => \Colame\Order\States\DeliveringState::class,
+                'delivered' => \Colame\Order\States\DeliveredState::class,
+                'completed' => \Colame\Order\States\CompletedState::class,
+                'cancelled' => \Colame\Order\States\CancelledState::class,
+                'refunded' => \Colame\Order\States\RefundedState::class,
+            ];
+            
+            // Map state classes to metadata
+            $nextStates = [];
+            foreach ($nextStateClasses as $stateClassOrName) {
+                // Check if it's a class name or a state name
+                $stateClass = class_exists($stateClassOrName) 
+                    ? $stateClassOrName 
+                    : ($stateNameToClass[$stateClassOrName] ?? null);
+                
+                if (!$stateClass || !class_exists($stateClass)) {
+                    continue;
+                }
+                
+                // Create a temporary instance to get metadata
+                $tempOrder = new \Colame\Order\Models\Order();
+                $tempOrder->status = $stateClass;
+                $stateInstance = new $stateClass($tempOrder);
+                
+                $nextStates[] = [
+                    'value' => $stateInstance::$name ?? strtolower(class_basename($stateClass)),
+                    'display_name' => $stateInstance->displayName(),
+                    'action_label' => $stateInstance->actionLabel(),
+                    'color' => $stateInstance->color(),
+                    'icon' => $stateInstance->icon(),
+                ];
+            }
+            
+            // Check if we can cancel from current state
+            $canCancel = $order->status->canTransitionTo(\Colame\Order\States\CancelledState::class);
+            
+            return response()->json([
+                'data' => [
+                    'current_state' => $currentState,
+                    'next_states' => $nextStates,
+                    'can_cancel' => $canCancel,
+                    'is_final_state' => empty($nextStates),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => [
+                    'code' => 'STATE_FETCH_FAILED',
+                    'message' => $e->getMessage(),
+                ],
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

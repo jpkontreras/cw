@@ -91,7 +91,7 @@ export interface OrderListPageProps {
 export interface OrderDetailPageProps {
   order: Order;
   user?: unknown;
-  location?: unknown;
+  orderLocation?: unknown; // The location where this order was placed (renamed to avoid conflict with location switcher)
   payments?: PaymentTransaction[];
   offers?: unknown[];
   isPaid: boolean;

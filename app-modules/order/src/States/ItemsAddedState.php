@@ -21,6 +21,16 @@ class ItemsAddedState extends OrderState
         return 'blue';
     }
     
+    public function icon(): string
+    {
+        return 'shopping-cart';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Add Items';
+    }
+    
     public function canBeModified(): bool
     {
         return true;
@@ -34,10 +44,5 @@ class ItemsAddedState extends OrderState
     public function canAddItems(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [ItemsValidatedState::class, CancelledState::class];
     }
 }

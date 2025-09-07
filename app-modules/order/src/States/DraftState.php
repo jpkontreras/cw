@@ -21,6 +21,16 @@ class DraftState extends OrderState
         return 'gray';
     }
     
+    public function icon(): string
+    {
+        return 'file-text';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Create Draft';
+    }
+    
     public function canBeModified(): bool
     {
         return true;
@@ -36,8 +46,4 @@ class DraftState extends OrderState
         return true;
     }
     
-    public function getNextPossibleStates(): array
-    {
-        return [StartedState::class, CancelledState::class];
-    }
 }

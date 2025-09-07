@@ -115,12 +115,16 @@ class OrderProjector extends Projector
 
             // Update validated items with actual prices and details
             foreach ($event->validatedItems as $item) {
+                // Handle both 'price' and 'unit_price' keys for compatibility
+                $price = $item['price'] ?? $item['unit_price'] ?? 0;
+                $quantity = $item['quantity'] ?? 1;
+                
                 OrderItem::where('order_id', $order->id)
                     ->where('item_id', $item['item_id'])
                     ->update([
-                        'unit_price' => $item['price'],
-                        'total_price' => ($item['quantity'] ?? 1) * $item['price'],
-                        'item_name' => $item['name'],
+                        'unit_price' => $price,
+                        'total_price' => $quantity * $price,
+                        'item_name' => $item['name'] ?? null,
                         'category' => $item['category'] ?? null,
                     ]);
             }

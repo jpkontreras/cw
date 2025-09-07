@@ -21,6 +21,16 @@ class CompletedState extends OrderState
         return 'green';
     }
     
+    public function icon(): string
+    {
+        return 'check-circle';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Complete Order';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -34,10 +44,5 @@ class CompletedState extends OrderState
     public function canProcessPayment(): bool
     {
         return true; // Can still process payment if not fully paid
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [RefundedState::class];
     }
 }

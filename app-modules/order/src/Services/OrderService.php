@@ -23,6 +23,7 @@ use Colame\Order\Data\OrderWithRelationsData;
 use Colame\Order\Data\UpdateOrderData;
 use Colame\Order\Exceptions\InvalidOrderStateException;
 use Colame\Order\Exceptions\OrderNotFoundException;
+use Colame\Order\Exceptions\InvalidStatusTransitionException;
 use Colame\Order\Models\Order;
 use Colame\Order\Aggregates\OrderAggregate;
 
@@ -178,7 +179,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function confirmOrder(int $id): OrderData
     {
-        return $this->transitionOrderStatus($id, Order::STATUS_CONFIRMED, __('order.status.confirmed'));
+        return $this->transitionOrderStatus($id, 'confirmed', __('order.status.confirmed'));
     }
 
     /**
@@ -186,7 +187,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function startPreparingOrder(int $id): OrderData
     {
-        return $this->transitionOrderStatus($id, Order::STATUS_PREPARING, __('order.status.preparing'));
+        return $this->transitionOrderStatus($id, 'preparing', __('order.status.preparing'));
     }
 
     /**
@@ -194,7 +195,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function markOrderReady(int $id): OrderData
     {
-        return $this->transitionOrderStatus($id, Order::STATUS_READY, __('order.status.ready'));
+        return $this->transitionOrderStatus($id, 'ready', __('order.status.ready'));
     }
 
     /**
@@ -202,7 +203,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
      */
     public function completeOrder(int $id): OrderData
     {
-        return $this->transitionOrderStatus($id, Order::STATUS_COMPLETED, __('order.status.completed'));
+        return $this->transitionOrderStatus($id, 'completed', __('order.status.completed'));
     }
 
     /**
@@ -325,38 +326,128 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     }
 
     /**
-     * Transition order status using event sourcing
+     * Transition order status using Model States dynamically
      */
     public function transitionOrderStatus(int $id, string $newStatus, ?string $reason = null): OrderData
     {
-        $order = $this->orderRepository->find($id);
+        $orderModel = Order::find($id);
         
-        if (!$order) {
+        if (!$orderModel) {
             throw new OrderNotFoundException("Order {$id} not found");
         }
 
+        // Refresh the model to ensure we have the latest state
+        $orderModel->refresh();
+        
+        // Get current status value
+        $currentStatus = $orderModel->status->getValue();
+        
         $this->logAction('Transitioning order status', [
             'orderId' => $id,
-            'from' => $order->status,
+            'from' => $currentStatus,
             'to' => $newStatus
         ]);
 
-        // Get order UUID
-        $orderModel = Order::find($id);
-        if (!$orderModel || !$orderModel->uuid) {
-            throw new OrderNotFoundException("Order UUID not found for ID {$id}");
+        // Map the string status to the state class
+        $targetStateClass = $this->getStateClassFromString($newStatus);
+        
+        if (!$targetStateClass) {
+            throw new InvalidStatusTransitionException("Unknown target status: {$newStatus}");
         }
         
-        // Use event sourcing to transition status
-        $aggregate = OrderAggregate::retrieve($orderModel->uuid);
-        $aggregate->transitionStatus(
-            $newStatus,
-            $reason,
-            request()->user()?->email ?? 'system'
-        );
-        $aggregate->persist();
+        // Use the state's built-in method to check if transition is allowed
+        if (!$orderModel->status->canTransitionTo($targetStateClass)) {
+            // Special handling for event-sourced states that need progression
+            $eventSourcedStates = ['started', 'items_added', 'items_validated', 'promotions_calculated', 'price_calculated'];
+            
+            if (in_array($currentStatus, $eventSourcedStates) && $newStatus === 'confirmed') {
+                // Use event-sourced service which handles all intermediate state transitions
+                if ($orderModel->uuid) {
+                    $this->eventSourcedService->confirmOrder($orderModel->uuid, $orderModel->payment_method ?? 'cash');
+                    return $this->orderRepository->find($id);
+                }
+            }
+            
+            // Get the list of allowed transitions for better error message
+            $allowedStates = $orderModel->status->transitionableStates();
+            $allowedStatusNames = array_map(function($stateClass) {
+                return $this->getStringFromStateClass($stateClass);
+            }, $allowedStates);
+            
+            throw new InvalidStatusTransitionException(
+                "Cannot transition from '{$currentStatus}' to '{$newStatus}'. Allowed transitions: " . implode(', ', $allowedStatusNames)
+            );
+        }
+        
+        // Perform the transition using the state machine
+        try {
+            $orderModel->status->transitionTo($targetStateClass);
+            $orderModel->save();
+        } catch (\Exception $e) {
+            throw new InvalidStatusTransitionException(
+                "Failed to transition order status: {$e->getMessage()}"
+            );
+        }
+        
+        // Log the transition in event stream only for fully event-sourced orders
+        // For mixed-mode orders (created via regular flow but have events), 
+        // we skip event sourcing for status transitions to avoid conflicts
+        if ($orderModel->uuid && false) { // Disabled for now - mixing modes causes issues
+            // Also record in event stream if order has UUID
+            try {
+                $aggregate = OrderAggregate::retrieve($orderModel->uuid);
+                $aggregate->transitionStatus(
+                    $newStatus,
+                    $reason,
+                    request()->user()?->email ?? 'system'
+                );
+                $aggregate->persist();
+            } catch (\Exception $e) {
+                // Log but don't fail if event sourcing fails
+                \Log::warning("Could not record status transition in event stream: " . $e->getMessage());
+            }
+        }
+        
+        // Don't manually create events here - let the event sourcing system handle it
+        // This was causing duplicate events when orders were confirmed
+        // The OrderAggregate and projectors handle event creation properly
         
         return $this->orderRepository->find($id);
+    }
+    
+    /**
+     * Map string status to state class
+     */
+    private function getStateClassFromString(string $status): ?string
+    {
+        $stateMap = [
+            'draft' => \Colame\Order\States\DraftState::class,
+            'started' => \Colame\Order\States\StartedState::class,
+            'items_added' => \Colame\Order\States\ItemsAddedState::class,
+            'items_validated' => \Colame\Order\States\ItemsValidatedState::class,
+            'promotions_calculated' => \Colame\Order\States\PromotionsCalculatedState::class,
+            'price_calculated' => \Colame\Order\States\PriceCalculatedState::class,
+            'confirmed' => \Colame\Order\States\ConfirmedState::class,
+            'preparing' => \Colame\Order\States\PreparingState::class,
+            'ready' => \Colame\Order\States\ReadyState::class,
+            'delivering' => \Colame\Order\States\DeliveringState::class,
+            'delivered' => \Colame\Order\States\DeliveredState::class,
+            'completed' => \Colame\Order\States\CompletedState::class,
+            'cancelled' => \Colame\Order\States\CancelledState::class,
+            'refunded' => \Colame\Order\States\RefundedState::class,
+        ];
+        
+        return $stateMap[$status] ?? null;
+    }
+    
+    /**
+     * Get string representation from state class
+     */
+    private function getStringFromStateClass(string $stateClass): string
+    {
+        $className = class_basename($stateClass);
+        $stateName = str_replace('State', '', $className);
+        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $stateName));
     }
 
     /**

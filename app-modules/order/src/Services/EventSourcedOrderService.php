@@ -13,15 +13,21 @@ use Colame\Order\Data\ModifyOrderData;
 use Colame\Order\Models\Order;
 use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Exceptions\InvalidOrderStateException;
+use Colame\Location\Models\Location;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Akaunting\Money\Money;
 use Akaunting\Money\Currency;
 
 /**
  * Event-sourced order service for creation and modification
+ * Now with automatic state progression and process tracking
  */
 class EventSourcedOrderService
 {
+    private const PROCESS_CACHE_PREFIX = 'order_process:';
+    private const PROCESS_TTL = 3600; // 1 hour cache for process tracking
     /**
      * Create a new order using event sourcing
      */
@@ -30,14 +36,26 @@ class EventSourcedOrderService
         // Generate a new UUID for the order
         $orderUuid = Str::uuid()->toString();
         
+        // Get location currency for this order
+        $currency = $this->getLocationCurrency($data->locationId);
+        
+        // Initialize process tracking
+        $this->initializeProcessTracking($orderUuid, [
+            'type' => 'create_order',
+            'user_id' => $data->userId,
+            'location_id' => $data->locationId,
+            'currency' => $currency,
+        ]);
+        
         // Create the aggregate and start the order
         $aggregate = OrderAggregate::retrieve($orderUuid)
             ->startOrder(
                 staffId: (string) $data->userId,
                 locationId: (string) $data->locationId,
-                tableNumber: $data->tableNumber,
+                tableNumber: $data->tableNumber, // laravel-data handles the casting
                 metadata: array_merge($data->metadata ?? [], [
                     'type' => $data->type,
+                    'currency' => $currency, // Store currency in metadata
                     'customer_name' => $data->customerName,
                     'customer_phone' => $data->customerPhone,
                     'customer_email' => $data->customerEmail,
@@ -63,10 +81,15 @@ class EventSourcedOrderService
             }
             
             $aggregate->addItems($items);
+            
+            // Don't auto-progress during creation - wait for explicit confirmation
+            // This prevents state conflicts when adding more items later
         }
         
         // Persist the aggregate (saves all events)
         $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'completed']);
         
         return $orderUuid;
     }
@@ -76,6 +99,11 @@ class EventSourcedOrderService
      */
     public function modifyOrder(string $orderUuid, ModifyOrderData $data): void
     {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'modify_order',
+            'modified_by' => $data->modifiedBy,
+        ]);
+        
         $aggregate = OrderAggregate::retrieve($orderUuid);
         
         // Modify items if provided
@@ -87,62 +115,188 @@ class EventSourcedOrderService
                 modifiedBy: $data->modifiedBy,
                 reason: $data->reason
             );
+            
+            // Don't auto-progress on modifications - let confirmation handle it
+            // This prevents overwriting items when adding more
         }
         
         // Adjust price if needed
         if ($data->priceAdjustment) {
             $aggregate->adjustPrice(
                 adjustmentType: $data->priceAdjustment['type'],
-                amount: Money::CLP($data->priceAdjustment['amount']),
+                amount: $this->createMoney($data->priceAdjustment['amount'], $orderUuid),
                 reason: $data->priceAdjustment['reason'],
                 authorizedBy: $data->modifiedBy
             );
         }
         
         $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'modified']);
+    }
+    
+    /**
+     * Add items to an existing order
+     * This is used by the action recorder and API flows
+     */
+    public function addItemsToOrder(string $orderUuid, array $items): void
+    {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'add_items',
+            'items_count' => count($items),
+        ]);
+        
+        $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        // Format items for the aggregate
+        $formattedItems = [];
+        foreach ($items as $item) {
+            $formattedItems[] = [
+                'item_id' => $item['item_id'] ?? $item['itemId'],
+                'name' => $item['name'] ?? null,
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['unit_price'] ?? $item['unitPrice'] ?? 0,
+                'notes' => $item['notes'] ?? null,
+                'modifiers' => $item['modifiers'] ?? [],
+                'metadata' => $item['metadata'] ?? [],
+            ];
+        }
+        
+        $aggregate->addItems($formattedItems);
+        
+        // Only persist items addition, don't auto-progress yet
+        // Auto-progression should happen when confirming the order
+        $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'items_added']);
     }
     
     /**
      * Confirm an order (ready for kitchen)
+     * This is where we progress through all validation states
      */
     public function confirmOrder(string $orderUuid, string $paymentMethod): void
     {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'confirm_order',
+            'payment_method' => $paymentMethod,
+        ]);
+        
         $aggregate = OrderAggregate::retrieve($orderUuid);
         
-        // Validate items (this would call item service to verify availability)
-        $validatedItems = $this->validateItems($aggregate);
-        $subtotal = $this->calculateSubtotal($validatedItems);
+        // Check current order state from database
+        $order = Order::where('uuid', $orderUuid)->first();
+        $currentStatus = $order ? $order->status : null;
         
-        $aggregate->markItemsAsValidated($validatedItems, $subtotal);
-        
-        // Calculate and apply promotions
-        $promotions = $this->calculatePromotions($aggregate);
-        $aggregate->setPromotions(
-            $promotions['available'],
-            $promotions['auto_applied']
-        );
-        
-        // Calculate final price
-        $tax = $this->calculateTax($aggregate);
-        $total = $this->calculateTotal($aggregate, $tax);
-        $aggregate->calculateFinalPrice($tax, $total);
+        // Progress through ALL validation states when confirming
+        // This ensures proper state progression without conflicts
+        if (!in_array($currentStatus, ['confirmed'])) {
+            // Always run the full progression when confirming
+            $this->progressOrderToConfirmation($aggregate, $orderUuid);
+        }
         
         // Set payment method and confirm
         $aggregate->setPaymentMethod($paymentMethod);
         $aggregate->confirmOrder();
         
         $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'confirmed']);
+    }
+    
+    /**
+     * Compatibility method - redirects to addItemsToOrder
+     */
+    public function addItems(string $orderUuid, array $items): void
+    {
+        $this->addItemsToOrder($orderUuid, $items);
+    }
+    
+    /**
+     * Apply a promotion to the order
+     */
+    public function applyPromotion(string $orderUuid, int $promotionId): void
+    {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'apply_promotion',
+            'promotion_id' => $promotionId,
+        ]);
+        
+        $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        // In real implementation, would fetch promotion details
+        // For now, apply a simple discount (10% or fixed amount based on promotion)
+        $discountAmount = 100000; // Example: 1000.00 in cents
+        $aggregate->applyPromotion(
+            (string) $promotionId,
+            $this->createMoney($discountAmount, $orderUuid)
+        );
+        
+        $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'promotion_applied']);
+    }
+    
+    /**
+     * Add tip to the order
+     */
+    public function addTip(string $orderUuid, float $amount, ?float $percentage = null): void
+    {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'add_tip',
+            'tip_amount' => $amount,
+            'tip_percentage' => $percentage,
+        ]);
+        
+        $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        $aggregate->addTip(
+            $this->createMoney((int) ($amount * 100), $orderUuid), // Convert to cents
+            $percentage
+        );
+        
+        $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'tip_added']);
+    }
+    
+    /**
+     * Update customer information
+     */
+    public function updateCustomerInfo(string $orderUuid, array $customerData): void
+    {
+        $this->updateProcessTracking($orderUuid, [
+            'type' => 'update_customer',
+            'customer_data' => $customerData,
+        ]);
+        
+        $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        // Update customer info through metadata
+        $aggregate->updateMetadata([
+            'customer_name' => $customerData['customerName'] ?? null,
+            'customer_phone' => $customerData['customerPhone'] ?? null,
+            'customer_email' => $customerData['customerEmail'] ?? null,
+            'special_instructions' => $customerData['specialInstructions'] ?? null,
+        ]);
+        
+        $aggregate->persist();
+        
+        $this->updateProcessTracking($orderUuid, ['status' => 'customer_updated']);
     }
     
     /**
      * Cancel an order
      */
-    public function cancelOrder(string $orderUuid, string $reason, string $cancelledBy): void
+    public function cancelOrder(string $orderUuid, string $reason, string $cancelledBy = ''): void
     {
         $aggregate = OrderAggregate::retrieve($orderUuid);
         
         // Add cancellation metadata
-        $fullReason = sprintf('%s (Cancelled by: %s)', $reason, $cancelledBy);
+        $fullReason = $cancelledBy 
+            ? sprintf('%s (Cancelled by: %s)', $reason, $cancelledBy)
+            : $reason;
+        
         $aggregate->cancelOrder($fullReason);
         
         $aggregate->persist();
@@ -256,14 +410,14 @@ class EventSourcedOrderService
         return $aggregate->getItems();
     }
     
-    private function calculateSubtotal(array $items): Money
+    private function calculateSubtotal(array $items, string $orderUuid): Money
     {
         $total = 0;
         foreach ($items as $item) {
             $total += $item['quantity'] * $item['unit_price'];
         }
         
-        return Money::CLP($total);
+        return $this->createMoney($total, $orderUuid);
     }
     
     private function calculatePromotions($aggregate): array
@@ -275,18 +429,156 @@ class EventSourcedOrderService
         ];
     }
     
-    private function calculateTax($aggregate): Money
+    private function calculateTax($aggregate, string $orderUuid): Money
     {
-        // Chilean IVA is 19%
+        // Tax rate should ideally come from location settings
+        // Default to 19% for Chilean IVA, but this should be configurable
         $subtotal = $aggregate->getTotal()->getAmount();
-        $tax = (int) round($subtotal * 0.19);
+        $taxRate = 0.19; // TODO: Get from location settings
+        $tax = (int) round($subtotal * $taxRate);
         
-        return Money::CLP($tax);
+        return $this->createMoney($tax, $orderUuid);
     }
     
     private function calculateTotal($aggregate, Money $tax): Money
     {
         $subtotal = $aggregate->getTotal();
         return $subtotal->add($tax);
+    }
+    
+    // NEW: Progression methods
+    
+    /**
+     * Progress order to confirmation state
+     * Runs all validation steps in sequence
+     */
+    private function progressOrderToConfirmation(OrderAggregate $aggregate, string $orderUuid): void
+    {
+        try {
+            // Get current state to avoid duplicate events
+            $order = Order::where('uuid', $orderUuid)->first();
+            $currentStatus = $order ? $order->status : null;
+            
+            // Step 1: Validate items (if not done)
+            if (!in_array($currentStatus, ['items_validated', 'promotions_calculated', 'price_calculated'])) {
+                $this->updateProcessTracking($orderUuid, ['step' => 'validating_items']);
+                $validatedItems = $this->validateItems($aggregate);
+                $subtotal = $this->calculateSubtotal($validatedItems, $orderUuid);
+                $aggregate->markItemsAsValidated($validatedItems, $subtotal);
+            }
+            
+            // Step 2: Calculate promotions (if not done)
+            if (!in_array($currentStatus, ['promotions_calculated', 'price_calculated'])) {
+                $this->updateProcessTracking($orderUuid, ['step' => 'calculating_promotions']);
+                $promotions = $this->calculatePromotions($aggregate);
+                $aggregate->setPromotions(
+                    $promotions['available'],
+                    $promotions['auto_applied']
+                );
+            }
+            
+            // Step 3: Calculate final price (if not done)
+            if ($currentStatus !== 'price_calculated') {
+                $this->updateProcessTracking($orderUuid, ['step' => 'calculating_price']);
+                $tax = $this->calculateTax($aggregate, $orderUuid);
+                $total = $this->calculateTotal($aggregate, $tax);
+                $aggregate->calculateFinalPrice($tax, $total);
+            }
+            
+            $this->updateProcessTracking($orderUuid, ['step' => 'progression_complete']);
+            
+            Log::info("Order {$orderUuid} progressed through validation states for confirmation");
+        } catch (\Exception $e) {
+            Log::error("Failed to progress order {$orderUuid}: {$e->getMessage()}");
+            $this->updateProcessTracking($orderUuid, [
+                'step' => 'progression_failed',
+                'error' => $e->getMessage(),
+            ]);
+            throw $e; // On confirmation, we should throw to prevent incomplete orders
+        }
+    }
+    
+    /**
+     * Initialize process tracking for an order
+     */
+    private function initializeProcessTracking(string $orderUuid, array $metadata = []): void
+    {
+        $processData = array_merge([
+            'order_uuid' => $orderUuid,
+            'started_at' => now()->toIso8601String(),
+            'status' => 'in_progress',
+            'steps' => [],
+        ], $metadata);
+        
+        Cache::put(
+            self::PROCESS_CACHE_PREFIX . $orderUuid,
+            $processData,
+            self::PROCESS_TTL
+        );
+    }
+    
+    /**
+     * Update process tracking for an order
+     */
+    private function updateProcessTracking(string $orderUuid, array $updates): void
+    {
+        $key = self::PROCESS_CACHE_PREFIX . $orderUuid;
+        $current = Cache::get($key, []);
+        
+        // Add timestamp to steps
+        if (isset($updates['step'])) {
+            $current['steps'][] = [
+                'name' => $updates['step'],
+                'timestamp' => now()->toIso8601String(),
+            ];
+            unset($updates['step']);
+        }
+        
+        $updated = array_merge($current, $updates);
+        $updated['updated_at'] = now()->toIso8601String();
+        
+        Cache::put($key, $updated, self::PROCESS_TTL);
+    }
+    
+    /**
+     * Get process tracking data for an order
+     */
+    public function getProcessTracking(string $orderUuid): ?array
+    {
+        return Cache::get(self::PROCESS_CACHE_PREFIX . $orderUuid);
+    }
+    
+    /**
+     * Get the currency for an order based on its location
+     */
+    private function getOrderCurrency(string $orderUuid): string
+    {
+        $order = Order::where('uuid', $orderUuid)->first();
+        
+        if (!$order || !$order->location_id) {
+            // Fallback to config default or CLP for Chilean system
+            return config('money.defaults.currency', 'CLP');
+        }
+        
+        return $this->getLocationCurrency($order->location_id);
+    }
+    
+    /**
+     * Get currency for a specific location
+     */
+    private function getLocationCurrency(int $locationId): string
+    {
+        $location = Location::find($locationId);
+        
+        return $location ? $location->currency : config('money.defaults.currency', 'CLP');
+    }
+    
+    /**
+     * Create a Money instance with the correct currency for the order
+     */
+    private function createMoney(int $amount, string $orderUuid): Money
+    {
+        $currency = $this->getOrderCurrency($orderUuid);
+        return new Money($amount, new Currency($currency));
     }
 }

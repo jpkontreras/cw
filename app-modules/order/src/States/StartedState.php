@@ -21,6 +21,16 @@ class StartedState extends OrderState
         return 'blue';
     }
     
+    public function icon(): string
+    {
+        return 'play-circle';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Start Order';
+    }
+    
     public function canBeModified(): bool
     {
         return true;
@@ -34,10 +44,5 @@ class StartedState extends OrderState
     public function canAddItems(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [ItemsAddedState::class, CancelledState::class];
     }
 }

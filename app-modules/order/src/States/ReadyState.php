@@ -21,6 +21,16 @@ class ReadyState extends OrderState
         return 'green';
     }
     
+    public function icon(): string
+    {
+        return 'package';
+    }
+    
+    public function actionLabel(): string
+    {
+        return 'Mark Ready';
+    }
+    
     public function canBeModified(): bool
     {
         return false;
@@ -39,10 +49,5 @@ class ReadyState extends OrderState
     public function affectsKitchen(): bool
     {
         return true;
-    }
-    
-    public function getNextPossibleStates(): array
-    {
-        return [DeliveringState::class, CompletedState::class];
     }
 }

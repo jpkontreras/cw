@@ -153,9 +153,9 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $orders = Order::where('location_id', $locationId)
             ->whereIn('status', [
-                Order::STATUS_CONFIRMED,
-                Order::STATUS_PREPARING,
-                Order::STATUS_READY,
+                'confirmed',
+                'preparing',
+                'ready',
             ])
             ->with('items')
             ->orderBy('placed_at', 'asc')
@@ -178,7 +178,7 @@ class OrderRepository implements OrderRepositoryInterface
                 AVG(total) as average_order_value,
                 SUM(total) as total_revenue,
                 AVG(TIMESTAMPDIFF(MINUTE, placed_at, completed_at)) as average_completion_time
-            ', [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])
+            ', ['completed', 'cancelled'])
             ->first();
         
         return [

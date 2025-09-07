@@ -113,14 +113,18 @@ class OrderValidationService
      */
     public function validateStatusTransition(string $currentStatus, string $newStatus): bool
     {
+        // Note: This is now redundant with Spatie Model States but kept for backward compatibility
         $validTransitions = [
-            Order::STATUS_DRAFT => [Order::STATUS_PLACED, Order::STATUS_CANCELLED],
-            Order::STATUS_PLACED => [Order::STATUS_CONFIRMED, Order::STATUS_CANCELLED],
-            Order::STATUS_CONFIRMED => [Order::STATUS_PREPARING, Order::STATUS_CANCELLED],
-            Order::STATUS_PREPARING => [Order::STATUS_READY],
-            Order::STATUS_READY => [Order::STATUS_COMPLETED],
-            Order::STATUS_COMPLETED => [],
-            Order::STATUS_CANCELLED => [],
+            'draft' => ['placed', 'confirmed', 'cancelled'],
+            'placed' => ['confirmed', 'cancelled'],
+            'confirmed' => ['preparing', 'cancelled'],
+            'preparing' => ['ready', 'cancelled'],
+            'ready' => ['completed', 'delivering'],
+            'delivering' => ['delivered'],
+            'delivered' => ['completed'],
+            'completed' => ['refunded'],
+            'cancelled' => [],
+            'refunded' => [],
         ];
 
         if (!isset($validTransitions[$currentStatus])) {
