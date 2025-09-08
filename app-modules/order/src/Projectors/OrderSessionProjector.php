@@ -56,9 +56,6 @@ class OrderSessionProjector extends Projector
      */
     public function onItemSearched(ItemSearched $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         // Update session activity
         $this->updateSessionActivity($event->aggregateRootUuid);
 
@@ -71,9 +68,6 @@ class OrderSessionProjector extends Projector
      */
     public function onCategoryBrowsed(CategoryBrowsed $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         $this->updateSessionActivity($event->aggregateRootUuid);
         
         // Track category popularity
@@ -87,9 +81,6 @@ class OrderSessionProjector extends Projector
      */
     public function onItemViewed(ItemViewed $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         $this->updateSessionActivity($event->aggregateRootUuid);
         
         // Track item popularity
@@ -103,9 +94,6 @@ class OrderSessionProjector extends Projector
      */
     public function onItemAddedToCart(ItemAddedToCart $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         // Update session to 'cart_building' status
         DB::table('order_sessions')
             ->where('uuid', $event->aggregateRootUuid)
@@ -130,9 +118,6 @@ class OrderSessionProjector extends Projector
      */
     public function onItemRemovedFromCart(ItemRemovedFromCart $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         $this->updateSessionActivity($event->aggregateRootUuid);
         $this->updateCartItemsCount($event->aggregateRootUuid);
     }
@@ -142,9 +127,6 @@ class OrderSessionProjector extends Projector
      */
     public function onCartModified(CartModified $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         $this->updateSessionActivity($event->aggregateRootUuid);
         $this->updateCartItemsCount($event->aggregateRootUuid);
     }
@@ -154,9 +136,6 @@ class OrderSessionProjector extends Projector
      */
     public function onServingTypeSelected(ServingTypeSelected $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         // Update session status if progressing
         DB::table('order_sessions')
             ->where('uuid', $event->aggregateRootUuid)
@@ -175,9 +154,6 @@ class OrderSessionProjector extends Projector
      */
     public function onCustomerInfoEntered(CustomerInfoEntered $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         // Update session with customer info completion status
         if ($event->isComplete) {
             DB::table('order_sessions')
@@ -196,9 +172,6 @@ class OrderSessionProjector extends Projector
      */
     public function onPaymentMethodSelected(PaymentMethodSelected $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         DB::table('order_sessions')
             ->where('uuid', $event->aggregateRootUuid)
             ->update([
@@ -214,9 +187,6 @@ class OrderSessionProjector extends Projector
      */
     public function onOrderDraftSaved(OrderDraftSaved $event): void
     {
-        // Events are already stored in stored_events table via event sourcing
-        // No need to duplicate in order_session_events
-
         // Store draft data
         DB::table('order_drafts')->updateOrInsert(
             ['session_id' => $event->aggregateRootUuid],
