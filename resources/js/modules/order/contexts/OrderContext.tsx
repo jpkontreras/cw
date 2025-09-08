@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { EventTrackingEngine, EventType } from '../services/EventTrackingEngine';
 
 // ============================================================================
@@ -143,6 +144,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   const [sessionStatus, setSessionStatus] = useState<'initializing' | 'active' | 'recovered' | 'error' | 'idle'>(
     initialSessionUuid ? 'active' : 'idle'
   );
+  const [sessionLocation, setSessionLocation] = useState<any>(null); // Locked location from session
   const [searchQuery, setSearchQuery] = useState('');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -292,6 +294,10 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         if (response.data.success) {
           setOrderUuid(existingUuid);
           setSessionStatus('recovered');
+          // Restore locked location from recovered session
+          if (response.data.location) {
+            setSessionLocation(response.data.location);
+          }
           
           // Initialize tracking engine for recovered session
           const token = response.data.data.session_token || `${existingUuid}-${Date.now()}`;
@@ -380,12 +386,12 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         return { success: true, uuid: orderUuid };
       }
       
-      // Create new session using web route
+      // Create new session using web route - location will be locked server-side
       const response = await axios.post('/orders/session/start', {
-        location_id: 1, // TODO: Get from user context
         platform: 'web',
         source: 'web',
         order_type: orderType,
+        // Location is determined server-side from user's current location
       });
       
       if (response.data.success) {
@@ -433,12 +439,18 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         });
         console.log('[OrderContext] EventTrackingEngine initialized');
         
-        // Track session started
+        // Track session started - location is already locked in session
         trackingEngineRef.current.track(EventType.SESSION_STARTED, {
           orderType: orderType || 'unspecified',
-          locationId: 1,
+          locationId: response.data.data.location?.id || null, // Use session's locked location
+          locationName: response.data.data.location?.name || null,
           platform: 'web'
         });
+        
+        // Store the locked location from session
+        if (response.data.data.location) {
+          setSessionLocation(response.data.data.location);
+        }
         
         // Store in localStorage
         localStorage.setItem('order_session', JSON.stringify({
@@ -838,83 +850,69 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
   // Process Order (convert session to confirmed order)
   const processOrder = async () => {
-    // If we have a session, convert it to an order
-    if (orderUuid && (sessionStatus === 'active' || sessionStatus === 'recovered')) {
-      try {
-        // Track customer info and payment method before conversion
-        await trackEvent('customer_info', {
-          fields: {
-            name: customerInfo.name,
-            phone: customerInfo.phone,
-            orderType: customerInfo.orderType,
-            tableNumber: customerInfo.tableNumber,
-            address: customerInfo.address,
-          },
-          is_complete: true,
+    // Orders MUST go through session conversion - no fallback
+    if (!orderUuid || (sessionStatus !== 'active' && sessionStatus !== 'recovered')) {
+      console.error('No active order session. Cannot process order.');
+      toast.error('No active order session. Please start a new order.');
+      return;
+    }
+
+    try {
+      // Track customer info and payment method before conversion
+      await trackEvent('customer_info', {
+        fields: {
+          name: customerInfo.name,
+          phone: customerInfo.phone,
+          orderType: customerInfo.orderType,
+          tableNumber: customerInfo.tableNumber,
+          address: customerInfo.address,
+        },
+        is_complete: true,
+      });
+      
+      if (customerInfo.paymentMethod) {
+        await trackEvent('payment_method', {
+          payment_method: customerInfo.paymentMethod,
         });
+      }
+      
+      // Convert session to order (the ONLY way to create an order)
+      const response = await axios.post(`/orders/session/${orderUuid}/convert`, {
+        payment_method: customerInfo.paymentMethod || 'cash',
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        notes: customerInfo.notes,
+      });
+      
+      if (response.data.success) {
+        // Clear local storage
+        localStorage.removeItem('order_session');
         
-        if (customerInfo.paymentMethod) {
-          await trackEvent('payment_method', {
-            payment_method: customerInfo.paymentMethod,
-          });
-        }
+        // Show success message
+        toast.success('Order created successfully');
         
-        // Convert session to order
-        const response = await axios.post(`/orders/session/${orderUuid}/convert`, {
-          payment_method: customerInfo.paymentMethod || 'cash',
-        });
+        // Navigate to order details using the order_id from response (which is the UUID)
+        const orderId = response.data.order_id;
+        console.log('Order conversion successful, redirecting to:', `/orders/${orderId}`);
+        console.log('Full API response:', response.data);
         
-        if (response.data.success) {
-          // Clear local storage
-          localStorage.removeItem('order_session');
-          
-          // Navigate to success page or order details
-          router.visit(`/orders/${orderUuid}`);
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to convert session to order:', error);
-        // Fall back to legacy flow
+        // Use Inertia router for navigation
+        router.visit(`/orders/${orderId}`);
+      } else {
+        throw new Error(response.data.error || 'Failed to convert session to order');
+      }
+    } catch (error: any) {
+      console.error('Failed to convert session to order:', error);
+      
+      // Show user-friendly error message
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to process order. Please try again.';
+      toast.error(errorMessage);
+      
+      // If session is not found or expired, redirect to start new order
+      if (error.response?.status === 404 || errorMessage.includes('not found')) {
+        router.visit('/orders/new');
       }
     }
-    
-    // Legacy flow if session conversion fails or not available
-    // Map frontend orderType to backend expected values
-    const orderTypeMap: Record<string, string> = {
-      'dine_in': 'dineIn',  // Backend expects camelCase per validation
-      'takeout': 'takeout',
-      'delivery': 'delivery',
-      'catering': 'catering'
-    };
-    
-    const orderData = {
-      // Required fields
-      locationId: 1, // TODO: Get from user context or settings
-      type: orderTypeMap[customerInfo.orderType] || 'dineIn', // Map to backend expected format
-      items: orderItems.map(item => ({
-        itemId: item.id, // Changed from item_id to itemId
-        name: item.name, // Include item name
-        unitPrice: item.price * 100, // Convert to cents (backend expects minor units)
-        quantity: item.quantity,
-        notes: item.notes,
-        modifiers: item.modifiers || []
-      })),
-      // Customer information
-      customerName: customerInfo.name,
-      customerPhone: customerInfo.phone,
-      tableNumber: customerInfo.tableNumber,
-      address: customerInfo.address,
-      customerNotes: customerInfo.notes,
-      specialInstructions: customerInfo.specialInstructions,
-      paymentMethod: customerInfo.paymentMethod || 'cash',
-      // Calculated values
-      subtotal: calculateSubtotal(),
-      tax: calculateTax(),
-      total: calculateTotal(),
-      preparationTime: calculatePreparationTime(),
-    };
-    
-    router.post('/orders', orderData);
   };
 
   const clearOrder = () => {
@@ -954,6 +952,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     activeFiltersCount,
     orderUuid,
     sessionStatus,
+    sessionLocation, // Expose locked location
     lastSavedAt,
     
     // Refs

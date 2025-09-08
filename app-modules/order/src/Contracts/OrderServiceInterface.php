@@ -24,42 +24,42 @@ interface OrderServiceInterface
     /**
      * Update an existing order
      */
-    public function updateOrder(int $id, UpdateOrderData $data): OrderData;
+    public function updateOrder(string $id, UpdateOrderData $data): OrderData;
 
     /**
      * Get order with all relations
      */
-    public function getOrderWithRelations(int $id): ?OrderWithRelationsData;
+    public function getOrderWithRelations(string $id): ?OrderWithRelationsData;
 
     /**
      * Confirm an order
      */
-    public function confirmOrder(int $id): OrderData;
+    public function confirmOrder(string $id): OrderData;
 
     /**
      * Mark order as preparing
      */
-    public function startPreparingOrder(int $id): OrderData;
+    public function startPreparingOrder(string $id): OrderData;
 
     /**
      * Mark order as ready
      */
-    public function markOrderReady(int $id): OrderData;
+    public function markOrderReady(string $id): OrderData;
 
     /**
      * Complete an order
      */
-    public function completeOrder(int $id): OrderData;
+    public function completeOrder(string $id): OrderData;
 
     /**
      * Cancel an order
      */
-    public function cancelOrder(int $id, string $reason): OrderData;
+    public function cancelOrder(string $id, string $reason): OrderData;
 
     /**
      * Calculate order totals
      */
-    public function calculateOrderTotals(int $id): array;
+    public function calculateOrderTotals(string $id): array;
 
     /**
      * Validate order items availability
@@ -69,7 +69,7 @@ interface OrderServiceInterface
     /**
      * Apply offers to order
      */
-    public function applyOffers(int $orderId, array $offerCodes): OrderData;
+    public function applyOffers(string $orderId, array $offerCodes): OrderData;
 
     /**
      * Get active orders for kitchen
@@ -79,12 +79,12 @@ interface OrderServiceInterface
     /**
      * Update order item status
      */
-    public function updateOrderItemStatus(int $orderId, int $itemId, string $status): bool;
+    public function updateOrderItemStatus(string $orderId, int $itemId, string $status): bool;
 
     /**
      * Split order into multiple orders
      */
-    public function splitOrder(int $orderId, array $itemGroups): array;
+    public function splitOrder(string $orderId, array $itemGroups): array;
 
     /**
      * Merge multiple orders
@@ -104,7 +104,7 @@ interface OrderServiceInterface
     /**
      * Transition order status
      */
-    public function transitionOrderStatus(int $id, string $newStatus, ?string $reason = null): OrderData;
+    public function transitionOrderStatus(string $id, string $newStatus, ?string $reason = null): OrderData;
 
     /**
      * Get dashboard data

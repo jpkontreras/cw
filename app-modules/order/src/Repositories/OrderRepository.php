@@ -22,7 +22,7 @@ class OrderRepository implements OrderRepositoryInterface
     /**
      * Find order by ID
      */
-    public function find(int $id): ?OrderData
+    public function find(string $id): ?OrderData
     {
         $order = Order::with(['items'])->find($id);
         
@@ -36,7 +36,7 @@ class OrderRepository implements OrderRepositoryInterface
     /**
      * Find order by ID or throw exception
      */
-    public function findOrFail(int $id): OrderData
+    public function findOrFail(string $id): OrderData
     {
         $order = Order::with(['items'])->findOrFail($id);
         return $this->modelToData($order, true);
@@ -107,7 +107,7 @@ class OrderRepository implements OrderRepositoryInterface
      * @deprecated Use EventSourcedOrderService instead
      * @throws \RuntimeException
      */
-    public function update(int $id, array $data): bool
+    public function update(string $id, array $data): bool
     {
         throw new \RuntimeException(
             'Direct order updates are not allowed. Use EventSourcedOrderService to modify orders through event sourcing.'
@@ -119,7 +119,7 @@ class OrderRepository implements OrderRepositoryInterface
      * @deprecated Use EventSourcedOrderService instead
      * @throws \RuntimeException
      */
-    public function updateStatus(int $id, string $status, ?string $reason = null): bool
+    public function updateStatus(string $id, string $status, ?string $reason = null): bool
     {
         throw new \RuntimeException(
             'Direct status updates are not allowed. Use EventSourcedOrderService to transition order status through event sourcing.'
@@ -131,7 +131,7 @@ class OrderRepository implements OrderRepositoryInterface
      * @deprecated Orders should not be deleted, only cancelled
      * @throws \RuntimeException
      */
-    public function delete(int $id): bool
+    public function delete(string $id): bool
     {
         throw new \RuntimeException(
             'Order deletion is not allowed. Orders should be cancelled instead of deleted to maintain audit trail.'
@@ -141,7 +141,7 @@ class OrderRepository implements OrderRepositoryInterface
     /**
      * Check if order exists
      */
-    public function exists(int $id): bool
+    public function exists(string $id): bool
     {
         return Order::where('id', $id)->exists();
     }
@@ -489,5 +489,30 @@ class OrderRepository implements OrderRepositoryInterface
     private function shouldIncludeRelations(array $filters): bool
     {
         return !empty($filters['include']) && in_array('items', (array) $filters['include']);
+    }
+
+    /**
+     * Search orders with term and filters
+     */
+    public function search(string $term, array $filters = []): LengthAwarePaginator
+    {
+        $query = Order::query();
+
+        // Apply search term
+        if (!empty($term)) {
+            $query->where(function (Builder $query) use ($term) {
+                $query->where('order_number', 'like', "%{$term}%")
+                      ->orWhere('customer_name', 'like', "%{$term}%")
+                      ->orWhere('customer_phone', 'like', "%{$term}%")
+                      ->orWhere('customer_email', 'like', "%{$term}%");
+            });
+        }
+
+        // Apply additional filters
+        $query = $this->applyFilters($query, $filters);
+
+        $perPage = $this->validatePerPage($filters['per_page'] ?? 20);
+        
+        return $query->paginate($perPage);
     }
 }

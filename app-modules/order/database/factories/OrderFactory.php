@@ -43,7 +43,8 @@ class OrderFactory extends Factory
         $data = [
             'order_number' => $orderNumber,
             'user_id' => $this->faker->numberBetween(1, 10),
-            'location_id' => $this->faker->numberBetween(1, 3),
+            // Use an existing location ID if available, otherwise use 1 as fallback for tests
+            'location_id' => \Colame\Location\Models\Location::inRandomOrder()->first()?->id ?? 1,
             'status' => $this->faker->randomElement(['placed', 'confirmed', 'preparing', 'ready', 'completed']),
             'type' => $type,
             'priority' => $this->faker->randomElement(['normal', 'normal', 'normal', 'high']), // 25% high priority

@@ -25,7 +25,7 @@ The Order module uses `spatie/laravel-model-states` for state management at the 
 $orderUuid = $eventSourcedService->createOrder($data);
 
 // 2. Database model is created by projector
-$order = Order::where('uuid', $orderUuid)->first();
+$order = Order::find($orderUuid);
 
 // 3. Check state permissions using model
 if ($order->canBeModified()) {

@@ -13,7 +13,7 @@ use Colame\Order\Data\ModifyOrderData;
 use Colame\Order\Models\Order;
 use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Exceptions\InvalidOrderStateException;
-use Colame\Location\Models\Location;
+use Colame\Location\Contracts\LocationRepositoryInterface;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -28,22 +28,36 @@ class EventSourcedOrderService
 {
     private const PROCESS_CACHE_PREFIX = 'order_process:';
     private const PROCESS_TTL = 3600; // 1 hour cache for process tracking
+    
+    public function __construct(
+        private ?LocationRepositoryInterface $locationRepository = null
+    ) {}
     /**
      * Create a new order using event sourcing
+     * Note: Location should already be locked in the session
      */
     public function createOrder(CreateOrderData $data): string
     {
+        // Location is now passed from session, not fetched from user context
+        // This ensures consistency throughout the order lifecycle
+        $locationId = $data->sessionLocationId ?? null;
+        
+        // Validate we have a location from session
+        if (!$locationId) {
+            throw new \InvalidArgumentException('Order session must have a locked location. Please start a new session.');
+        }
+        
         // Generate a new UUID for the order
         $orderUuid = Str::uuid()->toString();
         
         // Get location currency for this order
-        $currency = $this->getLocationCurrency($data->locationId);
+        $currency = $this->getLocationCurrency($locationId);
         
         // Initialize process tracking
         $this->initializeProcessTracking($orderUuid, [
             'type' => 'create_order',
             'user_id' => $data->userId,
-            'location_id' => $data->locationId,
+            'location_id' => $locationId,
             'currency' => $currency,
         ]);
         
@@ -51,7 +65,7 @@ class EventSourcedOrderService
         $aggregate = OrderAggregate::retrieve($orderUuid)
             ->startOrder(
                 staffId: (string) $data->userId,
-                locationId: (string) $data->locationId,
+                locationId: (string) $locationId,
                 tableNumber: $data->tableNumber, // laravel-data handles the casting
                 metadata: array_merge($data->metadata ?? [], [
                     'type' => $data->type,
@@ -185,7 +199,7 @@ class EventSourcedOrderService
         $aggregate = OrderAggregate::retrieve($orderUuid);
         
         // Check current order state from database
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $currentStatus = $order ? $order->status : null;
         
         // Progress through ALL validation states when confirming
@@ -307,7 +321,7 @@ class EventSourcedOrderService
      */
     public function getOrder(string $orderUuid): ?OrderData
     {
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         
         if (!$order) {
             return null;
@@ -321,7 +335,7 @@ class EventSourcedOrderService
      */
     public function canModifyOrder(string $orderUuid, int $userId): bool
     {
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         
         if (!$order) {
             return false;
@@ -342,7 +356,7 @@ class EventSourcedOrderService
      */
     public function getModificationPermissions(string $orderUuid, int $userId): array
     {
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         
         if (!$order) {
             return [
@@ -456,7 +470,7 @@ class EventSourcedOrderService
     {
         try {
             // Get current state to avoid duplicate events
-            $order = Order::where('uuid', $orderUuid)->first();
+            $order = Order::find($orderUuid);
             $currentStatus = $order ? $order->status : null;
             
             // Step 1: Validate items (if not done)
@@ -553,7 +567,7 @@ class EventSourcedOrderService
      */
     private function getOrderCurrency(string $orderUuid): string
     {
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         
         if (!$order || !$order->location_id) {
             // Fallback to config default or CLP for Chilean system
@@ -565,12 +579,31 @@ class EventSourcedOrderService
     
     /**
      * Get currency for a specific location
+     * Note: This should ideally be cached from session to avoid repeated lookups
      */
     private function getLocationCurrency(int $locationId): string
     {
-        $location = Location::find($locationId);
+        // Check if we have currency in session cache first
+        $sessionCurrency = Cache::get("order_session_currency:{$locationId}");
+        if ($sessionCurrency) {
+            return $sessionCurrency;
+        }
         
-        return $location ? $location->currency : config('money.defaults.currency', 'CLP');
+        // Otherwise fetch from repository if available
+        if ($this->locationRepository) {
+            $location = $this->locationRepository->find($locationId);
+            if (!$location) {
+                throw new \InvalidArgumentException("Location with ID {$locationId} not found");
+            }
+            $currency = $location->currency ?? config('money.defaults.currency', 'CLP');
+            
+            // Cache for this session
+            Cache::put("order_session_currency:{$locationId}", $currency, now()->addHours(24));
+            return $currency;
+        }
+        
+        // Fallback to config default if no repository available
+        return config('money.defaults.currency', 'CLP');
     }
     
     /**

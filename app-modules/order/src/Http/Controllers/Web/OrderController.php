@@ -14,8 +14,10 @@ use Colame\Order\Services\EventSourcedOrderService;
 use Colame\Order\Services\EventStreamService;
 use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
+use Colame\Order\Models\OrderSession;
 use Colame\Item\Contracts\ItemRepositoryInterface;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
+use Colame\Location\Contracts\LocationServiceInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -34,7 +36,8 @@ class OrderController extends Controller
         private ItemRepositoryInterface $itemRepository,
         private ?TaxonomyServiceInterface $taxonomyService = null,
         private ?EventSourcedOrderService $eventService = null,
-        private ?EventStreamService $eventStreamService = null
+        private ?EventStreamService $eventStreamService = null,
+        private ?LocationServiceInterface $locationService = null
     ) {
         $this->eventService = $eventService ?? app(EventSourcedOrderService::class);
         $this->eventStreamService = $eventStreamService ?? app(EventStreamService::class);
@@ -57,12 +60,20 @@ class OrderController extends Controller
             return $redirect;
         }
 
-        // Get locations for filter dropdown  
-        $locations = [
-            ['id' => 1, 'name' => 'Main Branch'],
-            ['id' => 2, 'name' => 'Downtown Branch'],
-            // TODO: Replace with actual location service
-        ];
+        // Get locations for filter dropdown using the location service
+        $locations = [];
+        if ($this->locationService) {
+            // Get the raw collection of LocationData objects
+            $locationsCollection = $this->locationService->getActiveLocations();
+            // Transform to simple array for the filter dropdown
+            $locations = [];
+            foreach ($locationsCollection as $location) {
+                $locations[] = [
+                    'id' => $location->id,
+                    'name' => $location->name,
+                ];
+            }
+        }
 
         // Update location options in metadata
         if (isset($responseData['metadata']['columns']['locationId'])) {
@@ -100,20 +111,31 @@ class OrderController extends Controller
     /**
      * Display the order creation session
      */
-    public function session(Request $request, string $uuid): Response
+    public function session(Request $request, string $uuid): Response|RedirectResponse
     {
-        // Get formatted categories from the taxonomy service
+        // Get session from event-sourced table
+        $session = OrderSession::find($uuid);
+        
+        if (!$session || !$session->isActive()) {
+            return redirect()->route('orders.new')->with('error', 'Session not found or expired');
+        }
+        
+        // Get location from session (now properly stored as integer)
+        $locationId = $session->location_id;
+        $locationData = $session->getLocationData();
+        
+        // Get formatted categories from the taxonomy service using session location
         $categories = [];
-        if ($this->taxonomyService) {
-            $locationId = $request->user()?->location_id;
+        if ($this->taxonomyService && $locationId) {
             $categoriesCollection = $this->taxonomyService->getFormattedItemCategories($locationId);
             // Transform to array for Inertia (includes computed properties)
             $categories = $categoriesCollection->toArray();
         }
 
-        // Return the order creation interface with the session UUID
+        // Return the order creation interface with the session UUID and location context
         return Inertia::render('order/session', [
             'sessionUuid' => $uuid,
+            'sessionLocation' => $locationData, // Include locked location
             'popularItems' => [], // Will be loaded via API
             'categories' => $categories,
         ]);
@@ -132,12 +154,24 @@ class OrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
+            // Get session location if available
+            $sessionUuid = $request->input('sessionUuid');
+            $sessionLocationId = null;
+            if ($sessionUuid) {
+                $session = OrderSession::find($sessionUuid);
+                $sessionLocationId = $session ? $session->location_id : null;
+            }
+            
             // Create order data from request with validation
             $payload = array_merge($request->all(), [
                 'userId' => $request->user()?->id,
+                'sessionLocationId' => $sessionLocationId, // Pass session location
             ]);
             $data = CreateOrderData::validateAndCreate($payload);
             $order = $this->orderService->createOrder($data);
+
+            // Debug: Log the order ID being used for redirect
+            \Illuminate\Support\Facades\Log::info("Order created with ID: " . $order->id);
 
             return redirect()
                 ->route('orders.show', $order->id)
@@ -173,15 +207,15 @@ class OrderController extends Controller
         // Extract the order data and other relations
         $orderData = $orderWithRelations->order;
 
-        // Get comprehensive event stream data if order has UUID
+        // Get comprehensive event stream data - order->id IS the UUID
         $eventStreamData = null;
-        if ($order->uuid) {
-            $events = $this->eventStreamService->getOrderEventStream($order->uuid);
-            $eventStatistics = $this->eventStreamService->getEventStatistics($order->uuid);
-            $currentState = $this->eventStreamService->getOrderStateAtTimestamp($order->uuid, now());
+        if ($order->id) {
+            $events = $this->eventStreamService->getOrderEventStream($order->id);
+            $eventStatistics = $this->eventStreamService->getEventStatistics($order->id);
+            $currentState = $this->eventStreamService->getOrderStateAtTimestamp($order->id, now());
 
             $eventStreamData = [
-                'orderUuid' => $order->uuid,
+                'orderUuid' => $order->id, // id IS the UUID
                 'events' => $events->toArray(),
                 'currentState' => $currentState, // This now contains the full order state with items
                 'statistics' => $eventStatistics,
@@ -453,7 +487,24 @@ class OrderController extends Controller
     public function kitchen(Request $request): Response
     {
         $user = $request->user();
-        $locationId = $user ? ($user->location_id ?? 1) : 1;
+        
+        // Kitchen display still needs current location for filtering
+        // This is one of the few places where we need real-time location
+        $locationId = null;
+        if ($this->locationService && $user) {
+            $currentLocation = $this->locationService->getUserCurrentLocation($user->id);
+            $locationId = $currentLocation ? $currentLocation->id : null;
+        }
+        
+        // If no location found, we can't show kitchen orders
+        if (!$locationId) {
+            return Inertia::render('order/kitchen-display', [
+                'orders' => [],
+                'locationId' => null,
+                'error' => 'No location selected. Please select a location to view kitchen orders.',
+            ]);
+        }
+        
         $orders = $this->orderService->getKitchenOrders($locationId);
 
         return Inertia::render('order/kitchen-display', [
@@ -500,11 +551,15 @@ class OrderController extends Controller
         // Convert to DTOs
         $orders = $ordersCollection->map(fn($order) => OrderData::fromModel($order)->toArray());
 
-        // Get locations
-        $locations = [
-            ['id' => 1, 'name' => 'Main Branch'],
-            ['id' => 2, 'name' => 'Downtown Branch'],
-        ];
+        // Get locations from location service
+        $locations = [];
+        if ($this->locationService) {
+            $locationsCollection = $this->locationService->getActiveLocations();
+            $locations = $locationsCollection->map(fn($location) => [
+                'id' => $location->id,
+                'name' => $location->name,
+            ])->toArray();
+        }
 
         return Inertia::render('order/operations', [
             'orders' => $orders,
@@ -516,7 +571,7 @@ class OrderController extends Controller
     /**
      * Display payment page
      */
-    public function payment(int $id): Response|RedirectResponse
+    public function payment(string $id): Response|RedirectResponse
     {
         $order = Order::with(['items', 'payments'])->find($id);
 
@@ -554,7 +609,7 @@ class OrderController extends Controller
     /**
      * Process payment
      */
-    public function processPayment(Request $request, int $id): RedirectResponse
+    public function processPayment(Request $request, string $id): RedirectResponse
     {
         $order = Order::find($id);
 

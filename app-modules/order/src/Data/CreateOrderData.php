@@ -21,14 +21,14 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class CreateOrderData extends BaseData
 {
     public function __construct(
-        #[MapInputName('locationId')]
-        public readonly int $locationId,
         #[MapInputName('type')]
         public readonly string $type,
         #[DataCollectionOf(CreateOrderItemData::class)]
         public readonly DataCollection $items,
         #[MapInputName('userId')]
         public readonly ?int $userId = null,
+        #[MapInputName('sessionLocationId')]
+        public readonly ?int $sessionLocationId = null,
         #[MapInputName('tableNumber')]
         #[WithCast(\Colame\Order\Casts\IntToStringCast::class)]
         public readonly ?string $tableNumber = null,
@@ -84,7 +84,6 @@ class CreateOrderData extends BaseData
     public static function rules(ValidationContext $context): array
     {
         return [
-            'locationId' => ['required', 'integer', 'min:1'],
             'type' => ['required', 'in:dineIn,takeout,delivery,catering'],
             'tableNumber' => ['nullable', 'integer', 'min:1'],
             'deliveryAddress' => ['nullable', 'string', 'required_if:type,delivery'],
@@ -100,7 +99,6 @@ class CreateOrderData extends BaseData
     public static function attributes(): array
     {
         return [
-            'locationId' => 'location',
             'items.*.itemId' => 'item',
             'customerName' => 'customer name',
             'customerPhone' => 'customer phone',

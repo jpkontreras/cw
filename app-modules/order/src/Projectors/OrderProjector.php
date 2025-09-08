@@ -32,17 +32,34 @@ class OrderProjector extends Projector
 {
     public function onOrderStarted(OrderStarted $event): void
     {
+        // Debug: Log that projector is being called
+        \Illuminate\Support\Facades\Log::info("OrderProjector.onOrderStarted called", [
+            'aggregateUuid' => $event->aggregateRootUuid,
+            'staffId' => $event->staffId,
+            'locationId' => $event->locationId
+        ]);
+        
         // Extract customer data from metadata
         $metadata = $event->metadata ?? [];
         
         // Generate order number immediately (ORD-XXXX format)
         $orderNumber = $this->generateOrderNumber($event->locationId);
         
-        Order::updateOrCreate(
-            ['uuid' => $event->aggregateRootUuid],
+        // Debug: Log before database operation
+        \Illuminate\Support\Facades\Log::info("Creating order in database", [
+            'id' => $event->aggregateRootUuid,
+            'orderNumber' => $orderNumber,
+            'locationId' => $event->locationId
+        ]);
+        
+        $order = Order::updateOrCreate(
+            ['id' => $event->aggregateRootUuid], // Use UUID as primary key
             [
+                'id' => $event->aggregateRootUuid, // Ensure UUID is preserved
+                'session_id' => $event->sessionId, // Store the session reference
                 'order_number' => $orderNumber,
-                'staff_id' => $event->staffId,
+                'user_id' => $metadata['user_id'] ?? null, // User who created the order
+                'waiter_id' => $event->staffId, // staffId maps to waiter_id column (nullable)
                 'location_id' => $event->locationId,
                 'table_number' => $event->tableNumber,
                 'type' => $metadata['type'] ?? 'dine_in',
@@ -61,11 +78,18 @@ class OrderProjector extends Projector
                 'total' => 0,
             ]
         );
+        
+        // Debug: Log after database operation
+        \Illuminate\Support\Facades\Log::info("Order created successfully in database", [
+            'id' => $order->id,
+            'orderNumber' => $order->order_number,
+            'created' => $order->wasRecentlyCreated
+        ]);
     }
 
     public function onItemsAddedToOrder(ItemsAddedToOrder $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -81,7 +105,7 @@ class OrderProjector extends Projector
                     'item_id' => $item['item_id'],
                     'item_name' => $item['name'] ?? 'Item ' . $item['item_id'],
                     'base_item_name' => $item['name'] ?? null,  // Store original item name
-                    'category' => $item['category'] ?? null,
+                    // 'category' => $item['category'] ?? null, // Column doesn't exist in table
                     'quantity' => $quantity,
                     'base_price' => $unitPrice,
                     'unit_price' => $unitPrice,
@@ -102,7 +126,7 @@ class OrderProjector extends Projector
 
     public function onItemsValidated(ItemsValidated $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -125,7 +149,7 @@ class OrderProjector extends Projector
                         'unit_price' => $price,
                         'total_price' => $quantity * $price,
                         'item_name' => $item['name'] ?? null,
-                        'category' => $item['category'] ?? null,
+                        // 'category' => $item['category'] ?? null, // Column doesn't exist in table
                     ]);
             }
 
@@ -138,7 +162,7 @@ class OrderProjector extends Projector
 
     public function onPromotionsCalculated(PromotionsCalculated $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -168,7 +192,7 @@ class OrderProjector extends Projector
 
     public function onPromotionApplied(PromotionApplied $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -186,7 +210,7 @@ class OrderProjector extends Projector
 
     public function onPromotionRemoved(PromotionRemoved $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -204,7 +228,7 @@ class OrderProjector extends Projector
 
     public function onPriceCalculated(PriceCalculated $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -222,7 +246,7 @@ class OrderProjector extends Projector
 
     public function onTipAdded(TipAdded $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -236,7 +260,7 @@ class OrderProjector extends Projector
 
     public function onPaymentMethodSet(PaymentMethodSet $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -249,7 +273,7 @@ class OrderProjector extends Projector
 
     public function onOrderConfirmed(OrderConfirmed $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -271,7 +295,7 @@ class OrderProjector extends Projector
 
     public function onOrderCancelled(OrderCancelled $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -286,7 +310,7 @@ class OrderProjector extends Projector
 
     public function onItemsModified(ItemsModified $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -359,7 +383,7 @@ class OrderProjector extends Projector
 
     public function onPriceAdjusted(PriceAdjusted $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -406,7 +430,7 @@ class OrderProjector extends Projector
 
     public function onOrderStatusTransitioned(OrderStatusTransitioned $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -455,7 +479,7 @@ class OrderProjector extends Projector
 
     public function onPaymentProcessed(PaymentProcessed $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -501,7 +525,7 @@ class OrderProjector extends Projector
 
     public function onPaymentFailed(PaymentFailed $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -543,7 +567,7 @@ class OrderProjector extends Projector
 
     public function onCustomerInfoUpdated(CustomerInfoUpdated $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -595,7 +619,7 @@ class OrderProjector extends Projector
 
     public function onOrderItemsUpdated(OrderItemsUpdated $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;
@@ -648,7 +672,7 @@ class OrderProjector extends Projector
      */
     public function onItemModifiersChanged(ItemModifiersChanged $event): void
     {
-        $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+        $order = Order::find($event->aggregateRootUuid);
 
         if (!$order) {
             return;

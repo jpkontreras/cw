@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace Colame\Order\Contracts;
 
-use App\Core\Contracts\FilterableRepositoryInterface;
+use App\Core\Contracts\FilterableUuidRepositoryInterface;
 use Colame\Order\Data\OrderData;
 use Spatie\LaravelData\DataCollection;
 
 /**
  * Order repository interface for domain operations
  */
-interface OrderRepositoryInterface extends FilterableRepositoryInterface
+interface OrderRepositoryInterface extends FilterableUuidRepositoryInterface
 {
     /**
      * Find order by ID
      */
-    public function find(int $id): ?OrderData;
+    public function find(string $id): ?OrderData;
 
     /**
      * Find order by ID or throw exception
      */
-    public function findOrFail(int $id): OrderData;
+    public function findOrFail(string $id): OrderData;
 
     /**
      * Get all orders
@@ -51,22 +51,22 @@ interface OrderRepositoryInterface extends FilterableRepositoryInterface
     /**
      * Update order
      */
-    public function update(int $id, array $data): bool;
+    public function update(string $id, array $data): bool;
 
     /**
      * Update order status
      */
-    public function updateStatus(int $id, string $status, ?string $reason = null): bool;
+    public function updateStatus(string $id, string $status, ?string $reason = null): bool;
 
     /**
      * Delete order
      */
-    public function delete(int $id): bool;
+    public function delete(string $id): bool;
 
     /**
      * Check if order exists
      */
-    public function exists(int $id): bool;
+    public function exists(string $id): bool;
 
     /**
      * Get active orders for kitchen display

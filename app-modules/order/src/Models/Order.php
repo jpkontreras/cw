@@ -28,6 +28,16 @@ class Order extends Model
      * The table associated with the model
      */
     protected $table = 'orders';
+    
+    /**
+     * The primary key type
+     */
+    protected $keyType = 'string';
+    
+    /**
+     * Indicates if the IDs are auto-incrementing
+     */
+    public $incrementing = false;
 
     /**
      * Create a new factory instance for the model.
@@ -41,7 +51,7 @@ class Order extends Model
      * The attributes that are mass assignable
      */
     protected $fillable = [
-        'uuid',
+        'session_id',
         'order_number',
         'user_id',
         'location_id',
@@ -157,10 +167,13 @@ class Order extends Model
     {
         parent::boot();
 
-        // Auto-generate UUID for new orders
+        // Auto-generate UUID for new orders (as primary key)
+        // Only generate if no ID is provided (for non-event-sourced orders)
         static::creating(function (Order $order) {
-            if (empty($order->uuid)) {
-                $order->uuid = Str::uuid()->toString();
+            // Only generate UUID if it's not already set
+            // This preserves UUIDs from event sourcing
+            if (!$order->id) {
+                $order->id = Str::uuid()->toString();
             }
         });
 
@@ -201,6 +214,14 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Get the session that created this order.
+     */
+    public function session()
+    {
+        return $this->belongsTo(OrderSession::class, 'session_id');
     }
 
     /**

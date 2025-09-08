@@ -16,7 +16,6 @@ use Colame\Order\Events\Session\PaymentMethodSelected;
 use Colame\Order\Events\Session\OrderDraftSaved;
 use Colame\Order\Events\Session\SessionAbandoned;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 
 class OrderSessionProjector extends Projector
 {
@@ -25,11 +24,15 @@ class OrderSessionProjector extends Projector
      */
     public function onOrderSessionInitiated(OrderSessionInitiated $event): void
     {
+        // Extract business_id from metadata if available
+        $businessId = isset($event->metadata['business_id']) ? $event->metadata['business_id'] : null;
+        
         // Create session record in database
         DB::table('order_sessions')->insert([
             'uuid' => $event->aggregateRootUuid,
             'user_id' => $event->userId,
             'location_id' => $event->locationId,
+            'business_id' => $businessId,
             'status' => 'initiated',
             'device_info' => json_encode($event->deviceInfo),
             'referrer' => $event->referrer,
@@ -348,9 +351,6 @@ class OrderSessionProjector extends Projector
             'items_count' => $event->itemsInCart,
             'last_activity' => $event->lastActivity,
         ]);
-
-        // Clear cache
-        Cache::forget("order_session:{$event->aggregateRootUuid}");
     }
 
     /**

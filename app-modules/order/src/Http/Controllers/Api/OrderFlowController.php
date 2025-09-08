@@ -9,10 +9,10 @@ use Colame\Order\Services\OrderSessionService;
 use Colame\Order\Data\CreateOrderFlowData;
 use Colame\Order\Data\OrderFlowResponseData;
 use Colame\Order\Models\Order;
+use Colame\Order\Models\OrderSession;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Cache;
 use Money\Money;
 use Money\Currency;
 
@@ -26,10 +26,28 @@ class OrderFlowController extends Controller
     /**
      * Start a new order - First step in the flow
      * Mobile app calls this when waiter starts taking an order
+     * Note: This should be called after a session is created with locked location
      */
     public function startOrder(Request $request)
     {
         $data = CreateOrderFlowData::validateAndCreate($request);
+        
+        // Get location from session if provided
+        $sessionUuid = $request->input('session_uuid');
+        $locationId = null;
+        
+        if ($sessionUuid) {
+            // Get location from event-sourced session
+            $session = OrderSession::find($sessionUuid);
+            $locationId = $session ? $session->location_id : null;
+        }
+        
+        if (!$locationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order must be started from a valid session with locked location.',
+            ], 400);
+        }
         
         // Generate order UUID
         $orderUuid = Str::uuid()->toString();
@@ -38,7 +56,7 @@ class OrderFlowController extends Controller
         $processId = $this->processManager->startProcess([
             'order_uuid' => $orderUuid,
             'staff_id' => $data->staffId,
-            'location_id' => $data->locationId,
+            'location_id' => $locationId,
             'table_number' => $data->tableNumber,
         ]);
 
@@ -49,7 +67,7 @@ class OrderFlowController extends Controller
         OrderAggregate::retrieve($orderUuid)
             ->startOrder(
                 staffId: $data->staffId,
-                locationId: $data->locationId,
+                locationId: (string) $locationId,
                 tableNumber: $data->tableNumber,
                 metadata: [
                     'device_id' => $request->header('X-Device-Id'),
@@ -174,7 +192,7 @@ class OrderFlowController extends Controller
         $aggregate->persist();
 
         // Recalculate total
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $newTotal = $order->subtotal - $order->discount + $order->tax + $order->tip;
 
         return response()->json([
@@ -202,7 +220,7 @@ class OrderFlowController extends Controller
             ->addTip(new Money($validated['tip_amount'], new Currency('CLP')))
             ->persist();
 
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
 
         return response()->json([
             'success' => true,
@@ -231,7 +249,7 @@ class OrderFlowController extends Controller
         $aggregate->setPaymentMethod($validated['payment_method']);
 
         // Calculate final price
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $total = $order->subtotal - $order->discount + $order->tax + $order->tip;
 
         $aggregate->calculateFinalPrice(
@@ -278,7 +296,7 @@ class OrderFlowController extends Controller
      */
     public function getOrderState(string $orderUuid)
     {
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
 
         if (!$order) {
             return response()->json([
@@ -636,7 +654,7 @@ class OrderFlowController extends Controller
             $aggregate->persist();
             
             // Get the created order
-            $order = Order::where('uuid', $orderUuid)->first();
+            $order = Order::find($orderUuid);
             
             return response()->json([
                 'success' => true,

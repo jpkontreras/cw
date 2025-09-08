@@ -105,7 +105,7 @@ class OrderController extends Controller
     /**
      * Display the specified order
      */
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         try {
             $orderWithRelations = $this->orderService->getOrderWithRelations($id);
@@ -127,7 +127,7 @@ class OrderController extends Controller
     /**
      * Update the specified order
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, string $id): JsonResponse
     {
         try {
             $data = UpdateOrderData::from($request->all());
@@ -147,7 +147,7 @@ class OrderController extends Controller
     /**
      * Remove the specified order (soft delete)
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         // In real implementation, would check permissions and business rules
         return response()->json([
@@ -158,7 +158,7 @@ class OrderController extends Controller
     /**
      * Update order status
      */
-    public function updateStatus(Request $request, int $id): JsonResponse
+    public function updateStatus(Request $request, string $id): JsonResponse
     {
         $request->validate([
             'status' => ['required', 'string', 'in:confirmed,preparing,ready,completed'],
@@ -188,7 +188,7 @@ class OrderController extends Controller
     /**
      * Cancel the order
      */
-    public function cancel(Request $request, int $id): JsonResponse
+    public function cancel(Request $request, string $id): JsonResponse
     {
         $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
@@ -269,7 +269,7 @@ class OrderController extends Controller
     /**
      * Apply offers to order
      */
-    public function applyOffers(Request $request, int $id): JsonResponse
+    public function applyOffers(Request $request, string $id): JsonResponse
     {
         $request->validate([
             'offer_codes' => ['required', 'array', 'min:1'],
@@ -296,7 +296,7 @@ class OrderController extends Controller
     /**
      * Get next possible states for an order with complete metadata
      */
-    public function getNextStates(int $id): JsonResponse
+    public function getNextStates(string $id): JsonResponse
     {
         try {
             $order = Order::find($id);

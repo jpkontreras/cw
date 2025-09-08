@@ -52,9 +52,7 @@ class EventStreamService
         
         // Get the order projection with relationships at that timestamp
         // Note: This is a simplified version - in production you'd want to replay projections too
-        $order = Order::with(['items'])
-            ->where('uuid', $orderUuid)
-            ->first();
+        $order = Order::with(['items'])->find($orderUuid);
         
         if ($order) {
             // Transform items to the format expected by the frontend

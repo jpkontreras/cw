@@ -122,7 +122,7 @@ class TakeOrderFlowTest extends TestCase
         $this->assertTrue($response->json('data.kitchen_notified'));
 
         // Assert - Check database
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $this->assertNotNull($order);
         $this->assertEquals('confirmed', $order->status);
         $this->assertEquals(60000, $order->subtotal);
@@ -215,7 +215,7 @@ class TakeOrderFlowTest extends TestCase
             ->persist();
 
         // Clear projections
-        Order::where('uuid', $orderUuid)->delete();
+        Order::find($orderUuid)?->delete();
 
         // Replay events
         Projectionist::replay(
@@ -224,7 +224,7 @@ class TakeOrderFlowTest extends TestCase
         );
 
         // Assert order is recreated
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $this->assertNotNull($order);
         $this->assertEquals('started', $order->status);
         $this->assertEquals($staff->id, $order->staff_id);
@@ -253,7 +253,7 @@ class TakeOrderFlowTest extends TestCase
         $response->assertSuccessful();
 
         // Check order is cancelled
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $this->assertEquals('cancelled', $order->status);
         $this->assertEquals('Customer left', $order->cancellation_reason);
     }
@@ -286,7 +286,7 @@ class TakeOrderFlowTest extends TestCase
         }
 
         // Process should handle out-of-order events correctly
-        $order = Order::where('uuid', $orderUuid)->first();
+        $order = Order::find($orderUuid);
         $this->assertNotNull($order);
         $this->assertEquals('items_added', $order->status);
     }

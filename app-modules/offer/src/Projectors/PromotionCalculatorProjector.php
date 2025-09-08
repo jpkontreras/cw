@@ -18,7 +18,7 @@ class PromotionCalculatorProjector extends Projector
     public function onItemsValidated(ItemsValidated $event): void
     {
         try {
-            $order = Order::where('uuid', $event->aggregateRootUuid)->first();
+            $order = Order::find($event->aggregateRootUuid);
             
             if (!$order) {
                 Log::warning('Order not found for promotion calculation', [

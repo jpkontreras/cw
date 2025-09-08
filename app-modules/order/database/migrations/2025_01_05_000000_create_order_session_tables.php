@@ -16,7 +16,11 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('location_id');
+            
+            // Location and business IDs - foreign keys added conditionally below
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->unsignedBigInteger('business_id')->nullable();
+            
             $table->string('status', 50)->default('initiated'); // initiated, cart_building, details_collecting, abandoned, converted
             $table->string('serving_type', 20)->nullable(); // dine_in, takeout, delivery
             $table->json('device_info')->nullable();
@@ -37,10 +41,15 @@ return new class extends Migration
             // Indexes
             $table->index('uuid');
             $table->index('user_id');
+            $table->index('location_id');
+            $table->index('business_id');
             $table->index('status');
             $table->index('started_at');
             $table->index('last_activity_at');
             $table->index(['status', 'last_activity_at']); // For finding stale sessions
+            
+            // Foreign keys are added in a separate migration (2025_09_01_000000_add_foreign_keys_to_order_sessions.php)
+            // to ensure businesses and locations tables exist first
         });
 
         // Order session events - detailed event log for each session

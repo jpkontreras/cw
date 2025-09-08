@@ -39,6 +39,7 @@ class OrderServiceProvider extends ServiceProvider
         $this->app->bind(OrderSearchInterface::class, OrderSearchService::class);
         
         // Register event-sourced services
+        // EventSourcedOrderService will auto-resolve LocationRepositoryInterface if available
         $this->app->singleton(EventSourcedOrderService::class);
         $this->app->singleton(OrderCalculationService::class);
         $this->app->singleton(OrderValidationService::class);

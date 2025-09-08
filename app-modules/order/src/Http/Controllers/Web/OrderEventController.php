@@ -224,7 +224,7 @@ class OrderEventController
             case 'payment_method_selected':
                 $this->sessionService->trackEvent($uuid, [
                     'event' => 'payment_method',
-                    'method' => $data['method'],
+                    'method' => $data['payment_method'] ?? $data['method'] ?? null,
                     'previous' => $data['previous'] ?? null,
                 ]);
                 break;

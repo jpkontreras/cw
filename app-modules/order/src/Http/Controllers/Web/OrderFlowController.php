@@ -19,19 +19,25 @@ class OrderFlowController extends Controller
     public function startSession(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'location_id' => 'nullable|integer',
             'platform' => 'nullable|string|in:web,mobile,kiosk',
             'source' => 'nullable|string',
             'order_type' => 'nullable|string|in:dine_in,takeout,delivery',
             'referrer' => 'nullable|string',
         ]);
         
-        $result = $this->sessionService->startSession($validated);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $result
-        ]);
+        try {
+            $result = $this->sessionService->startSession($validated);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
     
     /**
@@ -172,10 +178,16 @@ class OrderFlowController extends Controller
         
         $result = $this->sessionService->convertToOrder($orderUuid, $validated);
         
-        if (isset($result['success']) && $result['success']) {
-            return response()->json($result);
+        // Check if there's an error
+        if (isset($result['error'])) {
+            return response()->json($result, 400);
         }
         
-        return response()->json($result, isset($result['error']) ? 400 : 200);
+        // Add success flag if not present
+        if (!isset($result['success'])) {
+            $result['success'] = true;
+        }
+        
+        return response()->json($result);
     }
 }

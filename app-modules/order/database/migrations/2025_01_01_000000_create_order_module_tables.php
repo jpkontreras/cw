@@ -13,8 +13,8 @@ return new class extends Migration
     {
         // Create orders table with all fields from all migrations
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uuid')->unique(); // UUID for event sourcing
+            $table->uuid('id')->primary(); // UUID as primary key
+            $table->uuid('session_id')->nullable(); // Reference to order_sessions table
             $table->string('order_number')->nullable()->unique();
             $table->unsignedBigInteger('user_id')->nullable(); // Nullable for guest orders
             $table->unsignedBigInteger('location_id');
@@ -74,9 +74,9 @@ return new class extends Migration
             $table->softDeletes();
             
             // Indexes
-            $table->index('uuid');
             $table->index('user_id');
             $table->index('location_id');
+            $table->index('session_id');
             $table->index('waiter_id');
             $table->index('status');
             $table->index('type');
@@ -93,7 +93,8 @@ return new class extends Migration
         // Create order_items table with all fields from all migrations
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
+            $table->uuid('order_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->unsignedBigInteger('item_id');
             
             // Menu references (from 2025_08_06_235000_add_menu_references_to_orders.php)
@@ -134,7 +135,8 @@ return new class extends Migration
         // Create order_status_history table
         Schema::create('order_status_history', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
+            $table->uuid('order_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->string('from_status', 50);
             $table->string('to_status', 50);
             $table->unsignedBigInteger('user_id')->nullable();
@@ -149,7 +151,8 @@ return new class extends Migration
         // Create payment_transactions table
         Schema::create('payment_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
+            $table->uuid('order_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->string('method', 50); // cash, credit_card, debit_card, mobile_payment, gift_card, other
             $table->integer('amount'); // Stored in minor units (cents, fils, etc.)
             $table->string('status', 20)->default('pending'); // pending, completed, failed, refunded
@@ -168,7 +171,8 @@ return new class extends Migration
         Schema::create('order_search_history', function (Blueprint $table) {
             $table->id();
             $table->uuid('search_id');
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->uuid('order_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->unsignedBigInteger('user_id')->nullable();
             // Foreign key will be added after users table is created
             $table->timestamp('created_at');
@@ -181,7 +185,8 @@ return new class extends Migration
         // Create order_promotions table (from 2025_09_05_000001_create_order_promotions_table.php)
         Schema::create('order_promotions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->uuid('order_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->string('promotion_id'); // Can be string or integer depending on offer module
             $table->integer('discount_amount')->default(0);
             $table->string('type')->nullable(); // percentage, fixed, item, etc
@@ -195,7 +200,8 @@ return new class extends Migration
         // Create order_item_modifiers table for detailed modifier tracking
         Schema::create('order_item_modifiers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_item_id')->constrained('order_items')->cascadeOnDelete();
+            $table->unsignedBigInteger('order_item_id');
+            // Foreign key added in 2025_09_01_000000_add_foreign_keys_to_order_module_tables.php
             $table->string('modifier_id'); // ID from menu system
             $table->string('type', 50); // size, topping, ingredient, preparation, customization
             $table->string('name'); // Display name of modifier

@@ -19,8 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class OrderData extends BaseData
 {
     public function __construct(
-        public readonly int $id,
-        public readonly ?string $uuid,
+        public readonly string $id,
         public readonly ?string $orderNumber,
         public readonly ?int $userId,
         public readonly int $locationId,
@@ -87,7 +86,6 @@ class OrderData extends BaseData
     {
         return new self(
             id: $order->id,
-            uuid: $order->uuid,
             orderNumber: $order->order_number,
             userId: $order->user_id,
             locationId: $order->location_id,

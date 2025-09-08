@@ -60,35 +60,35 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         
         // NOTE: All specific routes must be defined BEFORE the dynamic {order} routes
         
-        // Single Order Operations - with numeric constraint to prevent conflicts
-        Route::get('/{order}', [WebOrderController::class, 'show'])->name('show')->where('order', '[0-9]+');
-        Route::get('/{order}/edit', [WebOrderController::class, 'edit'])->name('edit')->where('order', '[0-9]+');
-        Route::put('/{order}', [WebOrderController::class, 'update'])->name('update')->where('order', '[0-9]+');
+        // Single Order Operations - with UUID constraint
+        Route::get('/{order}', [WebOrderController::class, 'show'])->name('show');
+        Route::get('/{order}/edit', [WebOrderController::class, 'edit'])->name('edit');
+        Route::put('/{order}', [WebOrderController::class, 'update'])->name('update');
         
         // Status Updates
-        Route::post('/{order}/place', [WebOrderController::class, 'place'])->name('place')->where('order', '[0-9]+');
-        Route::post('/{order}/confirm', [WebOrderController::class, 'confirm'])->name('confirm')->where('order', '[0-9]+');
-        Route::post('/{order}/start-preparing', [WebOrderController::class, 'startPreparing'])->name('start-preparing')->where('order', '[0-9]+');
-        Route::post('/{order}/mark-ready', [WebOrderController::class, 'markReady'])->name('mark-ready')->where('order', '[0-9]+');
-        Route::post('/{order}/start-delivery', [WebOrderController::class, 'startDelivery'])->name('start-delivery')->where('order', '[0-9]+');
-        Route::post('/{order}/mark-delivered', [WebOrderController::class, 'markDelivered'])->name('mark-delivered')->where('order', '[0-9]+');
-        Route::post('/{order}/complete', [WebOrderController::class, 'complete'])->name('complete')->where('order', '[0-9]+');
+        Route::post('/{order}/place', [WebOrderController::class, 'place'])->name('place');
+        Route::post('/{order}/confirm', [WebOrderController::class, 'confirm'])->name('confirm');
+        Route::post('/{order}/start-preparing', [WebOrderController::class, 'startPreparing'])->name('start-preparing');
+        Route::post('/{order}/mark-ready', [WebOrderController::class, 'markReady'])->name('mark-ready');
+        Route::post('/{order}/start-delivery', [WebOrderController::class, 'startDelivery'])->name('start-delivery');
+        Route::post('/{order}/mark-delivered', [WebOrderController::class, 'markDelivered'])->name('mark-delivered');
+        Route::post('/{order}/complete', [WebOrderController::class, 'complete'])->name('complete');
         
         // Cancellation
-        Route::get('/{order}/cancel', [WebOrderController::class, 'showCancelForm'])->name('cancel.form')->where('order', '[0-9]+');
-        Route::post('/{order}/cancel', [WebOrderController::class, 'cancel'])->name('cancel')->where('order', '[0-9]+');
+        Route::get('/{order}/cancel', [WebOrderController::class, 'showCancelForm'])->name('cancel.form');
+        Route::post('/{order}/cancel', [WebOrderController::class, 'cancel'])->name('cancel');
         
         // Payment
-        Route::get('/{order}/payment', [WebOrderController::class, 'payment'])->name('payment')->where('order', '[0-9]+');
-        Route::post('/{order}/payment/process', [WebOrderController::class, 'processPayment'])->name('payment.process')->where('order', '[0-9]+');
+        Route::get('/{order}/payment', [WebOrderController::class, 'payment'])->name('payment');
+        Route::post('/{order}/payment/process', [WebOrderController::class, 'processPayment'])->name('payment.process');
         
         // Receipt
-        Route::get('/{order}/receipt', [WebOrderController::class, 'receipt'])->name('receipt')->where('order', '[0-9]+');
+        Route::get('/{order}/receipt', [WebOrderController::class, 'receipt'])->name('receipt');
         
         // Event Sourcing - Time Travel and State Management
-        Route::post('/{order}/events/state-at', [WebOrderController::class, 'getStateAtTimestamp'])->name('events.state-at')->where('order', '[0-9]+');
-        Route::post('/{order}/events/replay', [WebOrderController::class, 'replayEvents'])->name('events.replay')->where('order', '[0-9]+');
-        Route::post('/{order}/events/add', [WebOrderController::class, 'addEvent'])->name('events.add')->where('order', '[0-9]+');
+        Route::post('/{order}/events/state-at', [WebOrderController::class, 'getStateAtTimestamp'])->name('events.state-at');
+        Route::post('/{order}/events/replay', [WebOrderController::class, 'replayEvents'])->name('events.replay');
+        Route::post('/{order}/events/add', [WebOrderController::class, 'addEvent'])->name('events.add');
     });
 });
 

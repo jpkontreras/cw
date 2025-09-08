@@ -24,7 +24,7 @@ class EventStreamController extends Controller
     public function getEventStream(string $orderUuid): JsonResponse
     {
         // Verify order exists
-        $order = Order::where('uuid', $orderUuid)->firstOrFail();
+        $order = Order::findOrFail($orderUuid);
         
         // Get events
         $events = $this->eventStreamService->getOrderEventStream($orderUuid);
@@ -45,7 +45,7 @@ class EventStreamController extends Controller
         ]);
         
         // Verify order exists
-        $order = Order::where('uuid', $orderUuid)->firstOrFail();
+        $order = Order::findOrFail($orderUuid);
         
         $timestamp = Carbon::parse($request->input('timestamp'));
         $state = $this->eventStreamService->getOrderStateAtTimestamp($orderUuid, $timestamp);
@@ -64,7 +64,7 @@ class EventStreamController extends Controller
         ]);
         
         // Verify order exists
-        $order = Order::where('uuid', $orderUuid)->firstOrFail();
+        $order = Order::findOrFail($orderUuid);
         
         $from = Carbon::parse($request->input('from'));
         $to = Carbon::parse($request->input('to'));
@@ -86,7 +86,7 @@ class EventStreamController extends Controller
     public function getStatistics(string $orderUuid): JsonResponse
     {
         // Verify order exists
-        $order = Order::where('uuid', $orderUuid)->firstOrFail();
+        $order = Order::findOrFail($orderUuid);
         
         $statistics = $this->eventStreamService->getEventStatistics($orderUuid);
         

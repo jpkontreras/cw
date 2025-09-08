@@ -9,7 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import type { OrderDashboardPageProps } from '@/modules/order';
 import { formatCurrency } from '@/lib/format';
 import { getStatusColor, getStatusLabel } from '@/modules/order';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import {
   Activity,
   AlertCircle,
@@ -131,6 +131,10 @@ export default function OrderDashboard({
   const [selectedPeriod, setSelectedPeriod] = useState(filters?.period || 'today');
   const [selectedLocation, setSelectedLocation] = useState(filters?.location_id || 'all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Get locations from Inertia shared data
+  const { location } = usePage().props as any;
+  const availableLocations = location?.locations || [];
 
   // Process data for charts
   const hourlyData = useMemo(() => {
@@ -202,8 +206,11 @@ export default function OrderDashboard({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
-                <SelectItem value="1">Main Branch</SelectItem>
-                <SelectItem value="2">Downtown Branch</SelectItem>
+                {availableLocations.map((loc: any) => (
+                  <SelectItem key={loc.id} value={loc.id.toString()}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

@@ -5,18 +5,74 @@ namespace Colame\Order\Services;
 use Colame\Order\Aggregates\OrderAggregate;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Models\Order;
-use Illuminate\Support\Facades\Cache;
+use Colame\Order\Models\OrderSession;
+use Colame\Location\Contracts\LocationServiceInterface;
+use Colame\Business\Contracts\BusinessContextInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class OrderSessionService
 {
+    public function __construct(
+        private ?LocationServiceInterface $locationService = null,
+        private ?BusinessContextInterface $businessContext = null
+    ) {}
     /**
      * Start a new order session
      */
     public function startSession(array $data): array
     {
         $orderUuid = (string) Str::uuid();
+        
+        // Get business context first
+        $businessId = null;
+        $businessData = null;
+        if ($this->businessContext) {
+            $currentBusiness = $this->businessContext->getCurrentBusiness();
+            if ($currentBusiness) {
+                $businessId = $currentBusiness->id;
+                $businessData = [
+                    'id' => $currentBusiness->id,
+                    'name' => $currentBusiness->name,
+                    'currency' => $currentBusiness->currency ?? config('money.defaults.currency', 'CLP'),
+                ];
+            }
+        }
+        
+        // Validate we have a business context
+        if (!$businessId) {
+            throw new \InvalidArgumentException('No business context available. Please select a business before starting an order session.');
+        }
+        
+        // Get location from the user's current location (server-side)
+        $locationId = null;
+        $locationData = null;
+        $currency = null;
+        
+        // Get the current user's location from database (set by location switcher)
+        if ($this->locationService && auth()->id()) {
+            $currentLocation = $this->locationService->getUserCurrentLocation(auth()->id());
+            if ($currentLocation) {
+                // Validate that location belongs to the current business
+                if ($currentLocation->businessId !== $businessId) {
+                    throw new \InvalidArgumentException('Selected location does not belong to the current business context.');
+                }
+                
+                $locationId = $currentLocation->id;
+                $locationData = [
+                    'id' => $currentLocation->id,
+                    'name' => $currentLocation->name,
+                    'currency' => $currentLocation->currency ?? $businessData['currency'] ?? config('money.defaults.currency', 'CLP'),
+                    'timezone' => $currentLocation->timezone ?? config('app.timezone'),
+                ];
+                $currency = $locationData['currency'];
+            }
+        }
+        
+        // Validate we have a location
+        if (!$locationId) {
+            throw new \InvalidArgumentException('No location available. Please set your current location before starting an order session.');
+        }
         
         // Get device info from request
         $deviceInfo = [
@@ -25,33 +81,31 @@ class OrderSessionService
             'ip' => request()->ip(),
         ];
         
-        // Start the event-sourced session
+        // Start the event-sourced session with complete business and location context
         OrderAggregate::retrieve($orderUuid)
             ->initiateSession(
                 userId: auth()->id(),
-                locationId: $data['location_id'] ?? 1,
+                locationId: $locationId,
                 deviceInfo: $deviceInfo,
                 referrer: $data['referrer'] ?? request()->headers->get('referer'),
                 metadata: [
                     'source' => $data['source'] ?? 'web',
                     'order_type' => $data['order_type'] ?? null,
+                    'location_locked' => true,
+                    'location' => $locationData, // Store complete location context
+                    'business' => $businessData, // Store business context
+                    'business_id' => $businessId, // Store business ID for queries
+                    'currency' => $currency,
                 ]
             )
             ->persist();
-        
-        // Cache session for quick access
-        Cache::put("order_session:{$orderUuid}", [
-            'uuid' => $orderUuid,
-            'user_id' => auth()->id(),
-            'location_id' => $data['location_id'] ?? 1,
-            'status' => 'initiated',
-            'started_at' => now(),
-        ], now()->addHours(24));
         
         return [
             'uuid' => $orderUuid,
             'status' => 'initiated',
             'started_at' => now()->toIso8601String(),
+            'location' => $locationData, // Include location in response
+            'business' => $businessData, // Include business in response
         ];
     }
     
@@ -174,15 +228,10 @@ class OrderSessionService
      */
     public function getSessionState(string $orderUuid): array
     {
-        // Try cache first
-        $cached = Cache::get("order_session:{$orderUuid}");
-        if ($cached) {
-            // Get full state from database
-            $session = DB::table('order_sessions')
-                ->where('uuid', $orderUuid)
-                ->first();
-                
-            if ($session) {
+        // Get session from the event-sourced table
+        $session = OrderSession::find($orderUuid);
+        
+        if ($session && $session->isActive()) {
                 // Get cart items from events
                 $cartEvents = DB::table('order_session_events')
                     ->where('session_id', $orderUuid)
@@ -238,13 +287,13 @@ class OrderSessionService
                     'status' => $session->status,
                     'serving_type' => $session->serving_type,
                     'cart_items' => array_values($cart),
-                    'cart_value' => $session->cart_value,
+                    'cart_value' => null, // No pricing in sessions
                     'customer_info_complete' => $session->customer_info_complete,
                     'payment_method' => $session->payment_method,
                     'started_at' => $session->started_at,
                     'last_activity_at' => $session->last_activity_at,
+                    'location' => $session->getLocationData(), // Include location data
                 ];
-            }
         }
         
         return [
@@ -259,25 +308,15 @@ class OrderSessionService
      */
     public function recoverSession(string $orderUuid): array
     {
-        $state = $this->getSessionState($orderUuid);
+        $session = OrderSession::find($orderUuid);
         
-        if ($state['status'] !== 'not_found') {
+        if ($session && $session->isActive()) {
             // Update last activity
-            DB::table('order_sessions')
-                ->where('uuid', $orderUuid)
-                ->update([
-                    'last_activity_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            $session->update([
+                'last_activity_at' => now(),
+            ]);
             
-            // Refresh cache
-            Cache::put("order_session:{$orderUuid}", [
-                'uuid' => $orderUuid,
-                'status' => $state['status'],
-                'recovered_at' => now(),
-            ], now()->addHours(24));
-            
-            return $state;
+            return $this->getSessionState($orderUuid);
         }
         
         return ['error' => 'Session not found'];
@@ -307,16 +346,42 @@ class OrderSessionService
     /**
      * Convert session to order
      */
-    public function convertToOrder(string $orderUuid, array $data): array
+    public function convertToOrder(string $sessionUuid, array $data): array
     {
-        $state = $this->getSessionState($orderUuid);
+        $state = $this->getSessionState($sessionUuid);
         
         if ($state['status'] === 'not_found') {
             return ['error' => 'Session not found'];
         }
         
-        // Convert the session to an actual order
+        // Get the session
+        $session = OrderSession::find($sessionUuid);
+        if (!$session) {
+            return ['error' => 'Session not found'];
+        }
+        
+        // Generate a NEW UUID for the order (different from session UUID)
+        $orderUuid = (string) Str::uuid();
+        
+        // Create a new order aggregate with the new UUID
         $aggregate = OrderAggregate::retrieve($orderUuid);
+        
+        // Start the order (this creates the Order record in the database)
+        // Note: staffId should be null if no staff member exists for this user
+        $aggregate->startOrder(
+            staffId: null, // We don't have staff members yet, so set to null
+            locationId: (string) $session->location_id,
+            tableNumber: null, // Can be added from customer info if needed
+            sessionId: $sessionUuid, // Pass the session UUID as a reference
+            metadata: [
+                'source' => 'session_conversion',
+                'session_uuid' => $sessionUuid,
+                'user_id' => $session->user_id ?? auth()->id(), // Store user_id in metadata instead
+                'customer_name' => $data['customer_name'] ?? null,
+                'customer_phone' => $data['customer_phone'] ?? null,
+                'notes' => $data['notes'] ?? null,
+            ]
+        );
         
         // Add all cart items as order items - fetch fresh prices from database
         $itemIds = array_column($state['cart_items'], 'id');
@@ -355,22 +420,29 @@ class OrderSessionService
         
         // Now confirm the order
         $aggregate->confirmOrder();
+        
+        // Debug: Log before persist
+        \Illuminate\Support\Facades\Log::info("About to persist order aggregate", ['orderUuid' => $orderUuid]);
+        
         $aggregate->persist();
         
+        // Debug: Log after persist
+        \Illuminate\Support\Facades\Log::info("Order aggregate persisted successfully", ['orderUuid' => $orderUuid]);
+        
         // Update session status
-        DB::table('order_sessions')
-            ->where('uuid', $orderUuid)
-            ->update([
+        $session = OrderSession::find($sessionUuid);
+        if ($session) {
+            $session->update([
                 'status' => 'converted',
-                'converted_at' => now(),
-                'updated_at' => now(),
+                'order_id' => $orderUuid, // Store reference to the created order
             ]);
+        }
         
-        // Clear cache
-        Cache::forget("order_session:{$orderUuid}");
-        
+        // Return the new order UUID (different from session UUID)
         return [
             'order_uuid' => $orderUuid,
+            'order_id' => $orderUuid, // UUID is the primary key
+            'session_id' => $sessionUuid, // Include session reference
             'status' => 'confirmed',
             'total' => $orderTotal, // Fresh calculated total from database prices
         ];

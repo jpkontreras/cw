@@ -48,7 +48,7 @@ use Colame\Order\States\CancelledState;
 class OrderAggregate extends AggregateRoot
 {
     protected string $status = 'draft';
-    protected string $staffId;
+    protected ?string $staffId = null;
     protected string $locationId;
     protected ?string $tableNumber = null;
     protected array $items = [];
@@ -398,9 +398,10 @@ class OrderAggregate extends AggregateRoot
     }
 
     public function startOrder(
-        string $staffId, 
+        ?string $staffId, 
         string $locationId, 
         ?string $tableNumber = null,
+        ?string $sessionId = null,
         array $metadata = []
     ): self {
         if ($this->status !== 'draft') {
@@ -412,6 +413,7 @@ class OrderAggregate extends AggregateRoot
             staffId: $staffId,
             locationId: $locationId,
             tableNumber: $tableNumber,
+            sessionId: $sessionId,
             metadata: $metadata
         ));
 
@@ -1036,6 +1038,8 @@ class OrderAggregate extends AggregateRoot
         $this->locationId = $event->locationId;
         $this->tableNumber = $event->tableNumber;
         $this->metadata = $event->metadata;
+        // Extract user_id from metadata to track order creator
+        $this->userId = $event->metadata['user_id'] ?? null;
     }
 
     protected function applyItemsAddedToOrder(ItemsAddedToOrder $event): void

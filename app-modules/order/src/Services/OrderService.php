@@ -13,6 +13,7 @@ use App\Core\Data\PaginatedResourceData;
 use App\Core\Data\ResourceMetadata;
 use App\Core\Services\BaseService;
 use Colame\Item\Contracts\ItemRepositoryInterface;
+use Colame\Location\Contracts\LocationRepositoryInterface;
 use Spatie\LaravelData\DataCollection;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
@@ -26,6 +27,7 @@ use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Order\Exceptions\InvalidStatusTransitionException;
 use Colame\Order\Models\Order;
 use Colame\Order\Aggregates\OrderAggregate;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Order service implementation
@@ -40,25 +42,27 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         private OrderCalculationService $calculationService,
         private OrderValidationService $validationService,
         private EventSourcedOrderService $eventSourcedService,
+        private ?LocationRepositoryInterface $locationRepository = null,
     ) {
         parent::__construct($features);
     }
 
     /**
      * Create a new order
+     * Note: Location should already be set in the session, passed via sessionLocationId
      */
     public function createOrder(CreateOrderData $data): OrderData
     {
-        $this->logAction('Creating order', ['userId' => $data->userId, 'locationId' => $data->locationId]);
+        $this->logAction('Creating order', ['userId' => $data->userId, 'sessionLocationId' => $data->sessionLocationId]);
 
         // Validate order items
         $this->validationService->validateOrderItems($data->items->toArray());
 
-        // Use event sourcing to create the order
+        // Use event sourcing to create the order (location comes from session)
         $orderUuid = $this->eventSourcedService->createOrder($data);
         
-        // Get the order from projection
-        $order = Order::where('uuid', $orderUuid)->first();
+        // Get the order from projection - UUID is stored in the id field
+        $order = Order::find($orderUuid);
         
         if (!$order) {
             throw new OrderNotFoundException("Order {$orderUuid} not found after creation");
@@ -70,7 +74,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Update an existing order
      */
-    public function updateOrder(int $id, UpdateOrderData $data): OrderData
+    public function updateOrder(string $id, UpdateOrderData $data): OrderData
     {
         $order = $this->orderRepository->find($id);
         
@@ -139,7 +143,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Get order with all relations
      */
-    public function getOrderWithRelations(int $id): ?OrderWithRelationsData
+    public function getOrderWithRelations(string $id): ?OrderWithRelationsData
     {
         $order = $this->orderRepository->find($id);
         
@@ -147,7 +151,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             return null;
         }
 
-        // Mock data for now - in a real implementation, these would come from other services
+        // Get user data - still mocked for now
         $user = $order->userId ? (object) [
             'id' => $order->userId,
             'name' => 'John Doe',
@@ -155,12 +159,29 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
             'role' => 'waiter',
         ] : null;
         
-        $location = (object) [
-            'id' => $order->locationId,
-            'name' => $order->locationId === 1 ? 'Main Branch' : 'Downtown Branch',
-            'address' => $order->locationId === 1 ? '123 Main St' : '456 Downtown Ave',
-            'phone' => $order->locationId === 1 ? '555-0123' : '555-0456',
-        ];
+        // Get location data - simplified since location is locked at session
+        // Only fetch for display purposes, not business logic
+        $location = null;
+        if ($order->locationId) {
+            // First check if location data is cached with the order
+            $cachedLocation = Cache::get("order_location:{$order->id}");
+            if ($cachedLocation) {
+                $location = $cachedLocation;
+            } elseif ($this->locationRepository) {
+                // Fetch only if needed for display
+                $locationData = $this->locationRepository->find($order->locationId);
+                if ($locationData) {
+                    $location = (object) [
+                        'id' => $locationData->id,
+                        'name' => $locationData->name,
+                        'address' => $locationData->address ?? '',
+                        'phone' => $locationData->phone ?? '',
+                    ];
+                    // Cache for display purposes
+                    Cache::put("order_location:{$order->id}", $location, now()->addHours(1));
+                }
+            }
+        }
         
         $payments = []; // $this->paymentService->getByOrder($id);
         $offers = []; // $this->offerService->getByOrder($id);
@@ -177,7 +198,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Confirm an order
      */
-    public function confirmOrder(int $id): OrderData
+    public function confirmOrder(string $id): OrderData
     {
         return $this->transitionOrderStatus($id, 'confirmed', __('order.status.confirmed'));
     }
@@ -185,7 +206,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Mark order as preparing
      */
-    public function startPreparingOrder(int $id): OrderData
+    public function startPreparingOrder(string $id): OrderData
     {
         return $this->transitionOrderStatus($id, 'preparing', __('order.status.preparing'));
     }
@@ -193,7 +214,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Mark order as ready
      */
-    public function markOrderReady(int $id): OrderData
+    public function markOrderReady(string $id): OrderData
     {
         return $this->transitionOrderStatus($id, 'ready', __('order.status.ready'));
     }
@@ -201,7 +222,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Complete an order
      */
-    public function completeOrder(int $id): OrderData
+    public function completeOrder(string $id): OrderData
     {
         return $this->transitionOrderStatus($id, 'completed', __('order.status.completed'));
     }
@@ -209,7 +230,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Cancel an order
      */
-    public function cancelOrder(int $id, string $reason): OrderData
+    public function cancelOrder(string $id, string $reason): OrderData
     {
         $order = $this->orderRepository->find($id);
         
@@ -242,7 +263,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Calculate order totals
      */
-    public function calculateOrderTotals(int $id): array
+    public function calculateOrderTotals(string $id): array
     {
         return $this->calculationService->calculateOrderTotals($id);
     }
@@ -258,7 +279,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Apply offers to order
      */
-    public function applyOffers(int $orderId, array $offerCodes): OrderData
+    public function applyOffers(string $orderId, array $offerCodes): OrderData
     {
         if (!$this->isFeatureEnabled('order.offers')) {
             throw new \RuntimeException('Order offers feature is not enabled');
@@ -286,7 +307,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Update order item status
      */
-    public function updateOrderItemStatus(int $orderId, int $itemId, string $status): bool
+    public function updateOrderItemStatus(string $orderId, int $itemId, string $status): bool
     {
         $this->logAction('Updating order item status', [
             'orderId' => $orderId,
@@ -300,7 +321,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Split order into multiple orders
      */
-    public function splitOrder(int $orderId, array $itemGroups): array
+    public function splitOrder(string $orderId, array $itemGroups): array
     {
         if (!$this->isFeatureEnabled('order.split_bill')) {
             throw new \RuntimeException('Split bill feature is not enabled');
@@ -328,7 +349,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Transition order status using Model States dynamically
      */
-    public function transitionOrderStatus(int $id, string $newStatus, ?string $reason = null): OrderData
+    public function transitionOrderStatus(string $id, string $newStatus, ?string $reason = null): OrderData
     {
         $orderModel = Order::find($id);
         
@@ -453,7 +474,7 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
     /**
      * Update order items
      */
-    private function updateOrderItems(int $orderId, array $items): void
+    private function updateOrderItems(string $orderId, array $items): void
     {
         foreach ($items as $item) {
             if (isset($item['id']) && isset($item['quantity'])) {
@@ -718,11 +739,31 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
 
     private function getLocationPerformance(string $period): array
     {
-        // Mock data for location performance
-        return [
-            ['id' => '1', 'name' => 'Main Branch', 'orders' => 156, 'revenue' => 2450000, 'avgTime' => 22, 'rating' => 4.5],
-            ['id' => '2', 'name' => 'Downtown Branch', 'orders' => 134, 'revenue' => 1980000, 'avgTime' => 28, 'rating' => 4.3],
-        ];
+        // Get actual locations and calculate performance
+        $locations = [];
+        
+        if ($this->locationRepository) {
+            $activeLocations = $this->locationRepository->getActive();
+            foreach ($activeLocations as $location) {
+                // Calculate actual performance metrics per location
+                $query = Order::query()->where('location_id', $location->id);
+                $this->applyDateFilter($query, $period);
+                
+                $orderCount = $query->count();
+                $revenue = $query->sum('total_amount');
+                
+                $locations[] = [
+                    'id' => (string) $location->id,
+                    'name' => $location->name,
+                    'orders' => $orderCount,
+                    'revenue' => $revenue,
+                    'avgTime' => 25, // TODO: Calculate actual average preparation time
+                    'rating' => 4.5, // TODO: Get from reviews/ratings system
+                ];
+            }
+        }
+        
+        return $locations;
     }
 
     private function getStaffPerformance(string $period, ?int $locationId): array
