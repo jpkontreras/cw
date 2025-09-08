@@ -56,18 +56,8 @@ class OrderSessionProjector extends Projector
      */
     public function onItemSearched(ItemSearched $event): void
     {
-        // Record search in session events
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'search',
-            'event_data' => json_encode([
-                'query' => $event->query,
-                'filters' => $event->filters,
-                'results_count' => $event->resultsCount,
-                'search_id' => $event->searchId,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         // Update session activity
         $this->updateSessionActivity($event->aggregateRootUuid);
@@ -81,17 +71,8 @@ class OrderSessionProjector extends Projector
      */
     public function onCategoryBrowsed(CategoryBrowsed $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'category_browse',
-            'event_data' => json_encode([
-                'category_id' => $event->categoryId,
-                'category_name' => $event->categoryName,
-                'items_viewed' => $event->itemsViewed,
-                'time_spent' => $event->timeSpentSeconds,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         $this->updateSessionActivity($event->aggregateRootUuid);
         
@@ -106,19 +87,8 @@ class OrderSessionProjector extends Projector
      */
     public function onItemViewed(ItemViewed $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'item_view',
-            'event_data' => json_encode([
-                'item_id' => $event->itemId,
-                'item_name' => $event->itemName,
-                // NO PRICE - not needed for session tracking
-                'category' => $event->category,
-                'source' => $event->viewSource,
-                'duration' => $event->viewDurationSeconds,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         $this->updateSessionActivity($event->aggregateRootUuid);
         
@@ -133,19 +103,8 @@ class OrderSessionProjector extends Projector
      */
     public function onItemAddedToCart(ItemAddedToCart $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'cart_add',
-            'event_data' => json_encode([
-                'item_id' => $event->itemId,
-                'item_name' => $event->itemName,
-                'quantity' => $event->quantity,
-                // NO UNIT_PRICE - pricing calculated at checkout
-                'category' => $event->category,
-                'source' => $event->addedFrom,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         // Update session to 'cart_building' status
         DB::table('order_sessions')
@@ -171,17 +130,8 @@ class OrderSessionProjector extends Projector
      */
     public function onItemRemovedFromCart(ItemRemovedFromCart $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'cart_remove',
-            'event_data' => json_encode([
-                'item_id' => $event->itemId,
-                'item_name' => $event->itemName,
-                'quantity' => $event->removedQuantity,
-                'reason' => $event->removalReason,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         $this->updateSessionActivity($event->aggregateRootUuid);
         $this->updateCartItemsCount($event->aggregateRootUuid);
@@ -192,17 +142,8 @@ class OrderSessionProjector extends Projector
      */
     public function onCartModified(CartModified $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'cart_modify',
-            'event_data' => json_encode([
-                'item_id' => $event->itemId,
-                'item_name' => $event->itemName,
-                'modification' => $event->modificationType,
-                'changes' => $event->changes,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         $this->updateSessionActivity($event->aggregateRootUuid);
         $this->updateCartItemsCount($event->aggregateRootUuid);
@@ -213,17 +154,8 @@ class OrderSessionProjector extends Projector
      */
     public function onServingTypeSelected(ServingTypeSelected $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'serving_type',
-            'event_data' => json_encode([
-                'type' => $event->servingType,
-                'previous' => $event->previousType,
-                'table_number' => $event->tableNumber,
-                'delivery_address' => $event->deliveryAddress,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         // Update session status if progressing
         DB::table('order_sessions')
@@ -243,16 +175,8 @@ class OrderSessionProjector extends Projector
      */
     public function onCustomerInfoEntered(CustomerInfoEntered $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'customer_info',
-            'event_data' => json_encode([
-                'fields' => array_keys($event->fields),
-                'is_complete' => $event->isComplete,
-                'has_errors' => !empty($event->validationErrors),
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         // Update session with customer info completion status
         if ($event->isComplete) {
@@ -272,15 +196,8 @@ class OrderSessionProjector extends Projector
      */
     public function onPaymentMethodSelected(PaymentMethodSelected $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'payment_method',
-            'event_data' => json_encode([
-                'method' => $event->paymentMethod,
-                'previous' => $event->previousMethod,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         DB::table('order_sessions')
             ->where('uuid', $event->aggregateRootUuid)
@@ -297,16 +214,8 @@ class OrderSessionProjector extends Projector
      */
     public function onOrderDraftSaved(OrderDraftSaved $event): void
     {
-        DB::table('order_session_events')->insert([
-            'session_id' => $event->aggregateRootUuid,
-            'event_type' => 'draft_saved',
-            'event_data' => json_encode([
-                'items_count' => count($event->cartItems),
-                // NO SUBTOTAL - pricing calculated at checkout
-                'auto_saved' => $event->autoSaved,
-            ]),
-            'created_at' => now(),
-        ]);
+        // Events are already stored in stored_events table via event sourcing
+        // No need to duplicate in order_session_events
 
         // Store draft data
         DB::table('order_drafts')->updateOrInsert(
@@ -371,36 +280,38 @@ class OrderSessionProjector extends Projector
      */
     private function updateCartItemsCount(string $sessionId): void
     {
-        // Calculate cart items count from events - NO PRICING
-        $cartEvents = DB::table('order_session_events')
-            ->where('session_id', $sessionId)
-            ->whereIn('event_type', ['cart_add', 'cart_remove', 'cart_modify'])
+        // Calculate cart items count from stored_events table - NO PRICING
+        $cartEvents = DB::table('stored_events')
+            ->where('aggregate_uuid', $sessionId)
+            ->whereIn('event_class', [
+                ItemAddedToCart::class,
+                ItemRemovedFromCart::class,
+                CartModified::class
+            ])
+            ->orderBy('created_at')
             ->get();
 
         $itemsCount = 0;
         $cart = [];
 
         foreach ($cartEvents as $event) {
-            $data = json_decode($event->event_data, true);
+            $eventData = json_decode($event->event_properties, true);
+            $eventClass = $event->event_class;
             
-            switch ($event->event_type) {
-                case 'cart_add':
-                    $cart[$data['item_id']] = ($cart[$data['item_id']] ?? 0) + $data['quantity'];
-                    break;
-                case 'cart_remove':
-                    $cart[$data['item_id']] = max(0, ($cart[$data['item_id']] ?? 0) - $data['quantity']);
-                    if ($cart[$data['item_id']] === 0) {
-                        unset($cart[$data['item_id']]);
+            if ($eventClass === ItemAddedToCart::class) {
+                $cart[$eventData['itemId']] = ($cart[$eventData['itemId']] ?? 0) + $eventData['quantity'];
+            } elseif ($eventClass === ItemRemovedFromCart::class) {
+                $cart[$eventData['itemId']] = max(0, ($cart[$eventData['itemId']] ?? 0) - $eventData['removedQuantity']);
+                if ($cart[$eventData['itemId']] === 0) {
+                    unset($cart[$eventData['itemId']]);
+                }
+            } elseif ($eventClass === CartModified::class) {
+                if (isset($eventData['changes'])) {
+                    $cart[$eventData['itemId']] = max(0, $eventData['changes']['to'] ?? 0);
+                    if ($cart[$eventData['itemId']] === 0) {
+                        unset($cart[$eventData['itemId']]);
                     }
-                    break;
-                case 'cart_modify':
-                    if (isset($data['changes'])) {
-                        $cart[$data['item_id']] = max(0, $data['changes']['to'] ?? 0);
-                        if ($cart[$data['item_id']] === 0) {
-                            unset($cart[$data['item_id']]);
-                        }
-                    }
-                    break;
+                }
             }
         }
 

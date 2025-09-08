@@ -52,10 +52,11 @@ class OrderProjector extends Projector
             'locationId' => $event->locationId
         ]);
         
+        // Use updateOrCreate with the id in both the search and update arrays
+        // This ensures we don't trigger the creating event when the id is already set
         $order = Order::updateOrCreate(
-            ['id' => $event->aggregateRootUuid], // Use UUID as primary key
+            ['id' => $event->aggregateRootUuid], // Search by UUID
             [
-                'id' => $event->aggregateRootUuid, // Ensure UUID is preserved
                 'session_id' => $event->sessionId, // Store the session reference
                 'order_number' => $orderNumber,
                 'user_id' => $metadata['user_id'] ?? null, // User who created the order

@@ -232,53 +232,52 @@ class OrderSessionService
         $session = OrderSession::find($orderUuid);
         
         if ($session && $session->isActive()) {
-                // Get cart items from events
-                $cartEvents = DB::table('order_session_events')
-                    ->where('session_id', $orderUuid)
-                    ->whereIn('event_type', ['cart_add', 'cart_remove', 'cart_modify'])
+                // Get cart items from stored_events table
+                $cartEvents = DB::table('stored_events')
+                    ->where('aggregate_uuid', $orderUuid)
+                    ->whereIn('event_class', [
+                        'Colame\\Order\\Events\\Session\\ItemAddedToCart',
+                        'Colame\\Order\\Events\\Session\\ItemRemovedFromCart',
+                        'Colame\\Order\\Events\\Session\\CartModified'
+                    ])
                     ->orderBy('created_at')
                     ->get();
                 
                 $cart = [];
                 foreach ($cartEvents as $event) {
-                    $data = json_decode($event->event_data, true);
+                    $eventData = json_decode($event->event_properties, true);
+                    $eventClass = $event->event_class;
                     
-                    switch ($event->event_type) {
-                        case 'cart_add':
-                            if (!isset($cart[$data['item_id']])) {
-                                $cart[$data['item_id']] = [
-                                    'id' => $data['item_id'],
-                                    'name' => $data['item_name'],
-                                    'quantity' => 0,
-                                    // NO PRICE STORED - will be fetched fresh from items table
-                                    'category' => $data['category'] ?? null,
-                                ];
+                    if (str_ends_with($eventClass, 'ItemAddedToCart')) {
+                        if (!isset($cart[$eventData['itemId']])) {
+                            $cart[$eventData['itemId']] = [
+                                'id' => $eventData['itemId'],
+                                'name' => $eventData['itemName'],
+                                'quantity' => 0,
+                                // NO PRICE STORED - will be fetched fresh from items table
+                                'category' => $eventData['category'] ?? null,
+                            ];
+                        }
+                        $cart[$eventData['itemId']]['quantity'] += $eventData['quantity'];
+                    } elseif (str_ends_with($eventClass, 'ItemRemovedFromCart')) {
+                        if (isset($cart[$eventData['itemId']])) {
+                            $cart[$eventData['itemId']]['quantity'] -= $eventData['removedQuantity'];
+                            if ($cart[$eventData['itemId']]['quantity'] <= 0) {
+                                unset($cart[$eventData['itemId']]);
                             }
-                            $cart[$data['item_id']]['quantity'] += $data['quantity'];
-                            break;
+                        }
+                    } elseif (str_ends_with($eventClass, 'CartModified')) {
+                        if (isset($cart[$eventData['itemId']]) && isset($eventData['changes'])) {
+                            // Apply quantity change from modification
+                            $from = $eventData['changes']['from'] ?? 0;
+                            $to = $eventData['changes']['to'] ?? 0;
+                            $cart[$eventData['itemId']]['quantity'] = $to;
                             
-                        case 'cart_remove':
-                            if (isset($cart[$data['item_id']])) {
-                                $cart[$data['item_id']]['quantity'] -= $data['quantity'];
-                                if ($cart[$data['item_id']]['quantity'] <= 0) {
-                                    unset($cart[$data['item_id']]);
-                                }
+                            // Remove item if quantity becomes 0 or negative
+                            if ($cart[$eventData['itemId']]['quantity'] <= 0) {
+                                unset($cart[$eventData['itemId']]);
                             }
-                            break;
-                            
-                        case 'cart_modify':
-                            if (isset($cart[$data['item_id']]) && isset($data['changes'])) {
-                                // Apply quantity change from modification
-                                $from = $data['changes']['from'] ?? 0;
-                                $to = $data['changes']['to'] ?? 0;
-                                $cart[$data['item_id']]['quantity'] = $to;
-                                
-                                // Remove item if quantity becomes 0 or negative
-                                if ($cart[$data['item_id']]['quantity'] <= 0) {
-                                    unset($cart[$data['item_id']]);
-                                }
-                            }
-                            break;
+                        }
                     }
                 }
                 

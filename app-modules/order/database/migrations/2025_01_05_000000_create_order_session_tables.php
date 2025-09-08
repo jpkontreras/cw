@@ -52,21 +52,6 @@ return new class extends Migration
             // to ensure businesses and locations tables exist first
         });
 
-        // Order session events - detailed event log for each session
-        Schema::create('order_session_events', function (Blueprint $table) {
-            $table->id();
-            $table->string('session_id'); // UUID of the session
-            $table->string('event_type', 50); // search, category_browse, item_view, cart_add, cart_remove, etc.
-            $table->json('event_data');
-            $table->timestamp('created_at');
-            
-            // Indexes
-            $table->index('session_id');
-            $table->index('event_type');
-            $table->index('created_at');
-            $table->index(['session_id', 'event_type']);
-        });
-
         // Order drafts - saved cart states
         Schema::create('order_drafts', function (Blueprint $table) {
             $table->id();
@@ -158,7 +143,6 @@ return new class extends Migration
         Schema::dropIfExists('search_analytics');
         Schema::dropIfExists('order_analytics');
         Schema::dropIfExists('order_drafts');
-        Schema::dropIfExists('order_session_events');
         Schema::dropIfExists('order_sessions');
     }
 };
