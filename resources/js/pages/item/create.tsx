@@ -282,6 +282,9 @@ export default function ItemCreate({ categories, item_types, features, available
                               placeholder="0.00"
                             />
                           </div>
+                          <p className="text-xs text-muted-foreground">
+                            Leave blank to set as free (0.00)
+                          </p>
                           {errors.base_price && (
                             <p className="text-sm text-destructive">{errors.base_price}</p>
                           )}

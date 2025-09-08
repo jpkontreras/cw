@@ -198,21 +198,61 @@ class LocationService implements LocationServiceInterface
     }
 
     /**
-     * Get all active locations.
+     * Get all active locations (filtered by business context if available).
      */
     public function getActiveLocations(): DataCollection
     {
+        // If business context is available, filter by business
+        if (app()->bound('Colame\Business\Contracts\BusinessContextInterface')) {
+            $businessContext = app('Colame\Business\Contracts\BusinessContextInterface');
+            $currentBusinessId = $businessContext->getCurrentBusinessId();
+            
+            if ($currentBusinessId) {
+                return Cache::remember("locations.active.business.{$currentBusinessId}", 3600, function () use ($currentBusinessId) {
+                    $allLocations = $this->locationRepository->getActive();
+                    // Filter locations by business ID
+                    $filtered = [];
+                    foreach ($allLocations as $location) {
+                        if ($location->businessId === $currentBusinessId) {
+                            $filtered[] = $location;
+                        }
+                    }
+                    return LocationData::collect($filtered, DataCollection::class);
+                });
+            }
+        }
+        
+        // Fallback to all active locations if no business context
         return Cache::remember('locations.active', 3600, function () {
             return $this->locationRepository->getActive();
         });
     }
 
     /**
-     * Get all locations accessible by a user.
+     * Get all locations accessible by a user (filtered by business context if available).
      */
     public function getUserAccessibleLocations(int $userId): DataCollection
     {
-        return $this->locationRepository->getUserLocations($userId);
+        $locations = $this->locationRepository->getUserLocations($userId);
+        
+        // If business context is available, filter by business
+        if (app()->bound('Colame\Business\Contracts\BusinessContextInterface')) {
+            $businessContext = app('Colame\Business\Contracts\BusinessContextInterface');
+            $currentBusinessId = $businessContext->getCurrentBusinessId();
+            
+            if ($currentBusinessId) {
+                // Filter locations by business ID
+                $filtered = [];
+                foreach ($locations as $location) {
+                    if (!$location->businessId || $location->businessId === $currentBusinessId) {
+                        $filtered[] = $location;
+                    }
+                }
+                return LocationData::collect($filtered, DataCollection::class);
+            }
+        }
+        
+        return $locations;
     }
 
     /**
@@ -228,10 +268,15 @@ class LocationService implements LocationServiceInterface
 
         $this->locationRepository->assignUser($locationId, $userId, $role, $isPrimary);
 
-        // If primary, update user's default location
+        // If primary, update user's default location in preferences table
         if ($isPrimary) {
-            $user->default_location_id = $locationId;
-            $user->save();
+            DB::table('user_location_preferences')->updateOrInsert(
+                ['user_id' => $userId],
+                [
+                    'default_location_id' => $locationId,
+                    'updated_at' => now()
+                ]
+            );
         }
     }
 
@@ -242,16 +287,26 @@ class LocationService implements LocationServiceInterface
     {
         $this->locationRepository->removeUser($locationId, $userId);
 
-        // Check if this was the user's default or current location
-        $user = User::find($userId);
-        if ($user) {
-            if ($user->default_location_id === $locationId) {
-                $user->default_location_id = null;
+        // Clear current/default if they were this location
+        $preferences = DB::table('user_location_preferences')
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($preferences) {
+            $updates = [];
+            if ($preferences->current_location_id === $locationId) {
+                $updates['current_location_id'] = null;
             }
-            if ($user->current_location_id === $locationId) {
-                $user->current_location_id = null;
+            if ($preferences->default_location_id === $locationId) {
+                $updates['default_location_id'] = null;
             }
-            $user->save();
+            
+            if (!empty($updates)) {
+                $updates['updated_at'] = now();
+                DB::table('user_location_preferences')
+                    ->where('user_id', $userId)
+                    ->update($updates);
+            }
         }
     }
 
@@ -265,9 +320,27 @@ class LocationService implements LocationServiceInterface
             throw new LocationException('User does not have access to this location.');
         }
 
-        $user = User::findOrFail($userId);
-        $user->current_location_id = $locationId;
-        $user->save();
+        // Verify location belongs to current business context if business module is available
+        if (app()->bound('Colame\Business\Contracts\BusinessContextInterface')) {
+            $businessContext = app('Colame\Business\Contracts\BusinessContextInterface');
+            $currentBusinessId = $businessContext->getCurrentBusinessId();
+            
+            if ($currentBusinessId) {
+                $location = $this->locationRepository->find($locationId);
+                if ($location && $location->businessId && $location->businessId !== $currentBusinessId) {
+                    throw new LocationException('Location does not belong to the current business context.');
+                }
+            }
+        }
+
+        // Update or insert into user_location_preferences table
+        DB::table('user_location_preferences')->updateOrInsert(
+            ['user_id' => $userId],
+            [
+                'current_location_id' => $locationId,
+                'updated_at' => now()
+            ]
+        );
     }
 
     /**
@@ -280,9 +353,27 @@ class LocationService implements LocationServiceInterface
             throw new LocationException('User does not have access to this location.');
         }
 
-        $user = User::findOrFail($userId);
-        $user->default_location_id = $locationId;
-        $user->save();
+        // Verify location belongs to current business context if business module is available
+        if (app()->bound('Colame\Business\Contracts\BusinessContextInterface')) {
+            $businessContext = app('Colame\Business\Contracts\BusinessContextInterface');
+            $currentBusinessId = $businessContext->getCurrentBusinessId();
+            
+            if ($currentBusinessId) {
+                $location = $this->locationRepository->find($locationId);
+                if ($location && $location->businessId && $location->businessId !== $currentBusinessId) {
+                    throw new LocationException('Location does not belong to the current business context.');
+                }
+            }
+        }
+
+        // Update or insert into user_location_preferences table
+        DB::table('user_location_preferences')->updateOrInsert(
+            ['user_id' => $userId],
+            [
+                'default_location_id' => $locationId,
+                'updated_at' => now()
+            ]
+        );
     }
 
     /**
@@ -290,13 +381,16 @@ class LocationService implements LocationServiceInterface
      */
     public function getUserCurrentLocation(int $userId): ?LocationData
     {
-        $user = User::find($userId);
+        // Get from user_location_preferences table
+        $currentLocationId = DB::table('user_location_preferences')
+            ->where('user_id', $userId)
+            ->value('current_location_id');
         
-        if (!$user || !$user->current_location_id) {
+        if (!$currentLocationId) {
             return null;
         }
 
-        return $this->locationRepository->find($user->current_location_id);
+        return $this->locationRepository->find($currentLocationId);
     }
 
     /**
@@ -304,13 +398,16 @@ class LocationService implements LocationServiceInterface
      */
     public function getUserDefaultLocation(int $userId): ?LocationData
     {
-        $user = User::find($userId);
+        // Get from user_location_preferences table
+        $defaultLocationId = DB::table('user_location_preferences')
+            ->where('user_id', $userId)
+            ->value('default_location_id');
         
-        if (!$user || !$user->default_location_id) {
+        if (!$defaultLocationId) {
             return null;
         }
 
-        return $this->locationRepository->find($user->default_location_id);
+        return $this->locationRepository->find($defaultLocationId);
     }
 
     /**

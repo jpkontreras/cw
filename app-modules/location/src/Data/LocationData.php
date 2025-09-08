@@ -21,6 +21,7 @@ class LocationData extends BaseData
         public readonly string $name,
         public readonly string $type,
         public readonly string $status,
+        public readonly ?int $businessId,
         public readonly ?string $address,
         public readonly ?string $addressLine2,
         public readonly ?string $city,
@@ -47,6 +48,18 @@ class LocationData extends BaseData
     ) {}
 
     /**
+     * Create from any source (required for collect to work properly)
+     */
+    public static function from(mixed ...$payloads): static
+    {
+        if (count($payloads) === 1 && $payloads[0] instanceof Location) {
+            return static::fromModel($payloads[0]);
+        }
+        
+        return parent::from(...$payloads);
+    }
+    
+    /**
      * Create from Eloquent model
      */
     public static function fromModel(Location $location): self
@@ -57,6 +70,7 @@ class LocationData extends BaseData
             name: $location->name,
             type: $location->type,
             status: $location->status,
+            businessId: $location->business_id,
             address: $location->address,
             addressLine2: $location->address_line_2,
             city: $location->city,

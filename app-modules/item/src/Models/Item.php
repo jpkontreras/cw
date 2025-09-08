@@ -54,6 +54,8 @@ class Item extends Model
     ];
     
     protected $attributes = [
+        'base_price' => 0,
+        'sale_price' => null,
         'cost' => 0,
         'preparation_time' => 0,
         'is_active' => true,
