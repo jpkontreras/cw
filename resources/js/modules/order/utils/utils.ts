@@ -2,6 +2,7 @@
 
 import { KITCHEN_STATUS_CONFIG, ORDER_STATUS_CONFIG, ORDER_TYPE_CONFIG, PAYMENT_STATUS_CONFIG, TAX_RATE } from '../constants/constants';
 import { KitchenStatus, Order, OrderItem, OrderStatus, OrderType, PaymentStatus } from '../types/types';
+import { formatCurrency as formatCurrencyFromLib } from '@/lib/format';
 
 // Status utilities
 export const getStatusColor = (status: OrderStatus): string => {
@@ -172,15 +173,8 @@ export const getStatusIndicatorColor = (status: OrderStatus): string => {
 };
 
 export const formatCurrency = (amount: number | undefined | null): string => {
-  if (amount === undefined || amount === null || isNaN(amount)) {
-    return '$0';
-  }
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  // Delegate to the main formatCurrency function which gets currency from business context
+  return formatCurrencyFromLib(amount);
 };
 
 export const formatPhone = (phone: string): string => {

@@ -15,6 +15,7 @@ use Colame\Order\Services\EventStreamService;
 use Colame\Order\Exceptions\OrderException;
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderSession;
+use Colame\Order\States\StartedState;
 use Colame\Item\Contracts\ItemRepositoryInterface;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
 use Colame\Location\Contracts\LocationServiceInterface;
@@ -735,7 +736,7 @@ class OrderController extends Controller
     private function handleOrderConfirmation(Order $order, string $paymentMethod): mixed
     {
         // Check if order is already confirmed
-        if ($order->status === 'confirmed') {
+        if ($order->status && $order->status->getValue() === 'confirmed') {
             // Order is already confirmed, just return it without changes
             return $order;
         }
@@ -750,9 +751,9 @@ class OrderController extends Controller
         if ($order->uuid) {
             // For draft orders with items, transition directly to confirmed
             // The event service will handle any necessary intermediate states
-            if ($order->status === 'draft' && $order->items()->exists()) {
+            if ($order->status && $order->status->getValue() === 'draft' && $order->items()->exists()) {
                 // First transition to started state if needed
-                $order->update(['status' => 'started']);
+                $order->update(['status' => StartedState::class]);
             }
             
             // Use event-sourced service which handles all intermediate state transitions
@@ -847,10 +848,10 @@ class OrderController extends Controller
                 'can_be_cancelled' => $order->status->canBeCancelled(),
             ];
             
-            // Get the transitionable states - returns array of state names or classes
-            $nextStateClasses = $order->status->transitionableStates();
+            // Get the transitionable states - returns array of state names
+            $nextStateNames = $order->status->transitionableStates();
             
-            // Map state names to full class names
+            // Map state names to full class names and metadata
             $stateNameToClass = [
                 'draft' => \Colame\Order\States\DraftState::class,
                 'started' => \Colame\Order\States\StartedState::class,
@@ -868,34 +869,39 @@ class OrderController extends Controller
                 'refunded' => \Colame\Order\States\RefundedState::class,
             ];
             
-            // Map state classes to metadata
+            // Define state metadata directly without instantiation
+            $stateMetadata = [
+                'confirmed' => ['display_name' => 'Confirmed', 'action_label' => 'Confirm Order', 'color' => 'blue', 'icon' => 'check-circle'],
+                'started' => ['display_name' => 'Started', 'action_label' => 'Start Order', 'color' => 'blue', 'icon' => 'play-circle'],
+                'cancelled' => ['display_name' => 'Cancelled', 'action_label' => 'Cancel Order', 'color' => 'red', 'icon' => 'x-circle'],
+                'preparing' => ['display_name' => 'Preparing', 'action_label' => 'Start Preparing', 'color' => 'orange', 'icon' => 'clock'],
+                'ready' => ['display_name' => 'Ready', 'action_label' => 'Mark as Ready', 'color' => 'green', 'icon' => 'check-circle-2'],
+                'completed' => ['display_name' => 'Completed', 'action_label' => 'Complete Order', 'color' => 'green', 'icon' => 'check-circle'],
+                'delivering' => ['display_name' => 'Delivering', 'action_label' => 'Start Delivery', 'color' => 'blue', 'icon' => 'truck'],
+                'delivered' => ['display_name' => 'Delivered', 'action_label' => 'Mark as Delivered', 'color' => 'green', 'icon' => 'package-check'],
+                'items_added' => ['display_name' => 'Items Added', 'action_label' => 'Add Items', 'color' => 'blue', 'icon' => 'shopping-cart'],
+                'items_validated' => ['display_name' => 'Items Validated', 'action_label' => 'Validate Items', 'color' => 'blue', 'icon' => 'check'],
+                'promotions_calculated' => ['display_name' => 'Promotions Calculated', 'action_label' => 'Calculate Promotions', 'color' => 'blue', 'icon' => 'percent'],
+                'price_calculated' => ['display_name' => 'Price Calculated', 'action_label' => 'Calculate Price', 'color' => 'blue', 'icon' => 'calculator'],
+                'refunded' => ['display_name' => 'Refunded', 'action_label' => 'Refund Order', 'color' => 'gray', 'icon' => 'rotate-ccw'],
+            ];
+            
+            // Build next states array
             $nextStates = [];
-            foreach ($nextStateClasses as $stateClassOrName) {
-                // Check if it's a class name or a state name
-                $stateClass = class_exists($stateClassOrName) 
-                    ? $stateClassOrName 
-                    : ($stateNameToClass[$stateClassOrName] ?? null);
-                
-                if (!$stateClass || !class_exists($stateClass)) {
-                    continue;
+            foreach ($nextStateNames as $stateName) {
+                if (isset($stateMetadata[$stateName])) {
+                    $nextStates[] = [
+                        'value' => $stateName,
+                        'display_name' => $stateMetadata[$stateName]['display_name'],
+                        'action_label' => $stateMetadata[$stateName]['action_label'],
+                        'color' => $stateMetadata[$stateName]['color'],
+                        'icon' => $stateMetadata[$stateName]['icon'],
+                    ];
                 }
-                
-                // Create a temporary instance to get metadata
-                $tempOrder = new \Colame\Order\Models\Order();
-                $tempOrder->status = $stateClass;
-                $stateInstance = new $stateClass($tempOrder);
-                
-                $nextStates[] = [
-                    'value' => $stateInstance::$name ?? strtolower(class_basename($stateClass)),
-                    'display_name' => $stateInstance->displayName(),
-                    'action_label' => $stateInstance->actionLabel(),
-                    'color' => $stateInstance->color(),
-                    'icon' => $stateInstance->icon(),
-                ];
             }
             
             // Check if we can cancel from current state
-            $canCancel = $order->status->canTransitionTo(\Colame\Order\States\CancelledState::class);
+            $canCancel = in_array('cancelled', $nextStateNames);
             
             return [
                 'current_state' => $currentState,
@@ -904,6 +910,9 @@ class OrderController extends Controller
                 'is_final_state' => empty($nextStates),
             ];
         } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Error getting state transition data: ' . $e->getMessage());
+            
             // Return empty state data on error
             return [
                 'current_state' => null,

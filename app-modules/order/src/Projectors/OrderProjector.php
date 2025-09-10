@@ -27,9 +27,23 @@ use Colame\Order\Models\OrderItem;
 use Colame\Order\Models\OrderPromotion;
 use Colame\Order\Models\PaymentTransaction;
 use Illuminate\Support\Facades\DB;
+use Colame\Location\Contracts\LocationRepositoryInterface;
+use Colame\Order\States\StartedState;
+use Colame\Order\States\ItemsAddedState;
+use Colame\Order\States\ItemsValidatedState;
+use Colame\Order\States\PromotionsCalculatedState;
+use Colame\Order\States\PriceCalculatedState;
+use Colame\Order\States\ConfirmedState;
+use Colame\Order\States\CancelledState;
 
 class OrderProjector extends Projector
 {
+    private LocationRepositoryInterface $locationRepository;
+    
+    public function __construct(LocationRepositoryInterface $locationRepository)
+    {
+        $this->locationRepository = $locationRepository;
+    }
     public function onOrderStarted(OrderStarted $event): void
     {
         // Debug: Log that projector is being called
@@ -45,11 +59,22 @@ class OrderProjector extends Projector
         // Generate order number immediately (ORD-XXXX format)
         $orderNumber = $this->generateOrderNumber($event->locationId);
         
+        // Get location currency (critical for multi-currency support)
+        // Using repository pattern to respect module boundaries
+        $locationCurrency = 'CLP'; // Default
+        if ($event->locationId) {
+            $locationData = $this->locationRepository->find($event->locationId);
+            if ($locationData && $locationData->currency) {
+                $locationCurrency = $locationData->currency;
+            }
+        }
+        
         // Debug: Log before database operation
         \Illuminate\Support\Facades\Log::info("Creating order in database", [
             'id' => $event->aggregateRootUuid,
             'orderNumber' => $orderNumber,
-            'locationId' => $event->locationId
+            'locationId' => $event->locationId,
+            'currency' => $locationCurrency
         ]);
         
         // Use updateOrCreate with the id in both the search and update arrays
@@ -63,6 +88,7 @@ class OrderProjector extends Projector
                 'user_id' => $metadata['user_id'] ?? null, // User who created the order
                 'waiter_id' => $event->staffId, // staffId maps to waiter_id column (nullable)
                 'location_id' => $event->locationId,
+                'currency' => $locationCurrency, // Capture location currency at order creation
                 'table_number' => $event->tableNumber,
                 'type' => $metadata['type'] ?? 'dine_in',
                 'customer_name' => $metadata['customer_name'] ?? null,
@@ -71,7 +97,7 @@ class OrderProjector extends Projector
                 'delivery_address' => $metadata['delivery_address'] ?? null,
                 'notes' => $metadata['notes'] ?? null,
                 'special_instructions' => $metadata['special_instructions'] ?? null,
-                'status' => 'started', // Will be cast to StartedState by model
+                'status' => StartedState::class,
                 'metadata' => $event->metadata,
                 'subtotal' => 0,
                 'discount' => 0,
@@ -122,7 +148,7 @@ class OrderProjector extends Projector
                 ]);
             }
 
-            $order->update(['status' => 'items_added']); // Will be cast to ItemsAddedState
+            $order->update(['status' => ItemsAddedState::class]);
         });
     }
 
@@ -156,7 +182,7 @@ class OrderProjector extends Projector
             }
 
             $order->update([
-                'status' => 'items_validated', // Will be cast to ItemsValidatedState
+                'status' => ItemsValidatedState::class,
                 'subtotal' => $event->subtotal,
             ]);
         });
@@ -174,7 +200,7 @@ class OrderProjector extends Projector
             // Store available promotions
             $order->update([
                 'available_promotions' => $event->availablePromotions,
-                'status' => 'promotions_calculated', // Will be cast to PromotionsCalculatedState
+                'status' => PromotionsCalculatedState::class,
             ]);
 
             // Apply auto-applied promotions
@@ -242,7 +268,7 @@ class OrderProjector extends Projector
             'tax' => $event->tax,
             'tip' => $event->tip,
             'total' => $event->total,
-            'status' => 'price_calculated', // Will be cast to PriceCalculatedState
+            'status' => PriceCalculatedState::class,
         ]);
     }
 
@@ -283,7 +309,7 @@ class OrderProjector extends Projector
 
         $order->update([
             // Order number already set in onOrderStarted
-            'status' => 'confirmed', // Will be cast to ConfirmedState
+            'status' => ConfirmedState::class,
             'confirmed_at' => $event->confirmedAt,
         ]);
 
@@ -304,7 +330,7 @@ class OrderProjector extends Projector
         }
 
         $order->update([
-            'status' => 'cancelled', // Will be cast to CancelledState
+            'status' => CancelledState::class,
             'cancellation_reason' => $event->reason,
             'cancelled_at' => $event->cancelledAt,
         ]);

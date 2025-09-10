@@ -200,11 +200,11 @@ class EventSourcedOrderService
         
         // Check current order state from database
         $order = Order::find($orderUuid);
-        $currentStatus = $order ? $order->status : null;
+        $currentStatusValue = $order && $order->status ? $order->status->getValue() : null;
         
         // Progress through ALL validation states when confirming
         // This ensures proper state progression without conflicts
-        if (!in_array($currentStatus, ['confirmed'])) {
+        if ($currentStatusValue !== 'confirmed') {
             // Always run the full progression when confirming
             $this->progressOrderToConfirmation($aggregate, $orderUuid);
         }
@@ -471,10 +471,10 @@ class EventSourcedOrderService
         try {
             // Get current state to avoid duplicate events
             $order = Order::find($orderUuid);
-            $currentStatus = $order ? $order->status : null;
+            $currentStatusValue = $order && $order->status ? $order->status->getValue() : null;
             
             // Step 1: Validate items (if not done)
-            if (!in_array($currentStatus, ['items_validated', 'promotions_calculated', 'price_calculated'])) {
+            if (!in_array($currentStatusValue, ['items_validated', 'promotions_calculated', 'price_calculated'])) {
                 $this->updateProcessTracking($orderUuid, ['step' => 'validating_items']);
                 $validatedItems = $this->validateItems($aggregate);
                 
@@ -489,7 +489,7 @@ class EventSourcedOrderService
             }
             
             // Step 2: Calculate promotions (if not done)
-            if (!in_array($currentStatus, ['promotions_calculated', 'price_calculated'])) {
+            if (!in_array($currentStatusValue, ['promotions_calculated', 'price_calculated'])) {
                 $this->updateProcessTracking($orderUuid, ['step' => 'calculating_promotions']);
                 $promotions = $this->calculatePromotions($aggregate);
                 $aggregate->setPromotions(
@@ -499,7 +499,7 @@ class EventSourcedOrderService
             }
             
             // Step 3: Calculate final price (if not done)
-            if ($currentStatus !== 'price_calculated') {
+            if ($currentStatusValue !== 'price_calculated') {
                 $this->updateProcessTracking($orderUuid, ['step' => 'calculating_price']);
                 $tax = $this->calculateTax($aggregate, $orderUuid);
                 $total = $this->calculateTotal($aggregate, $tax);

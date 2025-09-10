@@ -118,4 +118,13 @@ interface LocationRepositoryInterface
      * Find locations by type.
      */
     public function findByType(string $type): DataCollection;
+
+    /**
+     * Get currency configuration for a location.
+     * Returns the currency config from money.php for the location's currency.
+     * 
+     * @param int $locationId
+     * @return array|null Currency configuration array or null if location not found
+     */
+    public function getCurrencyConfig(int $locationId): ?array;
 }

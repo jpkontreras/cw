@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 import { 
   MapPin, 
   User, 
@@ -55,14 +56,6 @@ const statusConfig: Record<string, { color: string; icon: React.ElementType; lab
 };
 
 export function OrderStateViewer({ orderState, currentTimestamp, className = '' }: OrderStateViewerProps) {
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-  
   // Cast orderState to a typed object for easier access
   const state = orderState as {
     uuid?: string;

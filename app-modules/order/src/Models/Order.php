@@ -56,6 +56,7 @@ class Order extends Model
         'order_number',
         'user_id',
         'location_id',
+        'currency', // ISO 4217 currency code
         'status',
         'type',
         'priority',
@@ -208,6 +209,15 @@ class Order extends Model
         });
     }
 
+    /**
+     * Get the UUID attribute (alias for id since we use UUID as primary key)
+     * This is needed for event sourcing compatibility
+     */
+    public function getUuidAttribute(): string
+    {
+        return $this->id;
+    }
+    
     /**
      * Get the order items
      * Note: This is only for internal module use, not exposed via interfaces

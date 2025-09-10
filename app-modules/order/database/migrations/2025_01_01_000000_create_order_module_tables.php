@@ -19,6 +19,13 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id')->nullable(); // Nullable for guest orders
             $table->unsignedBigInteger('location_id');
             
+            // Currency - ISO 4217 currency code (e.g., 'USD', 'CLP', 'EUR')
+            // This captures the location's currency at order creation time
+            // and remains fixed for the order's lifetime
+            $table->string('currency', 3)
+                ->default('CLP')
+                ->comment('ISO 4217 currency code from location at order creation');
+            
             // Menu references (from 2025_08_06_235000_add_menu_references_to_orders.php)
             $table->unsignedBigInteger('menu_id')->nullable();
             $table->integer('menu_version')->nullable();
@@ -76,6 +83,7 @@ return new class extends Migration
             // Indexes
             $table->index('user_id');
             $table->index('location_id');
+            $table->index('currency'); // Index for filtering orders by currency
             $table->index('session_id');
             $table->index('waiter_id');
             $table->index('status');

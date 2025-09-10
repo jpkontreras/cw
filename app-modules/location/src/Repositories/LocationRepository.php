@@ -287,4 +287,36 @@ class LocationRepository implements LocationRepositoryInterface
             
         return LocationData::collect($locations, DataCollection::class);
     }
+
+    /**
+     * Get currency configuration for a location.
+     * Returns the currency config from money.php for the location's currency.
+     */
+    public function getCurrencyConfig(int $locationId): ?array
+    {
+        $location = Location::find($locationId);
+        
+        if (!$location) {
+            return null;
+        }
+        
+        $currencyCode = $location->currency ?: 'CLP';
+        $config = config("money.currencies.{$currencyCode}");
+        
+        if (!$config) {
+            // Fallback to CLP if currency not found
+            $config = config('money.currencies.CLP');
+        }
+        
+        return [
+            'code' => $currencyCode,
+            'name' => $config['name'] ?? 'Chilean Peso',
+            'precision' => $config['precision'] ?? 0,
+            'subunit' => $config['subunit'] ?? 1,
+            'symbol' => $config['symbol'] ?? '$',
+            'symbol_first' => $config['symbol_first'] ?? true,
+            'decimal_mark' => $config['decimal_mark'] ?? ',',
+            'thousands_separator' => $config['thousands_separator'] ?? '.',
+        ];
+    }
 }

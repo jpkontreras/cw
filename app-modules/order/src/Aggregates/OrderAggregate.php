@@ -495,7 +495,7 @@ class OrderAggregate extends AggregateRoot
             tax: $tax->getAmount(),
             tip: $this->tip->getAmount(),
             total: $total->getAmount(),
-            currency: $total->getCurrency()
+            currency: $this->getCurrencyCode($total)
         ));
 
         return $this;
@@ -1468,5 +1468,14 @@ class OrderAggregate extends AggregateRoot
         $this->metadata['abandonmentReason'] = $event->reason;
         $this->metadata['sessionDuration'] = $event->sessionDurationSeconds;
         $this->status = 'abandoned';
+    }
+    
+    /**
+     * Extract currency code from Money object
+     * This helper avoids the awkward $money->getCurrency()->getCurrency() API
+     */
+    private function getCurrencyCode(Money $money): string
+    {
+        return $money->getCurrency()->getCurrency();
     }
 }

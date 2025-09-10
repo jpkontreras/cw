@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Data;
 
 use App\Core\Data\BaseData;
+use Colame\Location\Contracts\LocationRepositoryInterface;
 use Colame\Order\Models\Order;
 use Spatie\LaravelData\Attributes\Computed;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
@@ -23,6 +24,7 @@ class OrderData extends BaseData
         public readonly ?string $orderNumber,
         public readonly ?int $userId,
         public readonly int $locationId,
+        public readonly string $currency, // ISO 4217 currency code
         public readonly string $status,
         public readonly string $type,
         public readonly string $priority,
@@ -57,6 +59,17 @@ class OrderData extends BaseData
         public readonly ?\DateTimeInterface $updatedAt = null,
     ) {}
 
+
+    /**
+     * Get currency configuration from location repository
+     */
+    #[Computed]
+    public function currencyConfig(): ?array
+    {
+        $locationRepository = app(LocationRepositoryInterface::class);
+        return $locationRepository->getCurrencyConfig($this->locationId);
+    }
+
     /**
      * Get items count
      */
@@ -89,6 +102,7 @@ class OrderData extends BaseData
             orderNumber: $order->order_number,
             userId: $order->user_id,
             locationId: $order->location_id,
+            currency: $order->currency ?: 'CLP', // Default to CLP if not set
             status: $order->status instanceof \Spatie\ModelStates\State 
                 ? $order->status->getValue() 
                 : (string) $order->status,
@@ -263,5 +277,18 @@ class OrderData extends BaseData
         // This would need to be calculated based on payment transactions
         // For now, return total if not paid
         return $this->isPaid() ? 0 : $this->total;
+    }
+
+    /**
+     * Include computed properties when converting to array
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        
+        // Always include currencyConfig
+        $array['currencyConfig'] = $this->currencyConfig();
+        
+        return $array;
     }
 }
