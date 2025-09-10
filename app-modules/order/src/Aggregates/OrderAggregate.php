@@ -424,6 +424,13 @@ class OrderAggregate extends AggregateRoot
         if (!in_array($this->status, ['draft', 'started', 'items_added', 'cart_building'])) {
             throw new InvalidOrderStateException("Cannot add items in status: {$this->status}");
         }
+        
+        // Debug: Log items being added
+        \Illuminate\Support\Facades\Log::info("Adding items to order", [
+            'orderUuid' => $this->uuid(),
+            'items' => $items,
+            'itemCount' => count($items)
+        ]);
 
         $this->recordThat(new ItemsAddedToOrder(
             aggregateRootUuid: $this->uuid(),

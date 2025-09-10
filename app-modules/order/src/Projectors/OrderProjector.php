@@ -57,6 +57,7 @@ class OrderProjector extends Projector
         $order = Order::updateOrCreate(
             ['id' => $event->aggregateRootUuid], // Search by UUID
             [
+                'id' => $event->aggregateRootUuid, // IMPORTANT: Set ID explicitly to use aggregate UUID
                 'session_id' => $event->sessionId, // Store the session reference
                 'order_number' => $orderNumber,
                 'user_id' => $metadata['user_id'] ?? null, // User who created the order

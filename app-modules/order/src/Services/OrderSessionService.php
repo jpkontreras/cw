@@ -400,6 +400,7 @@ class OrderSessionService
             
             $orderItems[] = [
                 'item_id' => $cartItem['id'],
+                'name' => $item->name, // Add item name from database
                 'quantity' => $cartItem['quantity'],
                 'unit_price' => $currentPrice, // Fresh price from database
                 'notes' => null,

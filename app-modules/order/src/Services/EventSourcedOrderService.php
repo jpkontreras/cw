@@ -477,6 +477,13 @@ class EventSourcedOrderService
             if (!in_array($currentStatus, ['items_validated', 'promotions_calculated', 'price_calculated'])) {
                 $this->updateProcessTracking($orderUuid, ['step' => 'validating_items']);
                 $validatedItems = $this->validateItems($aggregate);
+                
+                // Debug: Log what we're passing to validation
+                Log::info("Items being validated", [
+                    'orderUuid' => $orderUuid,
+                    'validatedItems' => $validatedItems
+                ]);
+                
                 $subtotal = $this->calculateSubtotal($validatedItems, $orderUuid);
                 $aggregate->markItemsAsValidated($validatedItems, $subtotal);
             }

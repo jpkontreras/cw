@@ -51,6 +51,7 @@ class Order extends Model
      * The attributes that are mass assignable
      */
     protected $fillable = [
+        'id', // Allow setting ID for event-sourced orders
         'session_id',
         'order_number',
         'user_id',

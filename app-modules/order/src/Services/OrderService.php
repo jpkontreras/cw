@@ -62,9 +62,14 @@ class OrderService extends BaseService implements OrderServiceInterface, Resourc
         $orderUuid = $this->eventSourcedService->createOrder($data);
         
         // Get the order from projection - UUID is stored in the id field
+        // With synchronous projectors and proper ID setting, this should exist immediately
         $order = Order::find($orderUuid);
         
         if (!$order) {
+            \Illuminate\Support\Facades\Log::error("Order not found after creation", [
+                'uuid' => $orderUuid,
+                'message' => 'Check that Order model has id in fillable array'
+            ]);
             throw new OrderNotFoundException("Order {$orderUuid} not found after creation");
         }
         
