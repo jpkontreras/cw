@@ -63,7 +63,7 @@ class OrderItem extends Model
      * The attributes that should be cast
      */
     protected $casts = [
-        'order_id' => 'integer',
+        'order_id' => 'string',  // UUID, not integer
         'item_id' => 'integer',
         'menu_section_id' => 'integer',
         'menu_item_id' => 'integer',

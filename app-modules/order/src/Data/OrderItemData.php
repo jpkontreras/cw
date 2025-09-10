@@ -19,7 +19,7 @@ class OrderItemData extends BaseData
 {
     public function __construct(
         public readonly int $id,
-        public readonly int $orderId,
+        public readonly string $orderId,  // UUID, not integer
         public readonly int $itemId,
         public readonly string $itemName,
         public readonly int $quantity,
