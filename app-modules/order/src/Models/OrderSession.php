@@ -26,6 +26,7 @@ class OrderSession extends Model
         'device_info',
         'referrer',
         'metadata',
+        'cart_items',
         'serving_type',
         'payment_method',
         'customer_info_complete',
@@ -35,11 +36,17 @@ class OrderSession extends Model
         'started_at',
         'last_activity_at',
         'abandoned_at',
+        'draft_saved_at',
+        'converted_at',
+        'order_id',
+        'table_number',
+        'delivery_address',
     ];
 
     protected $casts = [
         'device_info' => 'array',
         'metadata' => 'array',
+        'cart_items' => 'array',
         'customer_info_complete' => 'boolean',
         'cart_items_count' => 'integer',
         'location_id' => 'integer',
@@ -48,6 +55,8 @@ class OrderSession extends Model
         'started_at' => 'datetime',
         'last_activity_at' => 'datetime',
         'abandoned_at' => 'datetime',
+        'draft_saved_at' => 'datetime',
+        'converted_at' => 'datetime',
     ];
 
     public function isActive(): bool

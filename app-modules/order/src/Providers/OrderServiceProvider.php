@@ -4,6 +4,7 @@ namespace Colame\Order\Providers;
 
 use App\Core\Services\UnifiedSearchService;
 use Colame\Order\Console\Commands\GenerateSampleOrdersCommand;
+use Colame\Order\Console\Commands\RebuildOrderSessionsCommand;
 use Colame\Order\Contracts\OrderItemRepositoryInterface;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Contracts\OrderSearchInterface;
@@ -93,6 +94,7 @@ class OrderServiceProvider extends ServiceProvider
             // Register commands
             $this->commands([
                 GenerateSampleOrdersCommand::class,
+                RebuildOrderSessionsCommand::class,
             ]);
         }
     }

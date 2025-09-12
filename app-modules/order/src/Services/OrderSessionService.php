@@ -8,7 +8,6 @@ use Colame\Order\Data\Session\StartOrderFlowData;
 use Colame\Order\Exceptions\OrderContextException;
 use Colame\Order\Models\OrderSession;
 use Colame\Location\Contracts\UserLocationServiceInterface;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class OrderSessionService
@@ -226,71 +225,22 @@ class OrderSessionService
      */
     public function getSessionState(string $orderUuid): array
     {
-        // Get session from the event-sourced table
+        // Now OrderSession is the read model maintained by the projector
         $session = OrderSession::find($orderUuid);
         
         if ($session && $session->isActive()) {
-                // Get cart items from stored_events table
-                $cartEvents = DB::table('stored_events')
-                    ->where('aggregate_uuid', $orderUuid)
-                    ->whereIn('event_class', [
-                        'Colame\\Order\\Events\\Session\\ItemAddedToCart',
-                        'Colame\\Order\\Events\\Session\\ItemRemovedFromCart',
-                        'Colame\\Order\\Events\\Session\\CartModified'
-                    ])
-                    ->orderBy('created_at')
-                    ->get();
-                
-                $cart = [];
-                foreach ($cartEvents as $event) {
-                    $eventData = json_decode($event->event_properties, true);
-                    $eventClass = $event->event_class;
-                    
-                    if (str_ends_with($eventClass, 'ItemAddedToCart')) {
-                        if (!isset($cart[$eventData['itemId']])) {
-                            $cart[$eventData['itemId']] = [
-                                'id' => $eventData['itemId'],
-                                'name' => $eventData['itemName'],
-                                'quantity' => 0,
-                                // NO PRICE STORED - will be fetched fresh from items table
-                                'category' => $eventData['category'] ?? null,
-                            ];
-                        }
-                        $cart[$eventData['itemId']]['quantity'] += $eventData['quantity'];
-                    } elseif (str_ends_with($eventClass, 'ItemRemovedFromCart')) {
-                        if (isset($cart[$eventData['itemId']])) {
-                            $cart[$eventData['itemId']]['quantity'] -= $eventData['removedQuantity'];
-                            if ($cart[$eventData['itemId']]['quantity'] <= 0) {
-                                unset($cart[$eventData['itemId']]);
-                            }
-                        }
-                    } elseif (str_ends_with($eventClass, 'CartModified')) {
-                        if (isset($cart[$eventData['itemId']]) && isset($eventData['changes'])) {
-                            // Apply quantity change from modification
-                            $from = $eventData['changes']['from'] ?? 0;
-                            $to = $eventData['changes']['to'] ?? 0;
-                            $cart[$eventData['itemId']]['quantity'] = $to;
-                            
-                            // Remove item if quantity becomes 0 or negative
-                            if ($cart[$eventData['itemId']]['quantity'] <= 0) {
-                                unset($cart[$eventData['itemId']]);
-                            }
-                        }
-                    }
-                }
-                
-                return [
-                    'uuid' => $session->uuid,
-                    'status' => $session->status,
-                    'serving_type' => $session->serving_type,
-                    'cart_items' => array_values($cart),
-                    'cart_value' => null, // No pricing in sessions
-                    'customer_info_complete' => $session->customer_info_complete,
-                    'payment_method' => $session->payment_method,
-                    'started_at' => $session->started_at,
-                    'last_activity_at' => $session->last_activity_at,
-                    'location' => $session->getLocationData(), // Include location data
-                ];
+            return [
+                'uuid' => $session->uuid,
+                'status' => $session->status,
+                'serving_type' => $session->serving_type,
+                'cart_items' => array_values($session->cart_items ?? []),
+                'cart_value' => null, // No pricing in sessions
+                'customer_info_complete' => $session->customer_info_complete,
+                'payment_method' => $session->payment_method,
+                'started_at' => $session->started_at,
+                'last_activity_at' => $session->last_activity_at,
+                'location' => $session->getLocationData(),
+            ];
         }
         
         return [
@@ -307,16 +257,36 @@ class OrderSessionService
     {
         $session = OrderSession::find($orderUuid);
         
-        if ($session && $session->isActive()) {
-            // Update last activity
-            $session->update([
-                'last_activity_at' => now(),
-            ]);
-            
-            return $this->getSessionState($orderUuid);
+        if (!$session) {
+            return [
+                'error' => 'Session not found or expired',
+                'flash' => [
+                    'error' => 'Session not found or expired',
+                    'success' => null,
+                    'warning' => null,
+                    'info' => null,
+                ],
+            ];
         }
         
-        return ['error' => 'Session not found'];
+        if (!$session->isActive()) {
+            return [
+                'error' => 'Session is no longer active',
+                'flash' => [
+                    'error' => 'Session is no longer active',
+                    'success' => null,
+                    'warning' => null,
+                    'info' => null,
+                ],
+            ];
+        }
+        
+        // Update last activity
+        $session->update([
+            'last_activity_at' => now(),
+        ]);
+        
+        return $this->getSessionState($orderUuid);
     }
     
     /**
@@ -427,14 +397,22 @@ class OrderSessionService
         // Debug: Log after persist
         \Illuminate\Support\Facades\Log::info("Order aggregate persisted successfully", ['orderUuid' => $orderUuid]);
         
-        // Update session status
-        $session = OrderSession::find($sessionUuid);
-        if ($session) {
-            $session->update([
-                'status' => 'converted',
-                'order_id' => $orderUuid, // Store reference to the created order
-            ]);
-        }
+        // Fire SessionConverted event for the session aggregate
+        $sessionAggregate = OrderAggregate::retrieve($sessionUuid);
+        $sessionAggregate->recordThat(new \Colame\Order\Events\Session\SessionConverted(
+            aggregateRootUuid: $sessionUuid,
+            orderId: $orderUuid,
+            paymentMethod: $data['payment_method'] ?? null,
+            customerName: $data['customer_name'] ?? null,
+            customerPhone: $data['customer_phone'] ?? null,
+            customerEmail: $data['customer_email'] ?? null,
+            notes: $data['notes'] ?? null,
+            metadata: [
+                'converted_at' => now()->toIso8601String(),
+                'order_total' => $orderTotal,
+            ]
+        ));
+        $sessionAggregate->persist();
         
         // Return the new order UUID (different from session UUID)
         return [

@@ -32,10 +32,15 @@ return new class extends Migration
             $table->integer('session_duration')->nullable(); // in seconds
             $table->string('abandonment_reason')->nullable();
             $table->json('metadata')->nullable();
+            $table->json('cart_items')->nullable(); // Event-sourced cart state projection
+            $table->string('table_number', 20)->nullable(); // For dine-in orders
+            $table->string('delivery_address')->nullable(); // For delivery orders
+            $table->string('order_id')->nullable(); // Reference to created order UUID
             $table->timestamp('started_at');
             $table->timestamp('last_activity_at');
             $table->timestamp('abandoned_at')->nullable();
             $table->timestamp('converted_at')->nullable();
+            $table->timestamp('draft_saved_at')->nullable(); // When draft was last saved
             $table->timestamps();
             
             // Indexes
