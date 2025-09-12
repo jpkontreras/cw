@@ -37,42 +37,6 @@ class OrderFlowController extends Controller
     }
 
     /**
-     * Track a generic event
-     */
-    public function trackEvent(Request $request, string $orderUuid): JsonResponse
-    {
-        $validated = $request->validate([
-            'event' => 'required|string',
-            'query' => 'nullable|string',
-            'filters' => 'nullable|array',
-            'results_count' => 'nullable|integer',
-            'search_id' => 'nullable|string',
-            'category_id' => 'nullable|integer',
-            'category_name' => 'nullable|string',
-            'items_viewed' => 'nullable|integer',
-            'time_spent' => 'nullable|integer',
-            'item_id' => 'nullable|integer',
-            'item_name' => 'nullable|string',
-            'price' => 'nullable|numeric',
-            'category' => 'nullable|string',
-            'source' => 'nullable|string',
-            'duration' => 'nullable|integer',
-            'type' => 'nullable|string',
-            'previous' => 'nullable|string',
-            'table_number' => 'nullable|string',
-            'delivery_address' => 'nullable|string',
-            'fields' => 'nullable|array',
-            'is_complete' => 'nullable|boolean',
-            'validation_errors' => 'nullable|array',
-            'method' => 'nullable|string',
-        ]);
-
-        $this->sessionService->trackEvent($orderUuid, $validated);
-
-        return response()->json(['success' => true]);
-    }
-
-    /**
      * Add item to cart
      */
     public function addToCart(Request $request, string $orderUuid): JsonResponse

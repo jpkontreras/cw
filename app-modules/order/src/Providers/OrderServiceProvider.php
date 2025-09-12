@@ -20,6 +20,7 @@ use Colame\Order\Services\OrderValidationService;
 use Colame\Order\Services\OrderSessionService;
 use Colame\Order\Projectors\OrderProjector;
 use Colame\Order\Projectors\OrderSessionProjector;
+use Colame\Order\Projectors\OrderFromSessionProjector;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Spatie\EventSourcing\Facades\Projectionist;
@@ -73,6 +74,7 @@ class OrderServiceProvider extends ServiceProvider
         // Register event sourcing projectors
         Projectionist::addProjector(OrderProjector::class);
         Projectionist::addProjector(OrderSessionProjector::class);
+        Projectionist::addProjector(OrderFromSessionProjector::class);
         
         // Register event listeners
         $this->registerEventListeners();

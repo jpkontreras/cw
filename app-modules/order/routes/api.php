@@ -11,9 +11,6 @@ Route::prefix('orders/session')->group(function () {
     
     // Session operations
     Route::prefix('{orderUuid}')->group(function () {
-        // Track generic events
-        Route::post('/track', [OrderFlowController::class, 'trackEvent']);
-        
         // Cart operations
         Route::post('/cart/add', [OrderFlowController::class, 'addToCart']);
         Route::post('/cart/remove', [OrderFlowController::class, 'removeFromCart']);
