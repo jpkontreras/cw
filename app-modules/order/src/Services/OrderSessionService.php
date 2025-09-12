@@ -3,100 +3,56 @@
 namespace Colame\Order\Services;
 
 use Colame\Order\Aggregates\OrderAggregate;
-use Colame\Order\Data\OrderData;
-use Colame\Order\Models\Order;
+use Colame\Order\Data\Session\OrderContextData;
+use Colame\Order\Data\Session\StartOrderFlowData;
+use Colame\Order\Exceptions\OrderContextException;
 use Colame\Order\Models\OrderSession;
-use Colame\Location\Contracts\LocationServiceInterface;
-use Colame\Business\Contracts\BusinessContextInterface;
+use Colame\Location\Contracts\UserLocationServiceInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class OrderSessionService
 {
     public function __construct(
-        private ?LocationServiceInterface $locationService = null,
-        private ?BusinessContextInterface $businessContext = null
+        private ?UserLocationServiceInterface $userLocationService = null
     ) {}
     /**
-     * Start a new order session
+     * Start a new order session with proper business and location context resolution
+     * Uses existing location module services for context resolution
      */
-    public function startSession(array $data): array
+    public function startSession(StartOrderFlowData $data): array
     {
-        $orderUuid = (string) Str::uuid();
+        // Get effective location which contains all context needed for the order
+        $context = $this->getLocationContext();
         
-        // Get business context first
-        $businessId = null;
-        $businessData = null;
-        if ($this->businessContext) {
-            $currentBusiness = $this->businessContext->getCurrentBusiness();
-            if ($currentBusiness) {
-                $businessId = $currentBusiness->id;
-                $businessData = [
-                    'id' => $currentBusiness->id,
-                    'name' => $currentBusiness->name,
-                    'currency' => $currentBusiness->currency ?? config('money.defaults.currency', 'CLP'),
-                ];
-            }
-        }
+        // Generate UUID using Str::orderedUuid for better indexing
+        $orderUuid = (string) Str::orderedUuid();
         
-        // Validate we have a business context
-        if (!$businessId) {
-            throw new \InvalidArgumentException('No business context available. Please select a business before starting an order session.');
-        }
-        
-        // Get location from the user's current location (server-side)
-        $locationId = null;
-        $locationData = null;
-        $currency = null;
-        
-        // Get the current user's location from database (set by location switcher)
-        if ($this->locationService && auth()->id()) {
-            $currentLocation = $this->locationService->getUserCurrentLocation(auth()->id());
-            if ($currentLocation) {
-                // Validate that location belongs to the current business
-                if ($currentLocation->businessId !== $businessId) {
-                    throw new \InvalidArgumentException('Selected location does not belong to the current business context.');
-                }
-                
-                $locationId = $currentLocation->id;
-                $locationData = [
-                    'id' => $currentLocation->id,
-                    'name' => $currentLocation->name,
-                    'currency' => $currentLocation->currency ?? $businessData['currency'] ?? config('money.defaults.currency', 'CLP'),
-                    'timezone' => $currentLocation->timezone ?? config('app.timezone'),
-                ];
-                $currency = $locationData['currency'];
-            }
-        }
-        
-        // Validate we have a location
-        if (!$locationId) {
-            throw new \InvalidArgumentException('No location available. Please set your current location before starting an order session.');
-        }
-        
-        // Get device info from request
+        // Get device info from data object or fallback to request helpers
         $deviceInfo = [
-            'platform' => $data['platform'] ?? 'web',
-            'user_agent' => request()->userAgent(),
-            'ip' => request()->ip(),
+            'platform' => $data->platform?->value ?? 'web',
+            'user_agent' => $data->userAgent ?? request()?->userAgent(),
+            'ip' => $data->ipAddress ?? request()?->ip(),
         ];
         
-        // Start the event-sourced session with complete business and location context
+        // Build metadata from context and request data
+        $metadata = array_merge(
+            $context->toMetadata(),
+            [
+                'source' => $data->source ?? 'web',
+                'order_type' => $data->orderType?->value ?? null,
+                'location_locked' => true,
+            ]
+        );
+        
+        // Start the event-sourced session with complete context
         OrderAggregate::retrieve($orderUuid)
             ->initiateSession(
-                userId: auth()->id(),
-                locationId: $locationId,
+                userId: $context->userId,
+                locationId: $context->locationId,
                 deviceInfo: $deviceInfo,
-                referrer: $data['referrer'] ?? request()->headers->get('referer'),
-                metadata: [
-                    'source' => $data['source'] ?? 'web',
-                    'order_type' => $data['order_type'] ?? null,
-                    'location_locked' => true,
-                    'location' => $locationData, // Store complete location context
-                    'business' => $businessData, // Store business context
-                    'business_id' => $businessId, // Store business ID for queries
-                    'currency' => $currency,
-                ]
+                referrer: $data->referrer ?? request()?->headers->get('referer'),
+                metadata: $metadata
             )
             ->persist();
         
@@ -104,9 +60,51 @@ class OrderSessionService
             'uuid' => $orderUuid,
             'status' => 'initiated',
             'started_at' => now()->toIso8601String(),
-            'location' => $locationData, // Include location in response
-            'business' => $businessData, // Include business in response
+            'location' => [
+                'id' => $context->locationData->id,
+                'name' => $context->locationData->name,
+                'currency' => $context->locationData->currency,
+                'timezone' => $context->locationData->timezone,
+            ],
+            'business' => $context->businessData ? [
+                'id' => $context->businessData->id,
+                'name' => $context->businessData->name,
+            ] : null,
         ];
+    }
+
+    /**
+     * Get location context for the order
+     * Uses UserLocationService::getEffectiveLocation which provides complete context
+     */
+    private function getLocationContext(): OrderContextData
+    {
+        $user = auth()->user();
+        
+        if (!$user || !$this->userLocationService) {
+            throw OrderContextException::noLocationAvailable();
+        }
+        
+        // Get effective location - it has everything we need:
+        // - businessId (locations MUST belong to a business)
+        // - currency, timezone, and all other context
+        $locationData = $this->userLocationService->getEffectiveLocation($user);
+        
+        if (!$locationData) {
+            throw OrderContextException::noLocationAvailable();
+        }
+        
+        // Since location MUST have a business (domain requirement),
+        // we can trust locationData->businessId exists
+        return new OrderContextData(
+            locationId: $locationData->id,
+            locationData: $locationData,
+            businessId: $locationData->businessId,
+            businessData: null, // Not needed since location has businessId
+            currency: $locationData->currency,
+            timezone: $locationData->timezone,
+            userId: $user->id
+        );
     }
     
     /**

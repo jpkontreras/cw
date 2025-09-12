@@ -6,6 +6,7 @@ namespace Colame\Location\Services;
 
 use App\Models\User;
 use Colame\Location\Contracts\LocationRepositoryInterface;
+use Colame\Location\Contracts\UserLocationServiceInterface;
 use Colame\Location\Data\LocationData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * Service to handle user-location relationships
  * Manages the bridge between the core User model and the Location module
  */
-class UserLocationService
+class UserLocationService implements UserLocationServiceInterface
 {
     public function __construct(
         private ?LocationRepositoryInterface $locationRepository = null

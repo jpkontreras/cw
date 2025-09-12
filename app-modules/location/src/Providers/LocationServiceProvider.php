@@ -5,8 +5,10 @@ namespace Colame\Location\Providers;
 use Illuminate\Support\ServiceProvider;
 use Colame\Location\Contracts\LocationRepositoryInterface;
 use Colame\Location\Contracts\LocationServiceInterface;
+use Colame\Location\Contracts\UserLocationServiceInterface;
 use Colame\Location\Repositories\LocationRepository;
 use Colame\Location\Services\LocationService;
+use Colame\Location\Services\UserLocationService;
 
 class LocationServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,7 @@ class LocationServiceProvider extends ServiceProvider
         
         // Register service bindings
         $this->app->bind(LocationServiceInterface::class, LocationService::class);
+        $this->app->bind(UserLocationServiceInterface::class, UserLocationService::class);
         
         // Merge config
         $this->mergeConfigFrom(
