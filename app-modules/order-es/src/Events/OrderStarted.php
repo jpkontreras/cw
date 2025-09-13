@@ -14,6 +14,7 @@ final class OrderStarted extends ShouldBeStored
         public readonly int $locationId,
         public readonly string $type,
         public readonly string $orderNumber,
-        public readonly \DateTimeImmutable $startedAt
+        public readonly \DateTimeImmutable $startedAt,
+        public readonly ?string $sessionId = null
     ) {}
 }

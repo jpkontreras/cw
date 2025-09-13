@@ -19,6 +19,7 @@ class OrderItem extends Model
         'order_id',
         'item_id',
         'item_name',
+        'base_price',
         'unit_price',
         'quantity',
         'modifiers',
@@ -28,10 +29,11 @@ class OrderItem extends Model
     
     protected $casts = [
         'item_id' => 'integer',
-        'unit_price' => 'float',
+        'base_price' => 'integer',    // Store as cents
+        'unit_price' => 'integer',    // Store as cents
         'quantity' => 'integer',
         'modifiers' => 'array',
-        'total_price' => 'float',
+        'total_price' => 'integer',   // Store as cents
     ];
     
     public function order(): BelongsTo

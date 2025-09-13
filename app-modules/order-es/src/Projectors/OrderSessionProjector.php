@@ -55,6 +55,14 @@ class OrderSessionProjector extends Projector
                 'converted_at' => now(),
             ]);
         }
+        
+        // Also update the Order with the session_id
+        $order = \Colame\OrderEs\Models\Order::find($event->orderId);
+        if ($order) {
+            $order->update([
+                'session_id' => $event->sessionId,
+            ]);
+        }
     }
 
     /**

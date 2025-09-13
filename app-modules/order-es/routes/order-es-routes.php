@@ -21,6 +21,7 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('es-order')->name('es-ord
     // Order Management
     Route::post('/{orderId}/confirm', [OrderController::class, 'confirm'])->name('confirm');
     Route::post('/{orderId}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+    Route::post('/{orderId}/status', [OrderController::class, 'changeStatus'])->name('change-status');
     
     // Kitchen View
     Route::get('/kitchen/display', [OrderController::class, 'kitchen'])->name('kitchen');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\OrderEs\Repositories;
 
 use App\Core\Traits\ValidatesPagination;
+use App\Core\Data\PaginatedResourceData;
 use Colame\OrderEs\Contracts\OrderRepositoryInterface;
 use Colame\OrderEs\Data\OrderData;
 use Colame\OrderEs\Models\Order;
@@ -205,6 +206,115 @@ class OrderRepository implements OrderRepositoryInterface
         $this->applyFilters($query, $filters);
 
         return $query->paginate($perPage);
+    }
+    
+    /**
+     * Get paginated orders with metadata
+     */
+    public function getPaginatedOrders(array $filters, int $perPage = 20): PaginatedResourceData
+    {
+        $paginator = $this->paginateWithFilters($filters, $perPage);
+        
+        // Generate metadata for the resource
+        $metadata = $this->getResourceMetadata();
+        
+        return PaginatedResourceData::fromPaginator(
+            $paginator,
+            OrderData::class,
+            $metadata
+        );
+    }
+    
+    /**
+     * Get resource metadata for data table
+     */
+    private function getResourceMetadata(): array
+    {
+        return [
+            'columns' => [
+                'orderNumber' => [
+                    'key' => 'orderNumber',
+                    'label' => 'Order #',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'status' => [
+                    'key' => 'status',
+                    'label' => 'Status',
+                    'type' => 'badge',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'draft', 'label' => 'Draft'],
+                            ['value' => 'started', 'label' => 'Started'],
+                            ['value' => 'placed', 'label' => 'Placed'],
+                            ['value' => 'confirmed', 'label' => 'Confirmed'],
+                            ['value' => 'preparing', 'label' => 'Preparing'],
+                            ['value' => 'ready', 'label' => 'Ready'],
+                            ['value' => 'completed', 'label' => 'Completed'],
+                            ['value' => 'cancelled', 'label' => 'Cancelled'],
+                        ],
+                    ],
+                ],
+                'type' => [
+                    'key' => 'type',
+                    'label' => 'Type',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'dine_in', 'label' => 'Dine In'],
+                            ['value' => 'takeout', 'label' => 'Takeout'],
+                            ['value' => 'delivery', 'label' => 'Delivery'],
+                        ],
+                    ],
+                ],
+                'customerName' => [
+                    'key' => 'customerName',
+                    'label' => 'Customer',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'totalAmount' => [
+                    'key' => 'totalAmount',
+                    'label' => 'Total',
+                    'type' => 'currency',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'paymentStatus' => [
+                    'key' => 'paymentStatus',
+                    'label' => 'Payment',
+                    'type' => 'badge',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'pending', 'label' => 'Pending'],
+                            ['value' => 'paid', 'label' => 'Paid'],
+                            ['value' => 'refunded', 'label' => 'Refunded'],
+                        ],
+                    ],
+                ],
+                'createdAt' => [
+                    'key' => 'createdAt',
+                    'label' => 'Created',
+                    'type' => 'date',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+            ],
+            'searchable' => ['orderNumber', 'customerName', 'customerPhone'],
+            'defaultSort' => '-createdAt',
+            'actions' => ['view', 'edit', 'cancel'],
+        ];
     }
 
     /**

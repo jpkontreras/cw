@@ -102,6 +102,11 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   const syncWithBackend = async () => {
     if (!sessionUuid) return;
     
+    // Don't sync if session is completed or we have an order UUID
+    if (sessionStatus === 'completed' || orderUuid) {
+      return;
+    }
+    
     try {
       await axios.post(`/es-order/session/${sessionUuid}/sync`, {
         items: orderItems,
@@ -111,7 +116,10 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       });
       setLastSavedAt(new Date());
     } catch (error) {
-      console.error('Failed to sync with backend:', error);
+      // Only log error if it's not a 404 (session might be converted already)
+      if (axios.isAxiosError(error) && error.response?.status !== 404) {
+        console.error('Failed to sync with backend:', error);
+      }
     }
   };
 

@@ -16,8 +16,10 @@ class Order extends Model
     
     protected $fillable = [
         'id',
+        'session_id',
         'order_number',
         'customer_id',
+        'user_id',
         'location_id',
         'type',
         'status',
@@ -36,10 +38,10 @@ class Order extends Model
     protected $casts = [
         'customer_id' => 'integer',
         'location_id' => 'integer',
-        'subtotal' => 'float',
-        'tax' => 'float',
-        'tip' => 'float',
-        'total' => 'float',
+        'subtotal' => 'integer',  // Store as cents
+        'tax' => 'integer',       // Store as cents
+        'tip' => 'integer',       // Store as cents
+        'total' => 'integer',     // Store as cents
         'started_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',

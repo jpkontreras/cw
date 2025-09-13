@@ -86,20 +86,4 @@ class OrderItem extends Model
     {
         return $this->kitchen_status === 'served';
     }
-
-    /**
-     * Get formatted price
-     */
-    public function getFormattedPriceAttribute(): string
-    {
-        return number_format($this->total_price / 100, 2);
-    }
-
-    /**
-     * Get formatted unit price
-     */
-    public function getFormattedUnitPriceAttribute(): string
-    {
-        return number_format($this->unit_price / 100, 2);
-    }
 }

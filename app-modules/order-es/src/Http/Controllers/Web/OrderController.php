@@ -10,6 +10,7 @@ use Colame\OrderEs\Aggregates\OrderSession as OrderSessionAggregate;
 use Colame\OrderEs\Contracts\OrderRepositoryInterface;
 use Colame\OrderEs\Models\Order;
 use Colame\OrderEs\Models\OrderSession;
+use Colame\OrderEs\Models\OrderStatusHistory;
 use Colame\Item\Contracts\ItemRepositoryInterface;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
 use Colame\Location\Contracts\LocationServiceInterface;
@@ -20,6 +21,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Spatie\EventSourcing\StoredEvents\Models\EloquentStoredEvent;
 
 /**
  * Web controller for event-sourced orders
@@ -49,20 +51,8 @@ class OrderController extends Controller
         $perPage = (int) $request->input('per_page', 20);
 
         // Get paginated orders
-        $paginator = $this->orderRepository->paginateWithFilters($filters, $perPage);
-        
-        $responseData = [
-            'data' => $paginator->items(),
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'last_page' => $paginator->lastPage(),
-            ],
-            'metadata' => [
-                'total' => $paginator->total(),
-            ]
-        ];
+        $paginatedData = $this->orderRepository->getPaginatedOrders($filters, $perPage);
+        $responseData = $paginatedData->toArray();
 
         // Handle out-of-bounds pages
         if ($redirect = $this->handleOutOfBoundsPagination($responseData['pagination'], $request, 'es-order.index')) {
@@ -81,6 +71,9 @@ class OrderController extends Controller
             }
         }
 
+        // Get stats for the dashboard cards
+        $stats = $this->getOrderStats($filters);
+        
         // Use es-order views
         return Inertia::render('es-order/index', [
             'view' => [
@@ -89,12 +82,7 @@ class OrderController extends Controller
                 'metadata' => $responseData['metadata'],
                 'locations' => $locations,
                 'filters' => $filters,
-                'stats' => [
-                    'total_orders' => $paginator->total(),
-                    'completed_orders' => 0,
-                    'cancelled_orders' => 0,
-                    'average_order_value' => 0,
-                ],
+                'stats' => $stats,
             ],
         ]);
     }
@@ -367,26 +355,182 @@ class OrderController extends Controller
 
         // Get state transition data
         $stateTransitionData = $this->getStateTransitionData($order);
+        
+        // Get user data if available
+        $user = null;
+        if ($order->user_id) {
+            try {
+                $user = \App\Models\User::find($order->user_id);
+            } catch (\Exception $e) {
+                // User model might not exist
+            }
+        }
+        
+        // Get location data
+        $location = null;
+        if ($order->location_id && $this->locationService) {
+            try {
+                $locationData = $this->locationService->getLocation($order->location_id);
+                if ($locationData) {
+                    $location = is_array($locationData) ? $locationData : $locationData->toArray();
+                }
+            } catch (\Exception $e) {
+                // Location service might not be available
+            }
+        }
+        
+        // Format order data with items
+        $orderData = $order->toArray();
+        $orderData['orderNumber'] = $order->order_number;
+        $orderData['totalAmount'] = $order->total; // Already in minor units
+        $orderData['createdAt'] = $order->created_at;
+        $orderData['customerName'] = $order->customer_name;
+        $orderData['customerPhone'] = $order->customer_phone;
+        $orderData['customerEmail'] = $order->customer_email;
+        $orderData['items'] = $order->items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'itemId' => $item->item_id,
+                'name' => $item->item_name,
+                'quantity' => $item->quantity,
+                'unitPrice' => $item->unit_price, // Already in minor units
+                'totalPrice' => $item->total_price, // Already in minor units
+                'notes' => $item->notes,
+                'status' => $item->status,
+                'kitchenStatus' => $item->kitchen_status,
+            ];
+        })->toArray();
 
+        // Get actual stored events for this order session
+        $storedEvents = collect([]);
+        if ($order->session_id) {
+            $storedEvents = EloquentStoredEvent::query()
+                ->where('aggregate_uuid', $order->session_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        
+        // Build event stream data from actual events
+        $eventStreamData = [
+            'orderUuid' => $order->session_id ?? $order->id,
+            'events' => [],
+            'currentState' => [
+                'orderId' => $order->id,
+                'orderNumber' => $order->order_number,
+                'status' => $order->status,
+                'items' => $orderData['items'],
+                'totalAmount' => $order->total,
+                'subtotal' => $order->subtotal,
+                'tax' => $order->tax,
+                'tip' => $order->tip,
+                'discount' => $order->discount,
+            ],
+            'statistics' => [
+                'totalEvents' => $storedEvents->count(),
+                'eventTypes' => [],
+                'firstEventAt' => $storedEvents->last() ? \Carbon\Carbon::parse($storedEvents->last()->created_at)->toIso8601String() : \Carbon\Carbon::parse($order->created_at)->toIso8601String(),
+                'lastEventAt' => $storedEvents->first() ? \Carbon\Carbon::parse($storedEvents->first()->created_at)->toIso8601String() : \Carbon\Carbon::parse($order->updated_at)->toIso8601String(),
+                'duration' => '0 minutes',
+            ],
+        ];
+        
+        // Format stored events for display
+        $eventIcons = [
+            'SessionInitiated' => 'play-circle',
+            'ItemAddedToCart' => 'plus-circle',
+            'ItemRemovedFromCart' => 'minus-circle',
+            'SessionConverted' => 'check-circle',
+            'OrderSessionInitiated' => 'play-circle',
+            'CartItemAdded' => 'plus-circle',
+            'CartItemRemoved' => 'minus-circle',
+            'OrderCheckedOut' => 'shopping-cart',
+            'OrderStatusChanged' => 'refresh-cw',
+            'OrderStarted' => 'play-circle',
+            'ItemAddedToOrder' => 'plus-circle',
+        ];
+        
+        $eventColors = [
+            'SessionInitiated' => 'blue',
+            'ItemAddedToCart' => 'green',
+            'ItemRemovedFromCart' => 'red',
+            'SessionConverted' => 'green',
+            'OrderSessionInitiated' => 'blue',
+            'CartItemAdded' => 'green',
+            'CartItemRemoved' => 'red',
+            'OrderCheckedOut' => 'purple',
+            'OrderStatusChanged' => 'orange',
+            'OrderStarted' => 'blue',
+            'ItemAddedToOrder' => 'green',
+        ];
+        
+        $eventDescriptions = [
+            'SessionInitiated' => 'Order session started',
+            'OrderSessionInitiated' => 'Order session started',
+            'ItemAddedToCart' => 'Item added to cart',
+            'CartItemAdded' => 'Item added to cart',
+            'ItemRemovedFromCart' => 'Item removed from cart',
+            'CartItemRemoved' => 'Item removed from cart',
+            'SessionConverted' => 'Session converted to order',
+            'OrderCheckedOut' => 'Order checked out',
+            'OrderStatusChanged' => 'Order status changed',
+            'OrderStarted' => 'Order started',
+            'ItemAddedToOrder' => 'Item added to order',
+        ];
+        
+        foreach ($storedEvents as $index => $storedEvent) {
+            $eventClass = class_basename($storedEvent->event_class);
+            $eventData = $storedEvent->event_properties;
+            
+            // Get user info
+            $userName = 'System';
+            if (isset($storedEvent->meta_data['user_id'])) {
+                $user = \App\Models\User::find($storedEvent->meta_data['user_id']);
+                $userName = $user ? $user->name : 'User #' . $storedEvent->meta_data['user_id'];
+            }
+            
+            $eventStreamData['events'][] = [
+                'id' => $storedEvent->id,
+                'type' => $eventClass,
+                'eventClass' => $eventClass,
+                'version' => $storedEvent->aggregate_version ?? $index + 1,
+                'properties' => $eventData,
+                'metadata' => $storedEvent->meta_data ?? [],
+                'userId' => $storedEvent->meta_data['user_id'] ?? null,
+                'userName' => $userName,
+                'description' => $eventDescriptions[$eventClass] ?? ucwords(str_replace('_', ' ', strtolower(preg_replace('/([a-z])([A-Z])/', '$1 $2', $eventClass)))),
+                'icon' => $eventIcons[$eventClass] ?? 'activity',
+                'color' => $eventColors[$eventClass] ?? 'gray',
+                'createdAt' => \Carbon\Carbon::parse($storedEvent->created_at)->toIso8601String(),
+                'timestamp' => \Carbon\Carbon::parse($storedEvent->created_at)->toIso8601String(),
+                'relativeTime' => \Carbon\Carbon::parse($storedEvent->created_at)->diffForHumans(),
+            ];
+            
+            // Count event types
+            if (!isset($eventStreamData['statistics']['eventTypes'][$eventClass])) {
+                $eventStreamData['statistics']['eventTypes'][$eventClass] = 0;
+            }
+            $eventStreamData['statistics']['eventTypes'][$eventClass]++;
+        }
+        
+        // Calculate duration
+        if ($storedEvents->count() > 0) {
+            $first = \Carbon\Carbon::parse($storedEvents->last()->created_at);
+            $last = \Carbon\Carbon::parse($storedEvents->first()->created_at);
+            $duration = $first->diff($last);
+            $eventStreamData['statistics']['duration'] = $duration->format('%H:%I:%S');
+        }
+        
         // Use es-order/show view
         return Inertia::render('es-order/show', [
-            'order' => $order->toArray(),
-            'user' => null, // Load if needed
-            'orderLocation' => null, // Load if needed
+            'order' => $orderData,
+            'user' => $user,
+            'orderLocation' => $location,
             'payments' => [],
             'offers' => [],
             'isPaid' => $order->payment_status === 'paid',
-            'remainingAmount' => $order->total,
-            'eventStreamData' => [
-                'orderUuid' => $order->id,
-                'events' => [],
-                'currentState' => $order->toArray(),
-                'statistics' => [
-                    'totalEvents' => 0,
-                    'statusChanges' => $order->statusHistory->count(),
-                ],
-            ],
+            'remainingAmount' => $order->payment_status === 'paid' ? 0 : $order->total,
             'stateTransitionData' => $stateTransitionData,
+            'eventStreamData' => $eventStreamData,
         ]);
     }
 
@@ -613,6 +757,44 @@ class OrderController extends Controller
 
         return back()->with('success', 'Order cancelled');
     }
+    
+    /**
+     * Change order status
+     */
+    public function changeStatus(Request $request, string $orderId): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:placed,confirmed,preparing,ready,delivering,delivered,completed,cancelled',
+        ]);
+        
+        $order = Order::find($orderId);
+        if (!$order || !$order->session_id) {
+            return back()->with('error', 'Order not found or missing session');
+        }
+        
+        // Use event sourcing to change status
+        OrderSessionAggregate::retrieve($order->session_id)
+            ->changeOrderStatus(
+                orderId: $orderId,
+                toStatus: $validated['status'],
+                userId: auth()->id(),
+                reason: 'Manual status change'
+            )
+            ->persist();
+        
+        // Add to status history (this will also be handled by projector but we keep for consistency)
+        OrderStatusHistory::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status,
+            'to_status' => $validated['status'],
+            'user_id' => auth()->id(),
+            'reason' => 'Manual status change',
+        ]);
+        
+        return redirect()
+            ->route('es-order.show', $orderId)
+            ->with('success', 'Order status updated');
+    }
 
     /**
      * Confirm order
@@ -632,41 +814,136 @@ class OrderController extends Controller
     }
 
     /**
+     * Get order statistics for dashboard cards
+     */
+    private function getOrderStats(array $filters = []): array
+    {
+        $query = Order::query();
+        
+        // Apply location filter if present
+        if (!empty($filters['locationId'])) {
+            $query->where('location_id', $filters['locationId']);
+        }
+        
+        // Today's orders
+        $todayOrders = (clone $query)->whereDate('created_at', today())->count();
+        
+        // Active orders (not completed or cancelled)
+        $activeOrders = (clone $query)->whereIn('status', ['started', 'placed', 'confirmed', 'preparing', 'ready'])->count();
+        
+        // Ready to serve
+        $readyToServe = (clone $query)->where('status', 'ready')->count();
+        
+        // Pending payment
+        $pendingPayment = (clone $query)->where('payment_status', 'pending')->count();
+        
+        return [
+            'todayOrders' => $todayOrders,
+            'activeOrders' => $activeOrders,
+            'readyToServe' => $readyToServe,
+            'pendingPayment' => $pendingPayment,
+        ];
+    }
+    
+    /**
      * Get state transition data for order
      */
     private function getStateTransitionData(Order $order): array
     {
-        $availableTransitions = [];
+        $nextStates = [];
+        $canCancel = false;
+        
+        // Define status labels and icons
+        $statusConfig = [
+            'placed' => ['label' => 'Place Order', 'icon' => 'shopping-cart', 'color' => 'blue'],
+            'confirmed' => ['label' => 'Confirm Order', 'icon' => 'check-circle', 'color' => 'green'],
+            'preparing' => ['label' => 'Start Preparing', 'icon' => 'clock', 'color' => 'yellow'],
+            'ready' => ['label' => 'Mark as Ready', 'icon' => 'check', 'color' => 'green'],
+            'delivering' => ['label' => 'Start Delivery', 'icon' => 'truck', 'color' => 'blue'],
+            'delivered' => ['label' => 'Mark as Delivered', 'icon' => 'package-check', 'color' => 'green'],
+            'completed' => ['label' => 'Complete Order', 'icon' => 'check-square', 'color' => 'green'],
+            'cancelled' => ['label' => 'Cancel Order', 'icon' => 'x-circle', 'color' => 'red'],
+        ];
         
         // Define available transitions based on current status
         switch ($order->status) {
             case 'draft':
-                $availableTransitions = ['placed', 'cancelled'];
+            case 'started':
+                $nextStates[] = [
+                    'value' => 'confirmed', 
+                    'action_label' => $statusConfig['confirmed']['label'],
+                    'icon' => $statusConfig['confirmed']['icon'],
+                    'color' => $statusConfig['confirmed']['color']
+                ];
+                $canCancel = true;
                 break;
             case 'placed':
-                $availableTransitions = ['confirmed', 'cancelled'];
+                $nextStates[] = [
+                    'value' => 'confirmed', 
+                    'action_label' => $statusConfig['confirmed']['label'],
+                    'icon' => $statusConfig['confirmed']['icon'],
+                    'color' => $statusConfig['confirmed']['color']
+                ];
+                $canCancel = true;
                 break;
             case 'confirmed':
-                $availableTransitions = ['preparing', 'cancelled'];
+                $nextStates[] = [
+                    'value' => 'preparing', 
+                    'action_label' => $statusConfig['preparing']['label'],
+                    'icon' => $statusConfig['preparing']['icon'],
+                    'color' => $statusConfig['preparing']['color']
+                ];
+                $canCancel = true;
                 break;
             case 'preparing':
-                $availableTransitions = ['ready', 'cancelled'];
+                $nextStates[] = [
+                    'value' => 'ready', 
+                    'action_label' => $statusConfig['ready']['label'],
+                    'icon' => $statusConfig['ready']['icon'],
+                    'color' => $statusConfig['ready']['color']
+                ];
+                $canCancel = false; // Can't cancel once preparing
                 break;
             case 'ready':
-                $availableTransitions = ['delivering', 'delivered', 'completed'];
+                if ($order->type === 'delivery') {
+                    $nextStates[] = [
+                        'value' => 'delivering', 
+                        'action_label' => $statusConfig['delivering']['label'],
+                        'icon' => $statusConfig['delivering']['icon'],
+                        'color' => $statusConfig['delivering']['color']
+                    ];
+                } else {
+                    $nextStates[] = [
+                        'value' => 'completed', 
+                        'action_label' => $statusConfig['completed']['label'],
+                        'icon' => $statusConfig['completed']['icon'],
+                        'color' => $statusConfig['completed']['color']
+                    ];
+                }
                 break;
             case 'delivering':
-                $availableTransitions = ['delivered'];
+                $nextStates[] = [
+                    'value' => 'delivered', 
+                    'action_label' => $statusConfig['delivered']['label'],
+                    'icon' => $statusConfig['delivered']['icon'],
+                    'color' => $statusConfig['delivered']['color']
+                ];
                 break;
             case 'delivered':
-                $availableTransitions = ['completed'];
+                $nextStates[] = [
+                    'value' => 'completed', 
+                    'action_label' => $statusConfig['completed']['label'],
+                    'icon' => $statusConfig['completed']['icon'],
+                    'color' => $statusConfig['completed']['color']
+                ];
                 break;
         }
 
         return [
-            'currentState' => $order->status,
-            'availableTransitions' => $availableTransitions,
-            'canTransition' => !empty($availableTransitions),
+            'current_state' => $order->status,
+            'next_states' => $nextStates,
+            'can_cancel' => $canCancel,
+            'can_transition' => !empty($nextStates),
         ];
     }
 }

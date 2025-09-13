@@ -21,9 +21,6 @@ import {
   XCircle,
   Clock,
   Package,
-  Activity,
-  Database,
-  GitBranch,
   type LucideIcon,
 } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -36,7 +33,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 
 interface OrderEvent {
   id: number;
@@ -87,14 +83,13 @@ export default function ShowOrder({
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [stateData, setStateData] = useState<StateTransitionData | null>(initialStateData || null);
-  const [showEventSourceInfo, setShowEventSourceInfo] = useState(false);
   
   const order = initialOrderData as Order;
   
-  // Initialize with provided data
+  // Initialize with provided data (events are in reverse order - latest first)
   useEffect(() => {
     if (initialEventStreamData && initialEventStreamData.events.length > 0) {
-      const latestEvent = initialEventStreamData.events[0];
+      const latestEvent = initialEventStreamData.events[0]; // First event is the latest
       setSelectedEvent(latestEvent);
       setCurrentTimestamp(new Date(latestEvent.createdAt));
     }
@@ -106,10 +101,13 @@ export default function ShowOrder({
     const index = eventStream?.events.findIndex(e => e.id === event.id) ?? 0;
     setCurrentTimestamp(new Date(event.createdAt));
     
+    // For now, we'll compute the state locally from the event stream
     if (eventStream && index >= 0 && index < eventStream.events.length) {
+      // If selecting the latest event (first in array), use the current state
       if (index === 0) {
         setOrderState(eventStream.currentState);
       } else {
+        // For historical events, we could compute the state at that point
         setOrderState({
           ...eventStream.currentState,
           _isHistorical: true,
@@ -141,6 +139,7 @@ export default function ShowOrder({
       return null;
     }
     
+    // Prioritize certain transitions for better UX
     const priorityOrder = ['confirmed', 'preparing', 'ready', 'completed'];
     const prioritizedState = stateData.next_states.find(
       state => priorityOrder.includes(state.value)
@@ -151,8 +150,8 @@ export default function ShowOrder({
     return {
       value: nextState.value,
       label: nextState.action_label,
-      icon: getIconComponent(nextState.icon),
-      color: `text-${nextState.color}-600`
+      icon: getIconComponent(nextState.icon || 'check-circle'),
+      color: `text-${nextState.color || 'blue'}-600`
     };
   };
   
@@ -160,20 +159,9 @@ export default function ShowOrder({
   const handleQuickStatusChange = (newStatus: string) => {
     setIsChangingStatus(true);
     
-    const eventType = (newStatus === 'confirmed') ? 'confirm' : 'change_status';
-    
-    const payload: any = {
-      eventType: eventType,
-    };
-    
-    if (eventType === 'confirm') {
-      payload.paymentMethod = order.paymentMethod || 'cash';
-    } else if (eventType === 'change_status') {
-      payload.newStatus = newStatus;
-      payload.reason = 'Quick status update';
-    }
-    
-    router.post(`/es-order/${order.id}/events/add`, payload, {
+    router.post(`/es-order/${order.id}/status`, {
+      status: newStatus,
+    }, {
       preserveScroll: true,
       preserveState: false,
       onSuccess: () => {
@@ -192,10 +180,10 @@ export default function ShowOrder({
   
   return (
     <AppLayout>
-      <Head title={`Event-Sourced Order ${order.orderNumber || 'Event Stream'}`} />
+      <Head title={`Order ${order.orderNumber || order.id}`} />
       
       <div className="flex h-screen flex-col">
-        {/* Header */}
+        {/* Header - Responsive Padding */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b bg-white px-4 lg:px-6 py-3 lg:py-4 gap-3 sm:gap-0">
           <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <Button
@@ -207,32 +195,14 @@ export default function ShowOrder({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1 sm:flex-initial">
-              <div className="flex items-center gap-2">
-                <OrderNumberDisplay order={order} size="lg" />
-                <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
-                  <Database className="h-3 w-3 mr-1" />
-                  Event-Sourced
-                </Badge>
-              </div>
+              <OrderNumberDisplay order={order} size="lg" />
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                <Activity className="inline h-3 w-3 mr-1" />
-                Event Log • {eventStream?.statistics.totalEvents || 0} immutable events
+                Order Details • {eventStream?.statistics?.totalEvents || 0} events
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            {/* Event Source Info Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEventSourceInfo(!showEventSourceInfo)}
-              className="text-blue-600 border-blue-200 hover:bg-blue-50"
-            >
-              <GitBranch className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Event Source</span>
-            </Button>
-
             {/* Quick Status Change */}
             {(() => {
               const nextStatus = getNextStatus();
@@ -248,7 +218,7 @@ export default function ShowOrder({
                       className="hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      <span>Cancel Order</span>
+                      <span className="hidden sm:inline">Cancel Order</span>
                     </Button>
                   )}
                   
@@ -292,10 +262,6 @@ export default function ShowOrder({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <GitBranch className="mr-2 h-3.5 w-3.5" />
-                  Replay Events
-                </DropdownMenuItem>
-                <DropdownMenuItem>
                   <Share2 className="mr-2 h-3.5 w-3.5" />
                   Share
                 </DropdownMenuItem>
@@ -309,56 +275,18 @@ export default function ShowOrder({
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Download className="mr-2 h-3.5 w-3.5" />
-                  Export Event Stream
+                  Export Events
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
         
-        {/* Event Source Info Panel */}
-        {showEventSourceInfo && (
-          <div className="bg-blue-50 border-b border-blue-200 px-4 lg:px-6 py-3">
-            <div className="flex items-start gap-3">
-              <Database className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-blue-900">Event Sourcing Architecture</h3>
-                <p className="text-xs text-blue-700 mt-1">
-                  This order is managed using event sourcing. Every action is stored as an immutable event, 
-                  providing complete audit trail, time-travel debugging, and the ability to rebuild state at any point.
-                </p>
-                <div className="flex gap-4 mt-2">
-                  <span className="text-xs text-blue-600">
-                    <Activity className="inline h-3 w-3 mr-1" />
-                    {eventStream?.statistics.totalEvents || 0} Events
-                  </span>
-                  <span className="text-xs text-blue-600">
-                    <Clock className="inline h-3 w-3 mr-1" />
-                    {eventStream?.statistics.duration || 'N/A'}
-                  </span>
-                  <span className="text-xs text-blue-600">
-                    <GitBranch className="inline h-3 w-3 mr-1" />
-                    Aggregate: OrderSession
-                  </span>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowEventSourceInfo(false)}
-                className="h-6 w-6"
-              >
-                <XCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Main Content */}
+        {/* Main Content - Responsive Layout */}
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-          {/* Event Stream */}
+          {/* Event Stream - Responsive Width */}
           <div className="w-full lg:w-96 xl:w-[28rem] flex-shrink-0 border-b lg:border-b-0 lg:border-r">
-            {eventStream && eventStream.events.length > 0 ? (
+            {eventStream && eventStream.events && eventStream.events.length > 0 ? (
               <EventStream
                 events={eventStream.events}
                 selectedEvent={selectedEvent}
@@ -366,26 +294,19 @@ export default function ShowOrder({
                 currentTimestamp={currentTimestamp || undefined}
                 className="h-64 lg:h-full"
                 headerAction={
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      <Database className="h-3 w-3 mr-1" />
-                      Immutable
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setIsActionRecorderOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Record Event
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setIsActionRecorderOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Action
+                  </Button>
                 }
               />
             ) : (
               <div className="flex h-64 lg:h-full items-center justify-center bg-gray-50">
                 <div className="text-center">
-                  <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">No events to display</p>
                   <p className="text-xs text-gray-400 mt-1">Events will appear here as they occur</p>
                 </div>
@@ -393,10 +314,17 @@ export default function ShowOrder({
             )}
           </div>
           
-          {/* Order State Viewer */}
+          {/* Order State Viewer - Responsive */}
           <div className="flex-1 overflow-hidden min-h-0">
             <OrderStateViewer
-              orderState={orderState}
+              orderState={orderState || {
+                order: order,
+                items: order.items,
+                user: order.user,
+                location: order.orderLocation,
+                payments: order.payments || [],
+                offers: order.offers || [],
+              }}
               currentTimestamp={currentTimestamp || undefined}
               className="h-full"
             />
@@ -408,7 +336,7 @@ export default function ShowOrder({
       <OrderActionRecorder
         isOpen={isActionRecorderOpen}
         onClose={() => setIsActionRecorderOpen(false)}
-        orderUuid={order.uuid || ''}
+        orderUuid={order.uuid || order.id}
         orderId={typeof order.id === 'number' ? order.id : parseInt(order.id)}
         orderStatus={order.status}
         orderTotal={order.totalAmount || 0}
@@ -429,9 +357,9 @@ export default function ShowOrder({
                   <XCircle className="h-6 w-6 text-red-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">Cancel Event-Sourced Order?</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Cancel Order?</h3>
                   <p className="mt-2 text-sm text-gray-500">
-                    Are you sure you want to cancel order #{order.orderNumber}? A cancellation event will be recorded and cannot be undone.
+                    Are you sure you want to cancel order #{order.orderNumber}? This action cannot be undone.
                   </p>
                   
                   <div className="mt-6 flex gap-3 justify-end">
@@ -450,7 +378,7 @@ export default function ShowOrder({
                       disabled={isChangingStatus}
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Yes, Record Cancellation
+                      Yes, Cancel Order
                     </Button>
                   </div>
                 </div>

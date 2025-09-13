@@ -11,7 +11,7 @@ use Colame\OrderEs\Models\OrderItem;
 class OrderItemData extends Data
 {
     public function __construct(
-        public readonly ?int $id,
+        public readonly ?string $id,
         #[Required] public readonly string $orderId,
         #[Required] public readonly int $itemId,
         public readonly ?int $menuSectionId,

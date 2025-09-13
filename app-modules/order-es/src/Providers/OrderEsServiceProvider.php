@@ -53,5 +53,12 @@ class OrderEsServiceProvider extends ServiceProvider
 		
 		// Load routes
 		$this->loadRoutesFrom(__DIR__ . '/../../routes/order-es-routes.php');
+		
+		// Register console commands
+		if ($this->app->runningInConsole()) {
+			$this->commands([
+				\Colame\OrderEs\Console\Commands\FixOrderSessionIds::class,
+			]);
+		}
 	}
 }

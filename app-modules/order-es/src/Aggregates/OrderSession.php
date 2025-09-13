@@ -18,6 +18,7 @@ use Colame\OrderEs\Events\DraftSaved;
 use Colame\OrderEs\Events\SessionAbandoned;
 use Colame\OrderEs\Events\SessionConverted;
 use Colame\OrderEs\Events\OrderStarted;
+use Colame\OrderEs\Events\OrderStatusChanged;
 use Colame\OrderEs\Events\ItemAddedToOrder;
 use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 use Illuminate\Support\Str;
@@ -366,7 +367,8 @@ final class OrderSession extends AggregateRoot
             locationId: $this->locationId,
             type: $this->servingType ?? 'dine_in',
             orderNumber: $this->generateOrderNumber(),
-            startedAt: new \DateTimeImmutable()
+            startedAt: new \DateTimeImmutable(),
+            sessionId: $this->uuid()
         ));
         
         // Add items to order
@@ -383,6 +385,35 @@ final class OrderSession extends AggregateRoot
                 notes: $item['notes'] ?? null
             ));
         }
+        
+        return $this;
+    }
+    
+    /**
+     * Change order status after conversion
+     */
+    public function changeOrderStatus(
+        string $orderId,
+        string $toStatus,
+        ?int $userId = null,
+        ?string $reason = null
+    ): self {
+        if ($this->status !== 'converted') {
+            throw new \DomainException('Can only change status of converted orders');
+        }
+        
+        if (!$this->orderId || $this->orderId !== $orderId) {
+            throw new \DomainException('Order ID mismatch');
+        }
+        
+        $this->recordThat(new OrderStatusChanged(
+            orderId: $orderId,
+            fromStatus: $this->orderStatus ?? 'started',
+            toStatus: $toStatus,
+            userId: $userId,
+            reason: $reason,
+            changedAt: new \DateTimeImmutable()
+        ));
         
         return $this;
     }
@@ -460,6 +491,11 @@ final class OrderSession extends AggregateRoot
     protected function applyOrderStarted(OrderStarted $event): void
     {
         $this->orderStatus = 'started';
+    }
+    
+    protected function applyOrderStatusChanged(OrderStatusChanged $event): void
+    {
+        $this->orderStatus = $event->toStatus;
     }
     
     // Guards

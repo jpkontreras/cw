@@ -163,20 +163,4 @@ class Order extends Model
     {
         return !in_array($this->status, ['completed', 'cancelled', 'refunded']);
     }
-
-    /**
-     * Get formatted total
-     */
-    public function getFormattedTotalAttribute(): string
-    {
-        return number_format($this->total / 100, 2);
-    }
-
-    /**
-     * Get formatted subtotal
-     */
-    public function getFormattedSubtotalAttribute(): string
-    {
-        return number_format($this->subtotal / 100, 2);
-    }
 }
