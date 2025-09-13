@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "381339c5d3d8fcfb2107bc201a453c3d",
+    "content-hash": "b8198c02e63264fe5f363ce24d31d1bc",
     "packages": [
         {
             "name": "akaunting/laravel-money",
@@ -1226,6 +1226,38 @@
                     "Colame\\Order\\Tests\\": "tests/",
                     "Colame\\Order\\Database\\Factories\\": "database/factories/",
                     "Colame\\Order\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "colame/order-es",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/order-es",
+                "reference": "c290381e2d4bebba916f942f531846dcce55e751"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Colame\\OrderEs\\Providers\\OrderEsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Colame\\OrderEs\\": "src/",
+                    "Colame\\OrderEs\\Tests\\": "tests/",
+                    "Colame\\OrderEs\\Database\\Factories\\": "database/factories/",
+                    "Colame\\OrderEs\\Database\\Seeders\\": "database/seeders/"
                 }
             },
             "license": [

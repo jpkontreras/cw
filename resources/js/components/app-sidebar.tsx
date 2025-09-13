@@ -30,6 +30,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import AppLogo from './app-logo';
+import { Activity, Database } from 'lucide-react';
 
 const mainNavItems: NavItem[] = [
   {
@@ -60,6 +61,33 @@ const mainNavItems: NavItem[] = [
       {
         title: 'Kitchen Display',
         href: '/orders/kitchen',
+        icon: ChefHat,
+      },
+    ],
+  },
+  {
+    title: 'Event-Sourced Orders',
+    href: '/es-order',
+    icon: Database,
+    items: [
+      {
+        title: 'All ES Orders',
+        href: '/es-order',
+        icon: List,
+      },
+      {
+        title: 'New ES Order',
+        href: '/es-order/new',
+        icon: Plus,
+      },
+      {
+        title: 'Event Stream',
+        href: '/es-order',
+        icon: Activity,
+      },
+      {
+        title: 'Kitchen Display',
+        href: '/es-order/kitchen',
         icon: ChefHat,
       },
     ],

@@ -18,6 +18,7 @@
     "colame/offer": "*",
     "colame/onboarding": "*",
     "colame/order": "*",
+    "colame/order-es": "*",
     "colame/settings": "*",
     "colame/staff": "*",
     "colame/taxonomy": "*",
