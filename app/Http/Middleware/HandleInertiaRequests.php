@@ -36,6 +36,9 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $defaultCurrency = config('money.defaults.currency', 'USD');
+        $currencyConfig = config("money.currencies.{$defaultCurrency}");
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -53,6 +56,15 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
+            ],
+            'currency' => [
+                'code' => $defaultCurrency,
+                'symbol' => $currencyConfig['symbol'] ?? '$',
+                'precision' => $currencyConfig['precision'] ?? 2,
+                'subunit' => $currencyConfig['subunit'] ?? 100,
+                'symbol_first' => $currencyConfig['symbol_first'] ?? true,
+                'decimal_mark' => $currencyConfig['decimal_mark'] ?? '.',
+                'thousands_separator' => $currencyConfig['thousands_separator'] ?? ',',
             ],
         ];
     }

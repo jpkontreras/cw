@@ -5,6 +5,7 @@ import type { Order, OrderDetailPageProps } from '@/modules/order';
 import { OrderNumberDisplay } from '@/modules/order/components/order-number-display';
 import { EventStream } from '@/modules/order/components/event-stream';
 import { OrderStateViewer } from '@/modules/order/components/order-state-viewer';
+import { EventDetailView } from '@/modules/order/components/event-detail-view';
 import { OrderActionRecorder } from '@/modules/order/components/order-action-recorder';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -85,36 +86,117 @@ export default function ShowOrder({
   const [stateData, setStateData] = useState<StateTransitionData | null>(initialStateData || null);
   
   const order = initialOrderData as Order;
-  
+
+  // Calculate state up to a specific event
+  const calculateStateAtEvent = useCallback((targetEvent: OrderEvent, events: OrderEvent[]) => {
+    // Start with initial state
+    let status = 'draft';
+    let items: any[] = [];
+    let customerName = null;
+    let customerPhone = null;
+    let itemCounter = 0; // Counter for unique IDs
+
+    // Find all events up to and including the target event
+    const targetIndex = events.findIndex(e => e.id === targetEvent.id);
+    const eventsToProcess = events.slice(targetIndex).reverse(); // Reverse to process chronologically
+
+    // Process each event to build up the state
+    for (const evt of eventsToProcess) {
+      const eventType = evt.type;
+      const props = evt.properties;
+
+      switch (eventType) {
+        case 'OrderStarted':
+        case 'SessionInitiated':
+          status = 'started';
+          break;
+
+        case 'ItemAddedToOrder':
+        case 'CartItemAdded':
+        case 'ItemAddedToCart':
+          // Add item to the order with unique ID
+          itemCounter++;
+          const itemId = props.itemId || props.item_id;
+          items.push({
+            id: itemId ? `item-${itemId}-${itemCounter}` : `item-${itemCounter}`,
+            itemId: itemId || itemCounter,
+            name: props.itemName || props.item_name || 'Item',
+            quantity: props.quantity || 1,
+            unitPrice: props.unitPrice || props.unit_price || 0,
+          });
+          break;
+
+        case 'ItemRemovedFromCart':
+        case 'CartItemRemoved':
+          // Remove last item (simplified)
+          if (items.length > 0) {
+            items.pop();
+          }
+          break;
+
+        case 'CustomerInfoEntered':
+          if (props.fields) {
+            customerName = props.fields.name || customerName;
+            customerPhone = props.fields.phone || customerPhone;
+          }
+          break;
+
+        case 'SessionConverted':
+        case 'OrderCheckedOut':
+          status = 'placed';
+          break;
+
+        case 'OrderStatusChanged':
+          // Update status from the event
+          status = props.toStatus || props.to_status || props.status || status;
+          break;
+      }
+    }
+
+    return {
+      status,
+      items,
+      customerName,
+      customerPhone,
+      _isHistorical: targetIndex > 0,
+      _eventCount: eventsToProcess.length,
+      _timestamp: targetEvent.createdAt,
+    };
+  }, []);
+
   // Initialize with provided data (events are in reverse order - latest first)
   useEffect(() => {
     if (initialEventStreamData && initialEventStreamData.events.length > 0) {
       const latestEvent = initialEventStreamData.events[0]; // First event is the latest
       setSelectedEvent(latestEvent);
       setCurrentTimestamp(new Date(latestEvent.createdAt));
+
+      // Calculate initial state based on latest event
+      const calculatedState = calculateStateAtEvent(latestEvent, initialEventStreamData.events);
+      setOrderState({
+        ...initialEventStreamData.currentState,
+        ...calculatedState,
+      });
     }
-  }, [initialEventStreamData]);
-  
-  // Handle event selection
+  }, [initialEventStreamData, calculateStateAtEvent]);
+
+  // Handle event selection with time travel
   const handleEventSelect = useCallback((event: OrderEvent) => {
     setSelectedEvent(event);
-    const index = eventStream?.events.findIndex(e => e.id === event.id) ?? 0;
-    setCurrentTimestamp(new Date(event.createdAt));
-    
-    // For now, we'll compute the state locally from the event stream
-    if (eventStream && index >= 0 && index < eventStream.events.length) {
-      // If selecting the latest event (first in array), use the current state
-      if (index === 0) {
-        setOrderState(eventStream.currentState);
-      } else {
-        // For historical events, we could compute the state at that point
-        setOrderState({
-          ...eventStream.currentState,
-          _isHistorical: true,
-        });
-      }
-    }
-  }, [eventStream]);
+    const eventTimestamp = new Date(event.createdAt);
+    setCurrentTimestamp(eventTimestamp);
+
+    if (!eventStream) return;
+
+    // Calculate the state at this point in history
+    const calculatedState = calculateStateAtEvent(event, eventStream.events);
+
+    // Merge with current state for other properties
+    setOrderState({
+      ...eventStream.currentState,
+      ...calculatedState,
+    });
+  }, [eventStream, calculateStateAtEvent]);
   
   // Handle refresh
   const handleRefresh = () => {
@@ -285,7 +367,7 @@ export default function ShowOrder({
         {/* Main Content - Responsive Layout */}
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           {/* Event Stream - Responsive Width */}
-          <div className="w-full lg:w-96 xl:w-[28rem] flex-shrink-0 border-b lg:border-b-0 lg:border-r">
+          <div className="w-full lg:w-auto lg:max-w-md flex-shrink-0 border-b lg:border-b-0 lg:border-r">
             {eventStream && eventStream.events && eventStream.events.length > 0 ? (
               <EventStream
                 events={eventStream.events}
@@ -314,20 +396,42 @@ export default function ShowOrder({
             )}
           </div>
           
-          {/* Order State Viewer - Responsive */}
+          {/* Order Detail View - Shows event details when selected */}
           <div className="flex-1 overflow-hidden min-h-0">
-            <OrderStateViewer
-              orderState={orderState || {
-                order: order,
-                items: order.items,
-                user: order.user,
-                location: order.orderLocation,
-                payments: order.payments || [],
-                offers: order.offers || [],
-              }}
-              currentTimestamp={currentTimestamp || undefined}
-              className="h-full"
-            />
+            {selectedEvent ? (
+              <EventDetailView
+                event={selectedEvent}
+                orderState={{
+                  ...orderState,
+                  order: order,
+                  items: orderState?.items || order.items || [],
+                  customerName: orderState?.customerName || order.customerName,
+                  customerPhone: orderState?.customerPhone || order.customerPhone,
+                  status: orderState?.status || order.status,
+                  subtotal: orderState?.subtotal || order.subtotal || 0,
+                  total: orderState?.total || order.totalAmount || 0,
+                  discount: orderState?.promotionAmount || 0,
+                  tip: orderState?.tipAmount || 0,
+                  _isHistorical: orderState?._isHistorical || false,
+                  _eventCount: orderState?._eventCount,
+                }}
+                isHistorical={!!orderState?._isHistorical}
+                className="h-full"
+              />
+            ) : (
+              <OrderStateViewer
+                orderState={orderState || {
+                  order: order,
+                  items: order.items,
+                  user: order.user,
+                  location: order.orderLocation,
+                  payments: order.payments || [],
+                  offers: order.offers || [],
+                }}
+                currentTimestamp={currentTimestamp || undefined}
+                className="h-full"
+              />
+            )}
           </div>
         </div>
       </div>

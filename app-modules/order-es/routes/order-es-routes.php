@@ -22,6 +22,9 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('es-order')->name('es-ord
     Route::post('/{orderId}/confirm', [OrderController::class, 'confirm'])->name('confirm');
     Route::post('/{orderId}/cancel', [OrderController::class, 'cancel'])->name('cancel');
     Route::post('/{orderId}/status', [OrderController::class, 'changeStatus'])->name('change-status');
+
+    // Time Travel API
+    Route::get('/{orderId}/state-at-timestamp', [OrderController::class, 'getStateAtTimestamp'])->name('state-at-timestamp');
     
     // Kitchen View
     Route::get('/kitchen/display', [OrderController::class, 'kitchen'])->name('kitchen');

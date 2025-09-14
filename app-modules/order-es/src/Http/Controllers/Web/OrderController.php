@@ -844,7 +844,7 @@ class OrderController extends Controller
             'pendingPayment' => $pendingPayment,
         ];
     }
-    
+
     /**
      * Get state transition data for order
      */

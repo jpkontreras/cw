@@ -4,11 +4,11 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
-import { 
-  MapPin, 
-  User, 
-  Calendar, 
-  DollarSign, 
+import {
+  MapPin,
+  User,
+  Calendar,
+  DollarSign,
   ShoppingBag,
   Clock,
   Receipt,
@@ -18,7 +18,11 @@ import {
   CheckCircle,
   XCircle,
   Package,
-  Hash
+  Hash,
+  History,
+  Play,
+  Activity,
+  Database
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useMemo } from 'react';
@@ -79,14 +83,42 @@ export function OrderStateViewer({ orderState, currentTimestamp, className = '' 
     confirmedAt?: string;
     completedAt?: string;
     cancelledAt?: string;
+    _isHistorical?: boolean;
+    _timestamp?: string;
+    _metadata?: {
+      timestamp?: string;
+      isHistorical?: boolean;
+      eventCount?: number;
+      selectedEventId?: number;
+    };
   } | null;
-  
+
   // Calculate if viewing historical state
   const isHistoricalView = useMemo(() => {
+    // First check if the state itself indicates it's historical
+    if (state?._isHistorical || state?._metadata?.isHistorical) return true;
+
+    // Then check based on timestamps
     if (!currentTimestamp || !state?.updatedAt) return false;
     const stateTime = parseISO(state.updatedAt);
     return currentTimestamp < stateTime;
   }, [currentTimestamp, state]);
+
+  // Get historical timestamp for display
+  const historicalTimestamp = useMemo(() => {
+    if (state?._metadata?.timestamp) return parseISO(state._metadata.timestamp);
+    if (state?._timestamp) return parseISO(state._timestamp);
+    return currentTimestamp;
+  }, [state, currentTimestamp]);
+
+  // Get event metadata for display
+  const eventMetadata = useMemo(() => {
+    if (!state?._metadata) return null;
+    return {
+      eventCount: state._metadata.eventCount ?? 0,
+      selectedEventId: state._metadata.selectedEventId,
+    };
+  }, [state]);
   
   if (!state) {
     return (
@@ -107,36 +139,103 @@ export function OrderStateViewer({ orderState, currentTimestamp, className = '' 
     <div className={cn("h-full overflow-hidden bg-gray-50", className)}>
       <ScrollArea className="h-full">
         <div className="p-6 space-y-6">
-          {/* Historical View Banner */}
-          {isHistoricalView && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-600" />
-              <span className="text-sm text-amber-800">
-                Viewing historical state from {format(currentTimestamp, 'h:mm:ss a')}
-              </span>
-            </div>
+          {/* Enhanced Historical View Banner */}
+          {isHistoricalView && historicalTimestamp && (
+            <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 rounded-full">
+                    <History className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-amber-900">Time Travel Mode</span>
+                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                        <Activity className="h-3 w-3 mr-1" />
+                        Historical View
+                      </Badge>
+                    </div>
+                    <div className="space-y-1 text-sm text-amber-800">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        <span>Viewing order state as of {format(historicalTimestamp, 'MMM d, yyyy h:mm:ss a')}</span>
+                      </div>
+                      {eventMetadata && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1">
+                            <Database className="h-3 w-3" />
+                            <span className="text-xs">Events replayed: {eventMetadata.eventCount}</span>
+                          </div>
+                          {eventMetadata.selectedEventId && (
+                            <div className="flex items-center gap-1">
+                              <Hash className="h-3 w-3" />
+                              <span className="text-xs">Event ID: {eventMetadata.selectedEventId}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="h-1 w-full bg-amber-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full animate-pulse" />
+                      </div>
+                      <span className="text-xs text-amber-600 font-medium whitespace-nowrap">Reconstructed State</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
           
           {/* Order Header */}
-          <Card>
+          <Card className={cn(isHistoricalView && "ring-2 ring-amber-200 border-amber-200")}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
-                    <Hash className="h-5 w-5 text-gray-500" />
-                    <CardTitle className="text-2xl">{state.orderNumber}</CardTitle>
-                    <Badge className={cn("flex items-center gap-1", statusInfo.color)}>
+                    <Hash className={cn("h-5 w-5", isHistoricalView ? "text-amber-500" : "text-gray-500")} />
+                    <CardTitle className={cn("text-2xl", isHistoricalView && "text-amber-900")}>
+                      {state.orderNumber}
+                    </CardTitle>
+                    <Badge className={cn(
+                      "flex items-center gap-1",
+                      statusInfo.color,
+                      isHistoricalView && "ring-1 ring-amber-300"
+                    )}>
                       <StatusIcon className="h-3 w-3" />
                       {statusInfo.label}
                     </Badge>
+                    {isHistoricalView && (
+                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                        <Play className="h-3 w-3 mr-1" />
+                        Historical
+                      </Badge>
+                    )}
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    UUID: {state.uuid}
-                  </p>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-gray-500">
+                      UUID: {state.uuid}
+                    </p>
+                    {isHistoricalView && historicalTimestamp && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        State as of {format(historicalTimestamp, 'h:mm:ss a')}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{formatCurrency(state.total || 0)}</p>
-                  <p className="text-sm text-gray-500">Total Amount</p>
+                  <p className={cn("text-2xl font-bold", isHistoricalView && "text-amber-900")}>
+                    {formatCurrency(state.total || 0)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {isHistoricalView ? 'Historical Total' : 'Total Amount'}
+                  </p>
+                  {isHistoricalView && eventMetadata && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Based on {eventMetadata.eventCount} events
+                    </p>
+                  )}
                 </div>
               </div>
             </CardHeader>
