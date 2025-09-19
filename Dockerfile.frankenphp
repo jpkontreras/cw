@@ -1,0 +1,69 @@
+# Production Dockerfile for Laravel Octane with FrankenPHP
+FROM dunglas/frankenphp:latest-alpine-php8.4
+
+# Install PHP extensions and system dependencies
+RUN install-php-extensions \
+    pcntl \
+    pdo_pgsql \
+    pdo_sqlite \
+    redis \
+    opcache \
+    intl \
+    gd \
+    zip \
+    bcmath
+
+# Install Node.js for asset building
+RUN apk add --no-cache nodejs npm
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+
+# Copy package files for npm
+COPY package.json package-lock.json ./
+
+# Install npm dependencies and build assets
+RUN npm ci --only=production
+
+# Copy application code
+COPY . .
+
+# Build frontend assets
+RUN npm run build
+
+# Generate optimized autoloader
+RUN composer dump-autoload --optimize
+
+# Create storage directories and set permissions
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Cache Laravel configurations for production
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache \
+    && php artisan event:cache \
+    && php artisan data:cache-structures
+
+# Expose ports
+EXPOSE 80 443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Set environment variables for FrankenPHP
+ENV FRANKENPHP_CONFIG="worker /app/public/index.php"
+ENV APP_ENV=production
+ENV LOG_CHANNEL=stderr
+
+# Run Octane with FrankenPHP
+ENTRYPOINT ["php", "artisan", "octane:frankenphp"]
+CMD ["--workers=auto", "--max-requests=500", "--port=80", "--https-port=443", "--host=0.0.0.0"]

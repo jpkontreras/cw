@@ -1,0 +1,166 @@
+# Production Docker Compose with FrankenPHP
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.frankenphp
+    image: colame-web:frankenphp
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"
+      - "${APP_HTTPS_PORT:-443}:443"
+    environment:
+      # Laravel Configuration
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL}
+
+      # Database
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Redis/Valkey
+      REDIS_HOST: valkey
+      REDIS_PORT: 6379
+
+      # Session & Cache
+      SESSION_DRIVER: redis
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Octane Settings
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+
+      # FrankenPHP Settings
+      SERVER_NAME: ${APP_URL:-localhost}
+      FRANKENPHP_CONFIG: "worker /app/public/index.php"
+
+    volumes:
+      - ./storage:/app/storage
+      - ./public/uploads:/app/public/uploads
+      # For SSL certificates (Let's Encrypt)
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    networks:
+      - colame-network
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - colame-network
+
+  valkey:
+    image: valkey/valkey:alpine
+    restart: unless-stopped
+    volumes:
+      - valkey_data:/data
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - colame-network
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+    volumes:
+      - meilisearch_data:/meili_data
+    ports:
+      - "${FORWARD_MEILISEARCH_PORT:-7700}:7700"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - colame-network
+
+  # Queue worker service (separate from web)
+  queue:
+    image: colame-web:frankenphp
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    environment:
+      APP_ENV: production
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: valkey
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+    depends_on:
+      - postgres
+      - valkey
+    networks:
+      - colame-network
+
+  # Scheduler service
+  scheduler:
+    image: colame-web:frankenphp
+    restart: unless-stopped
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction & sleep 60; done"
+    environment:
+      APP_ENV: production
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: valkey
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres
+      - valkey
+    networks:
+      - colame-network
+
+networks:
+  colame-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  valkey_data:
+  meilisearch_data:
+  caddy_data:
+  caddy_config:
