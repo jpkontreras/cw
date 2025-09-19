@@ -31,6 +31,11 @@ return new class extends Migration
             $table->string('status', 50)->default('draft')->index();
             $table->string('type', 20)->default('dine_in')->index();
             $table->string('priority', 20)->default('normal');
+
+            // Order slip tracking (barcode system)
+            $table->boolean('slip_printed')->default(false);
+            $table->timestamp('printed_at')->nullable();
+            $table->string('kitchen_status')->default('pending');
             
             // Customer information
             $table->string('customer_name')->nullable();
@@ -85,6 +90,7 @@ return new class extends Migration
             $table->index(['location_id', 'status']);
             $table->index(['user_id', 'status']);
             $table->index('created_at');
+            $table->index('order_number'); // For barcode scanning lookup
         });
 
         // 2. ORDER ITEMS TABLE - Line items projection

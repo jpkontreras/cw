@@ -9,7 +9,9 @@ use Colame\OrderEs\Events\{
     ItemAddedToOrder,
     ItemRemovedFromOrder,
     OrderConfirmed,
-    OrderCancelled
+    OrderCancelled,
+    OrderSlipPrinted,
+    SlipScannedReady
 };
 use Colame\OrderEs\Exceptions\{
     OrderAlreadyConfirmedException,
@@ -30,6 +32,8 @@ final class Order extends AggregateRoot
     private ?int $locationId = null;
     private string $type = 'dine_in';
     private ?string $orderNumber = null;
+    private bool $slipPrinted = false;
+    private bool $kitchenReady = false;
     
     // Business Methods
     
@@ -104,11 +108,11 @@ final class Order extends AggregateRoot
         $this->guardAgainstConfirmedOrder();
         $this->guardAgainstCancelledOrder();
         $this->guardAgainstEmptyOrder();
-        
+
         $subtotal = $this->calculateSubtotal();
         $tax = $this->calculateTax($subtotal);
         $total = $subtotal + $tax + $tipAmount;
-        
+
         $this->recordThat(new OrderConfirmed(
             orderId: $this->uuid(),
             paymentMethod: $paymentMethod,
@@ -118,28 +122,74 @@ final class Order extends AggregateRoot
             total: $total,
             confirmedAt: new \DateTimeImmutable()
         ));
-        
+
+        // Automatically print slip after confirmation (reduces friction)
+        $this->recordThat(new OrderSlipPrinted(
+            orderId: $this->uuid(),
+            orderNumber: $this->orderNumber,
+            printedAt: new \DateTimeImmutable()
+        ));
+
         return $this;
     }
     
     public function cancel(string $reason, int $cancelledBy): self
     {
         $this->guardAgainstCancelledOrder();
-        
+
         if ($this->status === 'completed') {
             throw new \DomainException('Cannot cancel completed order');
         }
-        
+
         $this->recordThat(new OrderCancelled(
             orderId: $this->uuid(),
             reason: $reason,
             cancelledBy: $cancelledBy,
             cancelledAt: new \DateTimeImmutable()
         ));
-        
+
         return $this;
     }
-    
+
+    public function printSlip(): self
+    {
+        if ($this->status !== 'confirmed') {
+            throw new \DomainException('Can only print slip for confirmed orders');
+        }
+
+        if ($this->slipPrinted) {
+            // Allow reprinting - just record the event
+            // This handles lost slips or printer issues
+        }
+
+        $this->recordThat(new OrderSlipPrinted(
+            orderId: $this->uuid(),
+            orderNumber: $this->orderNumber,
+            printedAt: new \DateTimeImmutable()
+        ));
+
+        return $this;
+    }
+
+    public function markReadyViaSlipScan(string $scannedOrderNumber): self
+    {
+        if ($this->orderNumber !== $scannedOrderNumber) {
+            throw new \DomainException('Scanned order number does not match');
+        }
+
+        if ($this->status !== 'confirmed' && $this->status !== 'preparing') {
+            throw new \DomainException('Order must be confirmed or preparing to mark as ready');
+        }
+
+        $this->recordThat(new SlipScannedReady(
+            orderId: $this->uuid(),
+            orderNumber: $this->orderNumber,
+            scannedAt: new \DateTimeImmutable()
+        ));
+
+        return $this;
+    }
+
     // Event Handlers (Update internal state)
     
     protected function applyOrderStarted(OrderStarted $event): void
@@ -177,7 +227,18 @@ final class Order extends AggregateRoot
     {
         $this->status = 'cancelled';
     }
-    
+
+    protected function applyOrderSlipPrinted(OrderSlipPrinted $event): void
+    {
+        $this->slipPrinted = true;
+    }
+
+    protected function applySlipScannedReady(SlipScannedReady $event): void
+    {
+        $this->kitchenReady = true;
+        $this->status = 'ready';
+    }
+
     // Guards (Business Rules)
     
     private function guardAgainstConfirmedOrder(): void

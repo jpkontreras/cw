@@ -1,6 +1,7 @@
 <?php
 
 use Colame\OrderEs\Http\Controllers\Web\OrderController;
+use Colame\OrderEs\Http\Controllers\Api\OrderSlipController;
 use Illuminate\Support\Facades\Route;
 
 // Web Routes - Pure Event Sourced Order Module
@@ -28,4 +29,11 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('es-order')->name('es-ord
     
     // Kitchen View
     Route::get('/kitchen/display', [OrderController::class, 'kitchen'])->name('kitchen');
+});
+
+// API Routes for Order Slip (barcode scanning)
+Route::middleware(['api', 'auth:sanctum'])->prefix('api/es-order')->name('api.es-order.')->group(function () {
+    Route::post('/slip/scan', [OrderSlipController::class, 'scan'])->name('slip.scan');
+    Route::post('/{orderId}/slip/print', [OrderSlipController::class, 'print'])->name('slip.print');
+    Route::get('/slip/print-queue', [OrderSlipController::class, 'getPrintQueue'])->name('slip.print-queue');
 });

@@ -10,7 +10,9 @@ use Colame\OrderEs\Events\{
     ItemAddedToOrder,
     ItemRemovedFromOrder,
     OrderConfirmed,
-    OrderCancelled
+    OrderCancelled,
+    OrderSlipPrinted,
+    SlipScannedReady
 };
 use Colame\OrderEs\Models\Order;
 use Colame\OrderEs\Models\OrderItem;
@@ -154,6 +156,23 @@ final class OrderProjector extends Projector
         ]);
     }
     
+    public function onOrderSlipPrinted(OrderSlipPrinted $event): void
+    {
+        Order::where('id', $event->orderId)->update([
+            'slip_printed' => true,
+            'printed_at' => $event->printedAt,
+        ]);
+    }
+
+    public function onSlipScannedReady(SlipScannedReady $event): void
+    {
+        Order::where('id', $event->orderId)->update([
+            'status' => 'ready',
+            'kitchen_status' => 'completed',
+            'ready_at' => $event->scannedAt,
+        ]);
+    }
+
     /**
      * Get currency subunit multiplier from config
      * CLP has subunit=1 (no cents), USD has subunit=100 (cents)
