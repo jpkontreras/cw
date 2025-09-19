@@ -114,4 +114,17 @@ class AuthController extends Controller
             'token' => $token,
         ]);
     }
+
+    /**
+     * Revoke all tokens for the authenticated user
+     */
+    public function revokeAllTokens(Request $request): JsonResponse
+    {
+        // Revoke all tokens for the user
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'message' => 'All tokens have been revoked successfully',
+        ]);
+    }
 }
