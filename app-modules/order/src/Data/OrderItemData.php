@@ -4,176 +4,70 @@ declare(strict_types=1);
 
 namespace Colame\Order\Data;
 
-use App\Core\Data\BaseData;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\Attributes\Validation\Required;
 use Colame\Order\Models\OrderItem;
-use Spatie\LaravelData\Attributes\Computed;
-use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\DataCollection;
-use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
-/**
- * Order item data transfer object
- */
-#[TypeScript]
-class OrderItemData extends BaseData
+class OrderItemData extends Data
 {
     public function __construct(
-        public readonly int $id,
-        public readonly string $orderId,  // UUID, not integer
-        public readonly int $itemId,
-        public readonly string $itemName,
-        public readonly int $quantity,
-        public readonly int $unitPrice,  // In minor units
-        public readonly int $totalPrice,  // In minor units
+        public readonly ?string $id,
+        #[Required] public readonly string $orderId,
+        #[Required] public readonly int $itemId,
+        public readonly ?int $menuSectionId,
+        public readonly ?int $menuItemId,
+        #[Required] public readonly string $itemName,
+        public readonly ?string $baseItemName,
+        #[Required] public readonly int $quantity,
+        #[Required] public readonly int $basePrice,
+        #[Required] public readonly int $unitPrice,
+        public readonly int $modifiersTotal,
+        #[Required] public readonly int $totalPrice,
         public readonly string $status,
         public readonly string $kitchenStatus,
-        public readonly ?string $course = null,
-        public readonly ?string $notes = null,
-        public readonly ?array $modifiers = null,
-        public readonly ?array $metadata = null,
-        public readonly ?\DateTimeInterface $preparedAt = null,
-        public readonly ?\DateTimeInterface $servedAt = null,
-        public readonly ?\DateTimeInterface $createdAt = null,
-        public readonly ?\DateTimeInterface $updatedAt = null,
+        public readonly ?string $course,
+        public readonly ?string $notes,
+        public readonly ?string $specialInstructions,
+        public readonly ?array $modifiers,
+        public readonly ?array $modifierHistory,
+        public readonly int $modifierCount,
+        public readonly ?array $metadata,
+        public readonly ?\DateTimeInterface $modifiedAt,
+        public readonly ?\DateTimeInterface $preparedAt,
+        public readonly ?\DateTimeInterface $servedAt,
+        public readonly ?\DateTimeInterface $createdAt,
+        public readonly ?\DateTimeInterface $updatedAt,
     ) {}
 
-    /**
-     * Create from Eloquent model
-     */
     public static function fromModel(OrderItem $item): self
     {
         return new self(
             id: $item->id,
             orderId: $item->order_id,
             itemId: $item->item_id,
+            menuSectionId: $item->menu_section_id,
+            menuItemId: $item->menu_item_id,
             itemName: $item->item_name,
+            baseItemName: $item->base_item_name,
             quantity: $item->quantity,
+            basePrice: $item->base_price,
             unitPrice: $item->unit_price,
+            modifiersTotal: $item->modifiers_total,
             totalPrice: $item->total_price,
             status: $item->status,
             kitchenStatus: $item->kitchen_status,
             course: $item->course,
             notes: $item->notes,
+            specialInstructions: $item->special_instructions,
             modifiers: $item->modifiers,
+            modifierHistory: $item->modifier_history,
+            modifierCount: $item->modifier_count,
             metadata: $item->metadata,
+            modifiedAt: $item->modified_at,
             preparedAt: $item->prepared_at,
             servedAt: $item->served_at,
             createdAt: $item->created_at,
             updatedAt: $item->updated_at,
         );
-    }
-
-    /**
-     * Calculate line total
-     * @return int Total in minor units
-     */
-    #[Computed]
-    public function lineTotal(): int
-    {
-        return $this->quantity * $this->unitPrice;
-    }
-
-    /**
-     * Get modifier names
-     */
-    #[Computed]
-    public function modifierNames(): array
-    {
-        if (!$this->modifiers) {
-            return [];
-        }
-
-        return array_map(fn($mod) => $mod['name'] ?? '', $this->modifiers);
-    }
-
-    /**
-     * Get total modifiers price
-     * @return int Total in minor units
-     */
-    #[Computed]
-    public function modifiersTotal(): int
-    {
-        if (!$this->modifiers) {
-            return 0;
-        }
-
-        return array_sum(array_map(fn($mod) => (int)($mod['price'] ?? 0), $this->modifiers));
-    }
-
-    /**
-     * Check if item is prepared
-     */
-    #[Computed]
-    public function isPrepared(): bool
-    {
-        return $this->status === 'prepared' || $this->preparedAt !== null;
-    }
-
-    /**
-     * Get status label
-     */
-    #[Computed]
-    public function statusLabel(): string
-    {
-        return match ($this->status) {
-            'pending' => 'Pending',
-            'preparing' => 'Preparing',
-            'prepared' => 'Prepared',
-            'served' => 'Served',
-            'cancelled' => 'Cancelled',
-            default => ucfirst($this->status),
-        };
-    }
-
-    /**
-     * Get kitchen status label
-     */
-    #[Computed]
-    public function kitchenStatusLabel(): string
-    {
-        return match ($this->kitchenStatus) {
-            'pending' => 'Pending',
-            'preparing' => 'Preparing',
-            'ready' => 'Ready',
-            'served' => 'Served',
-            default => ucfirst($this->kitchenStatus),
-        };
-    }
-
-    /**
-     * Get course label
-     */
-    #[Computed]
-    public function courseLabel(): string
-    {
-        if (!$this->course) {
-            return 'N/A';
-        }
-
-        return match ($this->course) {
-            'starter' => 'Starter',
-            'main' => 'Main Course',
-            'dessert' => 'Dessert',
-            'beverage' => 'Beverage',
-            default => ucfirst($this->course),
-        };
-    }
-
-    /**
-     * Check if item is ready
-     */
-    #[Computed]
-    public function isReady(): bool
-    {
-        return $this->kitchenStatus === 'ready';
-    }
-
-    /**
-     * Check if item is served
-     */
-    #[Computed]
-    public function isServed(): bool
-    {
-        return $this->kitchenStatus === 'served' || $this->servedAt !== null;
     }
 }

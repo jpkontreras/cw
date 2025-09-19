@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Colame\Order\Events;
 
 use Spatie\EventSourcing\StoredEvents\ShouldBeStored;
 
-class OrderStarted extends ShouldBeStored
+final class OrderStarted extends ShouldBeStored
 {
     public function __construct(
-        public string $aggregateRootUuid,
-        public ?string $staffId,
-        public string $locationId,
-        public ?string $tableNumber = null,
-        public ?string $sessionId = null,
-        public array $metadata = []
+        public readonly string $orderId,
+        public readonly int $userId, // This is the staff member, NOT a customer
+        public readonly int $locationId,
+        public readonly string $type,
+        public readonly string $orderNumber,
+        public readonly \DateTimeImmutable $startedAt,
+        public readonly ?string $sessionId = null
     ) {}
 }

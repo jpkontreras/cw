@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c2b2c127dc61b6af18db8a98f5a82de3",
+    "content-hash": "87cb3bf80edf0bc3ae680f4015b78e21",
     "packages": [
         {
             "name": "akaunting/laravel-money",
@@ -1209,7 +1209,7 @@
             "version": "1.0",
             "dist": {
                 "type": "path",
-                "url": "app-modules/order",
+                "url": "app-modules/order-old",
                 "reference": "8ea6172be8f14a72ba26a9296b692871ffa00e53"
             },
             "type": "library",
@@ -1226,38 +1226,6 @@
                     "Colame\\Order\\Tests\\": "tests/",
                     "Colame\\Order\\Database\\Factories\\": "database/factories/",
                     "Colame\\Order\\Database\\Seeders\\": "database/seeders/"
-                }
-            },
-            "license": [
-                "proprietary"
-            ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
-        },
-        {
-            "name": "colame/order-es",
-            "version": "1.0",
-            "dist": {
-                "type": "path",
-                "url": "app-modules/order-es",
-                "reference": "c290381e2d4bebba916f942f531846dcce55e751"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Colame\\OrderEs\\Providers\\OrderEsServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Colame\\OrderEs\\": "src/",
-                    "Colame\\OrderEs\\Tests\\": "tests/",
-                    "Colame\\OrderEs\\Database\\Factories\\": "database/factories/",
-                    "Colame\\OrderEs\\Database\\Seeders\\": "database/seeders/"
                 }
             },
             "license": [

@@ -4,61 +4,67 @@ declare(strict_types=1);
 
 namespace Colame\Order\Data;
 
-use App\Core\Data\BaseData;
-use Colame\Location\Contracts\LocationRepositoryInterface;
-use Colame\Order\Models\Order;
-use Spatie\LaravelData\Attributes\Computed;
-use Spatie\LaravelData\Attributes\DataCollectionOf;
-use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Lazy;
-use Spatie\TypeScriptTransformer\Attributes\TypeScript;
+use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Attributes\Validation\Required;
+use Spatie\LaravelData\Attributes\Validation\Uuid;
+use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\Computed;
+use Spatie\LaravelData\Attributes\WithTransformer;
+use Spatie\LaravelData\Transformers\DateTimeInterfaceTransformer;
+use Colame\Order\Models\Order;
+use Colame\Location\Contracts\LocationRepositoryInterface;
 
-/**
- * Order data transfer object
- */
-#[TypeScript]
-class OrderData extends BaseData
+class OrderData extends Data
 {
     public function __construct(
-        public readonly string $id,
+        #[Uuid] public readonly string $id,
+        public readonly ?string $sessionId,
         public readonly ?string $orderNumber,
         public readonly ?int $userId,
-        public readonly int $locationId,
-        public readonly string $currency, // ISO 4217 currency code
+        #[Required] public readonly int $locationId,
+        public readonly string $currency,
+        public readonly ?int $menuId,
+        public readonly ?int $menuVersion,
         public readonly string $status,
         public readonly string $type,
         public readonly string $priority,
+        public readonly ?string $customerName,
+        public readonly ?string $customerPhone,
+        public readonly ?string $customerEmail,
+        public readonly ?string $deliveryAddress,
+        public readonly ?int $tableNumber,
+        public readonly ?int $waiterId,
         public readonly int $subtotal,
         public readonly int $tax,
         public readonly int $tip,
         public readonly int $discount,
         public readonly int $total,
         public readonly string $paymentStatus,
-        public readonly ?string $customerName = null,
-        public readonly ?string $customerPhone = null,
-        public readonly ?string $customerEmail = null,
-        public readonly ?string $deliveryAddress = null,
-        public readonly ?int $tableNumber = null,
-        public readonly ?int $waiterId = null,
-        public readonly ?string $notes = null,
-        public readonly ?string $specialInstructions = null,
-        public readonly ?string $cancelReason = null,
-        public readonly ?array $metadata = null,
+        public readonly ?string $paymentMethod,
+        public readonly ?string $notes,
+        public readonly ?string $specialInstructions,
+        public readonly ?string $cancellationReason,
+        public readonly ?array $metadata,
+        public readonly int $viewCount,
+        public readonly int $modificationCount,
+        public readonly ?\DateTimeInterface $lastModifiedAt,
+        public readonly ?string $lastModifiedBy,
+        public readonly ?\DateTimeInterface $placedAt,
+        public readonly ?\DateTimeInterface $confirmedAt,
+        public readonly ?\DateTimeInterface $preparingAt,
+        public readonly ?\DateTimeInterface $readyAt,
+        public readonly ?\DateTimeInterface $deliveringAt,
+        public readonly ?\DateTimeInterface $deliveredAt,
+        public readonly ?\DateTimeInterface $completedAt,
+        public readonly ?\DateTimeInterface $cancelledAt,
+        public readonly ?\DateTimeInterface $scheduledAt,
+        public readonly ?\DateTimeInterface $createdAt,
+        public readonly ?\DateTimeInterface $updatedAt,
         #[DataCollectionOf(OrderItemData::class)]
-        public readonly Lazy|DataCollection|null $items = null,
-        public readonly ?\DateTimeInterface $placedAt = null,
-        public readonly ?\DateTimeInterface $confirmedAt = null,
-        public readonly ?\DateTimeInterface $preparingAt = null,
-        public readonly ?\DateTimeInterface $readyAt = null,
-        public readonly ?\DateTimeInterface $deliveringAt = null,
-        public readonly ?\DateTimeInterface $deliveredAt = null,
-        public readonly ?\DateTimeInterface $completedAt = null,
-        public readonly ?\DateTimeInterface $cancelledAt = null,
-        public readonly ?\DateTimeInterface $scheduledAt = null,
-        public readonly ?\DateTimeInterface $createdAt = null,
-        public readonly ?\DateTimeInterface $updatedAt = null,
+        public readonly Lazy|DataCollection $items,
     ) {}
-
 
     /**
      * Get currency configuration from location repository
@@ -79,54 +85,108 @@ class OrderData extends BaseData
         if ($this->items instanceof DataCollection) {
             return $this->items->count();
         }
-        
         return 0;
     }
-
+    
     /**
-     * Get items count for display
+     * Total amount alias for compatibility
      */
     #[Computed]
-    public function items(): int
+    public function totalAmount(): int
     {
-        return $this->itemsCount();
+        return $this->total;
     }
 
     /**
-     * Create from Eloquent model
+     * Convert to array ensuring all fields are included
      */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'sessionId' => $this->sessionId,
+            'orderNumber' => $this->orderNumber,
+            'userId' => $this->userId,
+            'locationId' => $this->locationId,
+            'currency' => $this->currency,
+            'menuId' => $this->menuId,
+            'menuVersion' => $this->menuVersion,
+            'status' => $this->status,
+            'type' => $this->type,
+            'priority' => $this->priority,
+            'customerName' => $this->customerName,
+            'customerPhone' => $this->customerPhone,
+            'customerEmail' => $this->customerEmail,
+            'deliveryAddress' => $this->deliveryAddress,
+            'tableNumber' => $this->tableNumber,
+            'waiterId' => $this->waiterId,
+            'subtotal' => $this->subtotal,
+            'tax' => $this->tax,
+            'tip' => $this->tip,
+            'discount' => $this->discount,
+            'total' => $this->total,
+            'totalAmount' => $this->total, // Alias for compatibility
+            'paymentStatus' => $this->paymentStatus,
+            'paymentMethod' => $this->paymentMethod,
+            'notes' => $this->notes,
+            'specialInstructions' => $this->specialInstructions,
+            'cancellationReason' => $this->cancellationReason,
+            'metadata' => $this->metadata,
+            'viewCount' => $this->viewCount,
+            'modificationCount' => $this->modificationCount,
+            'lastModifiedAt' => $this->lastModifiedAt?->format('c'),
+            'lastModifiedBy' => $this->lastModifiedBy,
+            'placedAt' => $this->placedAt?->format('c'),
+            'confirmedAt' => $this->confirmedAt?->format('c'),
+            'preparingAt' => $this->preparingAt?->format('c'),
+            'readyAt' => $this->readyAt?->format('c'),
+            'deliveringAt' => $this->deliveringAt?->format('c'),
+            'deliveredAt' => $this->deliveredAt?->format('c'),
+            'completedAt' => $this->completedAt?->format('c'),
+            'cancelledAt' => $this->cancelledAt?->format('c'),
+            'scheduledAt' => $this->scheduledAt?->format('c'),
+            'createdAt' => $this->createdAt?->format('c'),
+            'updatedAt' => $this->updatedAt?->format('c'),
+            'items' => $this->items instanceof DataCollection ? $this->items->toArray() : [],
+            'itemsCount' => $this->itemsCount(), // Include computed property
+        ];
+    }
+    
     public static function fromModel(Order $order): self
     {
         return new self(
             id: $order->id,
+            sessionId: $order->session_id,
             orderNumber: $order->order_number,
             userId: $order->user_id,
             locationId: $order->location_id,
-            currency: $order->currency ?: 'CLP', // Default to CLP if not set
-            status: $order->status instanceof \Spatie\ModelStates\State 
-                ? $order->status->getValue() 
-                : (string) $order->status,
+            currency: $order->currency,
+            menuId: $order->menu_id,
+            menuVersion: $order->menu_version,
+            status: $order->status,
             type: $order->type,
             priority: $order->priority,
-            subtotal: $order->subtotal,
-            tax: $order->tax,
-            tip: $order->tip,
-            discount: $order->discount,
-            total: $order->total,
-            paymentStatus: $order->payment_status,
             customerName: $order->customer_name,
             customerPhone: $order->customer_phone,
             customerEmail: $order->customer_email,
             deliveryAddress: $order->delivery_address,
             tableNumber: $order->table_number,
             waiterId: $order->waiter_id,
+            subtotal: $order->subtotal,
+            tax: $order->tax,
+            tip: $order->tip,
+            discount: $order->discount,
+            total: $order->total,
+            paymentStatus: $order->payment_status,
+            paymentMethod: $order->payment_method,
             notes: $order->notes,
             specialInstructions: $order->special_instructions,
-            cancelReason: $order->cancel_reason,
+            cancellationReason: $order->cancellation_reason,
             metadata: $order->metadata,
-            items: Lazy::whenLoaded('items', $order, 
-                fn() => OrderItemData::collect($order->items, DataCollection::class)
-            ),
+            viewCount: $order->view_count,
+            modificationCount: $order->modification_count,
+            lastModifiedAt: $order->last_modified_at,
+            lastModifiedBy: $order->last_modified_by,
             placedAt: $order->placed_at,
             confirmedAt: $order->confirmed_at,
             preparingAt: $order->preparing_at,
@@ -138,157 +198,9 @@ class OrderData extends BaseData
             scheduledAt: $order->scheduled_at,
             createdAt: $order->created_at,
             updatedAt: $order->updated_at,
+            items: Lazy::whenLoaded('items', $order, fn() => 
+                OrderItemData::collect($order->items, DataCollection::class)
+            ),
         );
-    }
-
-    /**
-     * Get order status label
-     */
-    #[Computed]
-    public function statusLabel(): string
-    {
-        return match ($this->status) {
-            'draft' => 'Draft',
-            'placed' => 'Placed',
-            'confirmed' => 'Confirmed',
-            'preparing' => 'Preparing',
-            'ready' => 'Ready',
-            'delivering' => 'Delivering',
-            'delivered' => 'Delivered',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled',
-            'refunded' => 'Refunded',
-            default => ucfirst($this->status),
-        };
-    }
-
-    /**
-     * Get order type label
-     */
-    #[Computed]
-    public function typeLabel(): string
-    {
-        return match ($this->type) {
-            'dine_in' => 'Dine In',
-            'takeout' => 'Takeout',
-            'delivery' => 'Delivery',
-            'catering' => 'Catering',
-            default => ucfirst($this->type),
-        };
-    }
-
-    /**
-     * Get payment status label
-     */
-    #[Computed]
-    public function paymentStatusLabel(): string
-    {
-        return match ($this->paymentStatus) {
-            'pending' => 'Pending',
-            'partial' => 'Partially Paid',
-            'paid' => 'Paid',
-            'refunded' => 'Refunded',
-            default => ucfirst($this->paymentStatus),
-        };
-    }
-
-    /**
-     * Check if order can be cancelled
-     */
-    #[Computed]
-    public function canBeCancelled(): bool
-    {
-        return in_array($this->status, ['draft', 'placed', 'confirmed']);
-    }
-
-    /**
-     * Check if order can be modified
-     */
-    #[Computed]
-    public function canBeModified(): bool
-    {
-        return in_array($this->status, ['draft', 'placed']);
-    }
-
-    /**
-     * Get order duration in minutes
-     */
-    #[Computed]
-    public function durationInMinutes(): ?int
-    {
-        if (!$this->placedAt || !$this->completedAt) {
-            return null;
-        }
-
-        return (int) $this->placedAt->diff($this->completedAt)->i;
-    }
-
-    /**
-     * Check if order is active
-     */
-    #[Computed]
-    public function isActive(): bool
-    {
-        return !in_array($this->status, ['completed', 'cancelled', 'refunded']);
-    }
-
-    /**
-     * Check if order is paid
-     */
-    #[Computed]
-    public function isPaid(): bool
-    {
-        return $this->paymentStatus === 'paid';
-    }
-
-    /**
-     * Check if order is high priority
-     */
-    #[Computed]
-    public function isHighPriority(): bool
-    {
-        return $this->priority === 'high';
-    }
-
-    /**
-     * Check if order requires delivery
-     */
-    #[Computed]
-    public function requiresDelivery(): bool
-    {
-        return $this->type === 'delivery';
-    }
-
-    /**
-     * Check if order requires table
-     */
-    #[Computed]
-    public function requiresTable(): bool
-    {
-        return $this->type === 'dine_in';
-    }
-
-    /**
-     * Get remaining amount to pay
-     */
-    #[Computed]
-    public function remainingAmount(): int
-    {
-        // This would need to be calculated based on payment transactions
-        // For now, return total if not paid
-        return $this->isPaid() ? 0 : $this->total;
-    }
-
-    /**
-     * Include computed properties when converting to array
-     */
-    public function toArray(): array
-    {
-        $array = parent::toArray();
-        
-        // Always include currencyConfig
-        $array['currencyConfig'] = $this->currencyConfig();
-        
-        return $array;
     }
 }

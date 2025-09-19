@@ -14,8 +14,8 @@ export default function NewOrder() {
     setError(null);
     
     try {
-      // Create new session using web route - location determined server-side
-      const response = await axios.post('/orders/session/start', {
+      // Create new session using orders route
+      const response = await axios.post('/api/v1/orders/session/start', {
         platform: 'web',
         source: 'web',
         order_type: type,
@@ -24,7 +24,7 @@ export default function NewOrder() {
       if (response.data.success) {
         const uuid = response.data.data.uuid;
         
-        // Navigate to the session page
+        // Navigate to the orders session page
         router.visit(`/orders/session/${uuid}`);
       } else {
         setError('Failed to create session. Please try again.');
@@ -41,8 +41,8 @@ export default function NewOrder() {
     <AppLayout containerClassName="overflow-visible">
       <Page>
         <Page.Header
-          title="New Order"
-          subtitle="Choose your service type to get started"
+          title="New Event-Sourced Order"
+          subtitle="Choose your service type to get started with full event tracking"
         />
         
         <Page.Content>
@@ -58,14 +58,17 @@ export default function NewOrder() {
               </div>
             )}
 
-            {/* Options Grid - Cleaner, minimal design */}
+            {/* Options Grid - Event-sourced theme */}
             <div className="grid gap-4 md:grid-cols-3 mb-8">
               {/* Dine In Option */}
               <button
                 onClick={() => handleOrderTypeSelection('dine_in')}
                 disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
               >
+                <div className="absolute top-2 right-2">
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">Event-Sourced</span>
+                </div>
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                     <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,8 +86,11 @@ export default function NewOrder() {
               <button
                 onClick={() => handleOrderTypeSelection('takeout')}
                 disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
               >
+                <div className="absolute top-2 right-2">
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">Event-Sourced</span>
+                </div>
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                     <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,8 +108,11 @@ export default function NewOrder() {
               <button
                 onClick={() => handleOrderTypeSelection('delivery')}
                 disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
               >
+                <div className="absolute top-2 right-2">
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">Event-Sourced</span>
+                </div>
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                     <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +127,7 @@ export default function NewOrder() {
               </button>
             </div>
 
-            {/* Simplified Information */}
+            {/* Event Sourcing Information */}
             <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
               <div className="flex items-start space-x-3">
                 <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,7 +135,9 @@ export default function NewOrder() {
                 </svg>
                 <div className="flex-1">
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    <span className="font-medium">Why choose a service type?</span> This creates a session that automatically saves your progress, allows recovery if the page closes, and personalizes the ordering experience.
+                    <span className="font-medium">Event-Sourced Architecture:</span> This order system uses event sourcing to track every action. 
+                    Each change is recorded as an immutable event, providing complete audit trail, offline-first capabilities, 
+                    and the ability to replay the entire order history.
                   </p>
                 </div>
               </div>
@@ -153,7 +164,7 @@ export default function NewOrder() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-sm text-gray-600">Setting up your order session...</p>
+                    <p className="text-sm text-gray-600">Initializing event-sourced session...</p>
                   </div>
                 </div>
               </div>

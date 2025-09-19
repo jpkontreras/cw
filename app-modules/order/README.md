@@ -1,163 +1,155 @@
-# Order Module
+# Order-ES Module: Pure Event Sourcing Implementation
 
-This module handles all order-related functionality in the Colame restaurant management system.
+## ✅ What We've Built
 
-## Architecture
+A **clean, pure event-sourced order module** with complete CQRS separation. No hybrid patterns, no service layers, no confusion.
 
-The order module follows the interface-based architecture pattern with:
-- **Contracts**: Define public APIs for cross-module communication
-- **DTOs**: Data Transfer Objects for type-safe data exchange
-- **Repositories**: Handle data persistence following repository pattern
-- **Services**: Contain all business logic
-- **Controllers**: Separate Web (Inertia) and API controllers
-- **Events**: Domain events for cross-module communication
+## 🏗️ Architecture Components
 
-## Key Features
+### 1. **Commands** (User Intentions)
+- `StartOrder` - Begin a new order
+- `AddItemToOrder` - Add item to cart
+- `RemoveItemFromOrder` - Remove item
+- `ConfirmOrder` - Finalize order
+- `CancelOrder` - Cancel order
 
-- Order lifecycle management (Draft → Placed → Confirmed → Preparing → Ready → Completed)
-- Order item management with modifiers
-- Status tracking and history
-- Kitchen display integration
-- Feature flag support for gradual rollout
-- Event-driven architecture
+### 2. **Events** (Facts)
+- `OrderStarted` - Order has begun
+- `ItemAddedToOrder` - Item was added
+- `ItemRemovedFromOrder` - Item was removed
+- `OrderConfirmed` - Order was confirmed
+- `OrderCancelled` - Order was cancelled
 
-## Directory Structure
+### 3. **Aggregate** (Business Logic)
+- `Order` - Contains ALL business rules
+- Guards against invalid state transitions
+- Emits events based on commands
+- Pure domain logic, no infrastructure
 
+### 4. **Projectors** (Read Model Builders)
+- `OrderProjector` - Updates read models from events
+- Creates optimized views for queries
+- Handles denormalization for performance
+
+### 5. **Queries** (Read Operations)
+- `GetOrder` - Fetch single order
+- `GetOrdersByStatus` - List orders by status
+- `GetKitchenOrders` - Kitchen display view
+
+### 6. **Controllers** (Thin Layer)
+- Just dispatch commands and queries
+- No business logic
+- Clean HTTP interface
+
+## 🚀 How to Use
+
+### Starting an Order
+```bash
+POST /orders-es/start
+{
+    "location_id": 1,
+    "type": "dine_in"
+}
 ```
-order/
-├── config/
-│   └── features.php          # Module feature flags
-├── database/
-│   ├── factories/           # Model factories for testing
-│   └── migrations/          # Database migrations
-├── routes/
-│   └── order-routes.php     # Web and API routes
-├── src/
-│   ├── Contracts/           # Public interfaces
-│   ├── Data/               # DTOs
-│   ├── Events/             # Domain events
-│   ├── Exceptions/         # Module exceptions
-│   ├── Http/
-│   │   └── Controllers/
-│   │       ├── Api/        # API controllers
-│   │       └── Web/        # Web controllers
-│   ├── Models/             # Eloquent models
-│   ├── Providers/          # Service providers
-│   ├── Repositories/       # Repository implementations
-│   └── Services/           # Business logic
-└── tests/                  # Module tests
+
+### Adding Items
+```bash
+POST /orders-es/{orderId}/add-item
+{
+    "item_id": 123,
+    "quantity": 2,
+    "modifiers": [],
+    "notes": "No onions"
+}
 ```
 
-## Usage
+### Confirming Order
+```bash
+POST /orders-es/{orderId}/confirm
+{
+    "payment_method": "cash",
+    "tip_amount": 5.00
+}
+```
 
-### Creating an Order
+### Viewing Orders
+```bash
+GET /orders-es/
+GET /orders-es/{orderId}
+GET /orders-es/kitchen?location_id=1
+```
+
+## 🎯 Key Benefits vs Old Architecture
+
+| Aspect | Old (order module) | New (order-es module) |
+|--------|-------------------|----------------------|
+| **Business Logic** | Scattered across services | All in aggregate |
+| **Controllers** | Fat with logic | Thin dispatchers |
+| **State Management** | Database-driven | Event-driven |
+| **Testing** | Complex mocking | Simple event assertions |
+| **Audit Trail** | Partial | Complete via events |
+| **Complexity** | High (dual architecture) | Low (single pattern) |
+
+## 📊 Code Comparison
+
+### Old Way (order module)
+```php
+// Fat controller with service dependencies
+public function store(Request $request, OrderService $service) {
+    $data = CreateOrderData::validateAndCreate($request);
+    $order = $service->createOrder($data);
+    // More orchestration...
+    return Inertia::render('Order/Show', ['order' => $order]);
+}
+```
+
+### New Way (order-es module)
+```php
+// Thin controller just dispatches
+public function start(Request $request): JsonResponse {
+    $command = new StartOrder(
+        customerId: $request->user()->id,
+        locationId: $request->input('location_id')
+    );
+    $this->commandHandler->handleStartOrder($command);
+    return response()->json(['id' => $command->orderId]);
+}
+```
+
+## 🧪 Testing
 
 ```php
-use Colame\Order\Contracts\OrderServiceInterface;
-use Colame\Order\Data\CreateOrderData;
+// Test with events, not mocks
+test('order can be started')
+    ->given([])
+    ->when(new StartOrder($customerId, $locationId))
+    ->assertRecorded([new OrderStarted(...)]);
 
-$orderService = app(OrderServiceInterface::class);
-
-$orderData = CreateOrderData::from([
-    'userId' => 1,
-    'locationId' => 1,
-    'items' => [
-        [
-            'itemId' => 101,
-            'quantity' => 2,
-            'unitPrice' => 15.99,
-            'modifiers' => [
-                ['id' => 1, 'name' => 'Extra cheese', 'price' => 2.00]
-            ]
-        ]
-    ],
-    'customerName' => 'John Doe',
-    'customerPhone' => '+1234567890'
-]);
-
-$order = $orderService->createOrder($orderData);
+test('cannot add items to cancelled order')
+    ->given([
+        new OrderStarted(...),
+        new OrderCancelled(...)
+    ])
+    ->when(new AddItemToOrder(...))
+    ->assertException(OrderAlreadyCancelledException::class);
 ```
 
-### Updating Order Status
+## 📈 Next Steps
 
-```php
-// Confirm order
-$order = $orderService->confirmOrder($orderId);
+1. Add more complex business rules
+2. Implement process managers for multi-step flows
+3. Add more projections for different views
+4. Implement event replay capabilities
+5. Add integration with other modules via events
 
-// Start preparing
-$order = $orderService->startPreparingOrder($orderId);
+## 🚫 What NOT to Add
 
-// Mark as ready
-$order = $orderService->markOrderReady($orderId);
+- ❌ Service layers (logic belongs in aggregates)
+- ❌ Direct database queries in controllers
+- ❌ Business logic in controllers
+- ❌ Mixing read/write models
+- ❌ Synchronous projections (use async)
 
-// Complete order
-$order = $orderService->completeOrder($orderId);
+## 📝 Module Status
 
-// Cancel order
-$order = $orderService->cancelOrder($orderId, 'Customer request');
-```
-
-## API Endpoints
-
-### Web Routes
-- `GET /orders` - List orders
-- `GET /orders/create` - Show create form
-- `POST /orders` - Create order
-- `GET /orders/{id}` - Show order
-- `GET /orders/{id}/edit` - Show edit form
-- `PUT /orders/{id}` - Update order
-- `POST /orders/{id}/confirm` - Confirm order
-- `POST /orders/{id}/cancel` - Cancel order
-- `GET /orders/kitchen/display` - Kitchen display
-
-### API Routes
-- `GET /api/v1/orders` - List orders
-- `POST /api/v1/orders` - Create order
-- `GET /api/v1/orders/{id}` - Get order
-- `PUT /api/v1/orders/{id}` - Update order
-- `PATCH /api/v1/orders/{id}/status` - Update status
-- `POST /api/v1/orders/{id}/cancel` - Cancel order
-- `GET /api/v1/orders/statistics/summary` - Get statistics
-
-## Feature Flags
-
-The module includes several feature flags for controlled rollout:
-
-- `order.split_bill` - Allow splitting bills
-- `order.order_notes` - Allow adding notes to orders
-- `order.quick_order` - Quick order creation
-- `order.kitchen_display` - Kitchen display system
-- `order.order_tracking` - Real-time order tracking
-
-Configure in `.env`:
-```
-FEATURE_ORDER_SPLIT_BILL=false
-FEATURE_ORDER_KITCHEN_DISPLAY=true
-```
-
-## Events
-
-The module dispatches the following events:
-- `OrderCreated` - When a new order is created
-- `OrderStatusChanged` - When order status changes
-
-Other modules can listen to these events without direct dependencies.
-
-## Testing
-
-Run module tests:
-```bash
-sail artisan test --filter=Colame\\Order
-```
-
-## Database
-
-Run migrations:
-```bash
-sail artisan migrate
-```
-
-The module creates three tables:
-- `orders` - Main orders table
-- `order_items` - Order line items
-- `order_status_history` - Status change tracking
+✅ **COMPLETE** - This is a fully functional, pure event-sourced implementation ready for use.

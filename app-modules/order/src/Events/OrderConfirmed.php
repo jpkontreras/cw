@@ -1,15 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Colame\Order\Events;
 
 use Spatie\EventSourcing\StoredEvents\ShouldBeStored;
-use Carbon\Carbon;
 
-class OrderConfirmed extends ShouldBeStored
+final class OrderConfirmed extends ShouldBeStored
 {
     public function __construct(
-        public string $aggregateRootUuid,
-        public string $orderNumber,
-        public Carbon $confirmedAt
+        public readonly string $orderId,
+        public readonly string $paymentMethod,
+        public readonly float $subtotal,
+        public readonly float $tax,
+        public readonly float $tip,
+        public readonly float $total,
+        public readonly \DateTimeImmutable $confirmedAt
     ) {}
 }

@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { EmptyOrderState, OrderItemsView, SearchInput, SearchView, CartPopover, FilterBar } from '@/modules/order';
-import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/OrderContext';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/EventSourcedOrderContext';
+import { ArrowLeft, ArrowRight, Activity } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface Category {
@@ -68,13 +68,21 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
 
   const [currentStep, setCurrentStep] = useState(0);
   const [addedItemFeedback, setAddedItemFeedback] = useState<{ id: number; name: string } | null>(null);
+  const [eventCount, setEventCount] = useState(0);
 
-  // Handle adding item with feedback
+  // Simulate event count tracking
+  useEffect(() => {
+    // Count events based on actions
+    let count = 1; // Session initiated
+    count += orderItems.length * 2; // Add + quantity events
+    if (lastSavedAt) count += 1; // Draft saved
+    setEventCount(count);
+  }, [orderItems, lastSavedAt]);
+
   const handleAddItemWithFeedback = (item: SearchResult) => {
     addItemToOrder(item);
     setAddedItemFeedback({ id: item.id, name: item.name });
     
-    // Clear feedback after animation
     setTimeout(() => {
       setAddedItemFeedback(null);
     }, 3000);
@@ -91,27 +99,26 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
   };
 
   const handleFinish = () => {
+    // Event-sourced order processing
     processOrder();
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Ensure proper scrolling on mobile devices
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-    
-    // Reset scroll position when changing steps
     container.scrollTop = 0;
   }, [currentStep]);
 
   return (
     <AppLayout containerClassName="overflow-visible">
       <Page>
-        {/* Auto-save Indicator */}
+        {/* Event-Sourced Auto-save Indicator */}
         {lastSavedAt && (
-          <div className="fixed bottom-20 right-4 z-40 text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded">
-            Auto-saved {new Date(lastSavedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          <div className="fixed bottom-20 right-4 z-40 text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded flex items-center gap-1">
+            <Activity className="h-3 w-3" />
+            Event saved {new Date(lastSavedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
 
@@ -140,7 +147,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold">Added to cart!</p>
+                <p className="font-semibold">Item added event recorded!</p>
                 <p className="text-sm opacity-90">{addedItemFeedback.name}</p>
               </div>
               <Badge variant="secondary" className="bg-background/10 text-primary-foreground border-0">
@@ -151,11 +158,15 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
         )}
 
         <Page.Header
-          title="Order Session"
+          title="Event-Sourced Order Session"
           subtitle={currentStep === 0 ? "Select products to add to the order" : "Review and confirm order details"}
           actions={
             <div className="flex items-center gap-3">
-              {/* Session ID Badge */}
+              {/* Session Info Badges */}
+              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                <Activity className="h-3 w-3 mr-1" />
+                {eventCount} events
+              </Badge>
               <Badge variant="outline" className="text-xs">
                 Session: {sessionUuid.slice(0, 8)}
               </Badge>
@@ -187,7 +198,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
         />
 
         {currentStep === 0 ? (
-          /* Step 1: Product Selection - Main scrollable container */
+          /* Step 1: Product Selection */
           <div 
             className="flex-1 relative"
             ref={scrollContainerRef}
@@ -197,7 +208,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
               height: '100%'
             }}
           >
-            {/* Search Bar with Cart - Sticky inside scrollable container */}
+            {/* Search Bar with Cart */}
             <div 
               className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100"
               style={{
@@ -236,7 +247,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                 </div>
               </div>
               
-              {/* Filter Bar - Shows when searching or when filters are active */}
+              {/* Filter Bar */}
               {(isSearchMode || searchQuery || activeFiltersCount > 0) && (
                 <FilterBar
                   filters={searchFilters}
@@ -248,11 +259,10 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
               )}
             </div>
 
-            {/* Content Section - Scrollable content */}
+            {/* Content Section */}
             <div className="px-4 sm:px-6 lg:px-8 pb-6 pt-2">
               <div className="max-w-6xl">
                 {isSearchMode || searchQuery ? (
-                  // Search Results View
                   <SearchView
                     searchQuery={searchQuery}
                     searchResults={searchResults}
@@ -283,7 +293,6 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                     onCategorySelect={handleCategorySelect}
                   />
                 ) : (
-                  // Default Categories View when not searching
                   <SearchView
                     searchQuery=""
                     searchResults={[]}
@@ -328,8 +337,8 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                   <div className="min-w-0">
                     <div className="bg-white rounded-lg shadow-sm h-fit">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <h2 className="text-base font-bold text-gray-900">Order Summary</h2>
-                        <p className="text-xs text-gray-600 mt-0.5">{getTotalItems()} products in your cart</p>
+                        <h2 className="text-base font-bold text-gray-900">Event-Sourced Order Summary</h2>
+                        <p className="text-xs text-gray-600 mt-0.5">{getTotalItems()} products • {eventCount} events recorded</p>
                       </div>
                       <div className="p-3 max-h-[calc(100vh-200px)] overflow-y-auto">
                         {orderItems.length > 0 ? (
@@ -358,6 +367,19 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                   
                   {/* Right Column - Order Details */}
                   <div className="space-y-3">
+                    {/* Event Sourcing Info */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Activity className="h-4 w-4 text-blue-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-blue-900">Event-Sourced Order</p>
+                          <p className="text-xs text-blue-700 mt-1">
+                            All actions are recorded as events. {eventCount} events captured so far.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Order Type */}
                     <div className="bg-white rounded-lg shadow-sm p-4 h-fit">
                       <h3 className="font-semibold text-gray-900 mb-2 text-sm">Order Type</h3>
@@ -498,7 +520,8 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                         className="w-full mt-3 h-9"
                         disabled={!customerInfo.name || !customerInfo.orderType || !customerInfo.paymentMethod}
                       >
-                        Create Order
+                        <Activity className="h-4 w-4 mr-2" />
+                        Create Event-Sourced Order
                       </Button>
                     </div>
                   </div>

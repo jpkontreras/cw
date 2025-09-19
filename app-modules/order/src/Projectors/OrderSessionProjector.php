@@ -5,187 +5,78 @@ declare(strict_types=1);
 namespace Colame\Order\Projectors;
 
 use Spatie\EventSourcing\EventHandlers\Projectors\Projector;
-use Colame\Order\Events\Session\OrderSessionInitiated;
-use Colame\Order\Events\Session\ItemAddedToCart;
-use Colame\Order\Events\Session\ItemRemovedFromCart;
-use Colame\Order\Events\Session\CartModified;
-use Colame\Order\Events\Session\ServingTypeSelected;
-use Colame\Order\Events\Session\CustomerInfoEntered;
-use Colame\Order\Events\Session\PaymentMethodSelected;
-use Colame\Order\Events\Session\OrderDraftSaved;
-use Colame\Order\Events\Session\SessionAbandoned;
-use Colame\Order\Events\Session\SessionConverted;
+use Colame\Order\Events\SessionEvents\SessionInitiated;
+use Colame\Order\Events\SessionEvents\SessionUpdated;
+use Colame\Order\Events\SessionEvents\SessionClosed;
+use Colame\Order\Events\SessionConverted;
 use Colame\Order\Models\OrderSession;
 
 class OrderSessionProjector extends Projector
 {
     /**
-     * Handle session initiated event
+     * Handle session initiated
      */
-    public function onOrderSessionInitiated(OrderSessionInitiated $event): void
+    public function onSessionInitiated(SessionInitiated $event): void
     {
         OrderSession::create([
-            'uuid' => $event->aggregateRootUuid(),
-            'user_id' => $event->userId,
+            'id' => $event->sessionId,
+            'staff_id' => $event->staffId,
             'location_id' => $event->locationId,
-            'status' => 'initiated',
-            'device_info' => $event->deviceInfo,
-            'referrer' => $event->referrer,
-            'metadata' => $event->metadata,
-            'cart_items' => [],
-            'started_at' => $event->createdAt(),
-            'last_activity_at' => $event->createdAt(),
+            'table_number' => $event->tableNumber,
+            'customer_count' => $event->customerCount ?? 1,
+            'status' => 'active',
+            'type' => $event->type ?? 'dine_in',
+            'metadata' => $event->metadata ?? [],
+            'started_at' => now(),
         ]);
     }
 
     /**
-     * Handle item added to cart event
+     * Handle session updated
      */
-    public function onItemAddedToCart(ItemAddedToCart $event): void
+    public function onSessionUpdated(SessionUpdated $event): void
     {
-        $session = OrderSession::find($event->aggregateRootUuid());
-        if (!$session) {
-            return;
+        $session = OrderSession::find($event->sessionId);
+        if ($session) {
+            $session->update($event->updates);
         }
-
-        $cartItems = $session->cart_items ?? [];
-        $itemId = $event->itemId;
-
-        if (!isset($cartItems[$itemId])) {
-            $cartItems[$itemId] = [
-                'id' => $itemId,
-                'name' => $event->itemName,
-                'quantity' => 0,
-                'category' => $event->category,
-                'modifiers' => $event->modifiers,
-                'notes' => $event->notes,
-            ];
-        }
-        $cartItems[$itemId]['quantity'] += $event->quantity;
-
-        $session->update([
-            'cart_items' => $cartItems,
-            'last_activity_at' => $event->createdAt(),
-        ]);
     }
 
     /**
-     * Handle item removed from cart event
-     */
-    public function onItemRemovedFromCart(ItemRemovedFromCart $event): void
-    {
-        $session = OrderSession::find($event->aggregateRootUuid());
-        if (!$session) {
-            return;
-        }
-
-        $cartItems = $session->cart_items ?? [];
-        if (isset($cartItems[$event->itemId])) {
-            $cartItems[$event->itemId]['quantity'] -= $event->removedQuantity;
-            if ($cartItems[$event->itemId]['quantity'] <= 0) {
-                unset($cartItems[$event->itemId]);
-            }
-        }
-
-        $session->update([
-            'cart_items' => $cartItems,
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle cart modified event
-     */
-    public function onCartModified(CartModified $event): void
-    {
-        $session = OrderSession::find($event->aggregateRootUuid());
-        if (!$session) {
-            return;
-        }
-
-        $cartItems = $session->cart_items ?? [];
-        if (isset($cartItems[$event->itemId]) && isset($event->changes['to'])) {
-            $cartItems[$event->itemId]['quantity'] = $event->changes['to'];
-            if ($cartItems[$event->itemId]['quantity'] <= 0) {
-                unset($cartItems[$event->itemId]);
-            }
-        }
-
-        $session->update([
-            'cart_items' => $cartItems,
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle serving type selected event
-     */
-    public function onServingTypeSelected(ServingTypeSelected $event): void
-    {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'serving_type' => $event->servingType,
-            'table_number' => $event->tableNumber ?? null,
-            'delivery_address' => $event->deliveryAddress ?? null,
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle customer info entered event
-     */
-    public function onCustomerInfoEntered(CustomerInfoEntered $event): void
-    {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'customer_info_complete' => $event->isComplete,
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle payment method selected event
-     */
-    public function onPaymentMethodSelected(PaymentMethodSelected $event): void
-    {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'payment_method' => $event->paymentMethod,
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle draft saved event
-     */
-    public function onOrderDraftSaved(OrderDraftSaved $event): void
-    {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'status' => 'draft',
-            'draft_saved_at' => $event->createdAt(),
-            'last_activity_at' => $event->createdAt(),
-        ]);
-    }
-
-    /**
-     * Handle session abandoned event
-     */
-    public function onSessionAbandoned(SessionAbandoned $event): void
-    {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'status' => 'abandoned',
-            'abandonment_reason' => $event->reason ?? null,
-            'abandoned_at' => $event->createdAt(),
-        ]);
-    }
-    
-    /**
-     * Handle session converted to order event
+     * Handle order conversion
      */
     public function onSessionConverted(SessionConverted $event): void
     {
-        OrderSession::where('uuid', $event->aggregateRootUuid())->update([
-            'status' => 'converted',
-            'order_id' => $event->orderId,
-            'converted_at' => $event->createdAt(),
-            'last_activity_at' => $event->createdAt(),
-        ]);
+        $session = OrderSession::find($event->sessionId);
+        if ($session) {
+            $session->update([
+                'order_id' => $event->orderId,
+                'status' => 'converted',
+                'converted_at' => now(),
+            ]);
+        }
+        
+        // Also update the Order with the session_id
+        $order = \Colame\Order\Models\Order::find($event->orderId);
+        if ($order) {
+            $order->update([
+                'session_id' => $event->sessionId,
+            ]);
+        }
+    }
+
+    /**
+     * Handle session closed
+     */
+    public function onSessionClosed(SessionClosed $event): void
+    {
+        $session = OrderSession::find($event->sessionId);
+        if ($session) {
+            $session->update([
+                'status' => 'closed',
+                'closed_reason' => $event->reason,
+                'closed_at' => now(),
+            ]);
+        }
     }
 }

@@ -108,7 +108,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     }
     
     try {
-      await axios.post(`/es-order/session/${sessionUuid}/sync`, {
+      await axios.post(`/api/v1/orders/session/${sessionUuid}/sync`, {
         items: orderItems,
         customer_info: customerInfo,
         search_history: recentSearches,
@@ -247,7 +247,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     setSessionStatus('processing');
     
     try {
-      const response = await axios.post(`/es-order/session/${sessionUuid}/checkout`, {
+      const response = await axios.post(`/api/v1/orders/session/${sessionUuid}/checkout`, {
         items: orderItems,
         customer_info: customerInfo,
       });
@@ -256,7 +256,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
         setOrderUuid(response.data.data.order_uuid);
         setSessionStatus('completed');
         
-        router.visit(`/es-order/${response.data.data.order_uuid}`);
+        router.visit(`/orders/${response.data.data.order_uuid}`);
       }
     } catch (error) {
       console.error('Failed to process order:', error);

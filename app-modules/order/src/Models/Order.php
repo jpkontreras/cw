@@ -4,59 +4,33 @@ declare(strict_types=1);
 
 namespace Colame\Order\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Scout\Searchable;
-use Illuminate\Support\Str;
-use Spatie\ModelStates\HasStates;
-use Colame\Order\States\OrderState;
-use Colame\Order\States\Transitions\ToConfirmed;
-use Colame\Order\States\Transitions\ToCancelled;
 
 /**
- * Order model
- * 
- * Note: Following interface-based architecture, this model only stores foreign keys
- * and does not have cross-module relationships
+ * Order model - Read model projection from events
+ * Matches original order module structure exactly
  */
 class Order extends Model
 {
-    use HasFactory, SoftDeletes, Searchable, HasStates;
+    use SoftDeletes, Searchable;
 
-    /**
-     * The table associated with the model
-     */
-    protected $table = 'orders';
-    
-    /**
-     * The primary key type
-     */
+    protected $table = 'order_es_orders';
     protected $keyType = 'string';
-    
-    /**
-     * Indicates if the IDs are auto-incrementing
-     */
     public $incrementing = false;
 
-    /**
-     * Create a new factory instance for the model.
-     */
-    protected static function newFactory()
-    {
-        return \Colame\Order\Database\Factories\OrderFactory::new();
-    }
-
-    /**
-     * The attributes that are mass assignable
-     */
     protected $fillable = [
-        'id', // Allow setting ID for event-sourced orders
+        'id',
         'session_id',
         'order_number',
         'user_id',
         'location_id',
-        'currency', // ISO 4217 currency code
+        'currency',
+        'menu_id',
+        'menu_version',
         'status',
         'type',
         'priority',
@@ -72,15 +46,16 @@ class Order extends Model
         'discount',
         'total',
         'payment_status',
+        'payment_method',
         'notes',
         'special_instructions',
-        'cancel_reason',
         'cancellation_reason',
-        'payment_method',
+        'metadata',
+        'view_count',
         'modification_count',
         'last_modified_at',
         'last_modified_by',
-        'metadata',
+        'started_at',
         'placed_at',
         'confirmed_at',
         'preparing_at',
@@ -89,25 +64,27 @@ class Order extends Model
         'delivered_at',
         'completed_at',
         'cancelled_at',
+        'cancelled_by',
         'scheduled_at',
     ];
 
-    /**
-     * The attributes that should be cast
-     */
     protected $casts = [
-        'status' => OrderState::class,  // Cast status to OrderState
         'user_id' => 'integer',
         'location_id' => 'integer',
-        'waiter_id' => 'integer',
+        'menu_id' => 'integer',
+        'menu_version' => 'integer',
         'table_number' => 'integer',
-        'subtotal' => 'integer',  // Store as integer (minor units)
-        'tax' => 'integer',       // Store as integer (minor units)
-        'tip' => 'integer',       // Store as integer (minor units)
-        'discount' => 'integer',  // Store as integer (minor units)
-        'total' => 'integer',     // Store as integer (minor units)
-        'modification_count' => 'integer',
+        'waiter_id' => 'integer',
+        'subtotal' => 'integer',
+        'tax' => 'integer',
+        'tip' => 'integer',
+        'discount' => 'integer',
+        'total' => 'integer',
         'metadata' => 'array',
+        'view_count' => 'integer',
+        'modification_count' => 'integer',
+        'last_modified_at' => 'datetime',
+        'started_at' => 'datetime',
         'placed_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'preparing_at' => 'datetime',
@@ -116,150 +93,67 @@ class Order extends Model
         'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'cancelled_by' => 'integer',
         'scheduled_at' => 'datetime',
-        'last_modified_at' => 'datetime',
     ];
 
     /**
-     * Default values for attributes
+     * Order items relationship
      */
-    protected $attributes = [
-        'status' => 'draft',  // Default state string
-        'type' => 'dine_in',
-        'priority' => 'normal',
-        'payment_status' => 'pending',
-        'subtotal' => 0,
-        'tax' => 0,
-        'tip' => 0,
-        'discount' => 0,
-        'total' => 0,
-    ];
-
-
-    /**
-     * Order types
-     */
-    public const TYPE_DINE_IN = 'dine_in';
-    public const TYPE_TAKEOUT = 'takeout';
-    public const TYPE_DELIVERY = 'delivery';
-    public const TYPE_CATERING = 'catering';
-
-    /**
-     * Valid order types
-     */
-    public const VALID_TYPES = [
-        self::TYPE_DINE_IN,
-        self::TYPE_TAKEOUT,
-        self::TYPE_DELIVERY,
-        self::TYPE_CATERING,
-    ];
-
-    /**
-     * Payment statuses
-     */
-    public const PAYMENT_PENDING = 'pending';
-    public const PAYMENT_PARTIAL = 'partial';
-    public const PAYMENT_PAID = 'paid';
-    public const PAYMENT_REFUNDED = 'refunded';
-
-    /**
-     * Boot the model
-     */
-    protected static function boot(): void
+    public function items(): HasMany
     {
-        parent::boot();
-
-        // Auto-generate UUID for new orders (as primary key)
-        // Only generate if no ID is provided (for non-event-sourced orders)
-        static::creating(function (Order $order) {
-            // Only generate UUID if it's not already set
-            // This preserves UUIDs from event sourcing
-            if (!$order->id) {
-                $order->id = Str::uuid()->toString();
-            }
-        });
-
-        // Set placed_at when status changes to placed
-        static::updating(function (Order $order) {
-            if ($order->isDirty('status')) {
-                // Get the string value from the State object
-                $statusValue = $order->status instanceof OrderState ? $order->status->getValue() : $order->status;
-                
-                switch ($statusValue) {
-                    case 'placed':
-                        $order->placed_at = now();
-                        break;
-                    case 'confirmed':
-                        $order->confirmed_at = now();
-                        break;
-                    case 'preparing':
-                        $order->preparing_at = now();
-                        break;
-                    case 'ready':
-                        $order->ready_at = now();
-                        break;
-                    case 'completed':
-                        $order->completed_at = now();
-                        break;
-                    case 'cancelled':
-                        $order->cancelled_at = now();
-                        break;
-                }
-            }
-        });
+        return $this->hasMany(OrderItem::class, 'order_id');
     }
 
     /**
-     * Get the UUID attribute (alias for id since we use UUID as primary key)
-     * This is needed for event sourcing compatibility
+     * Status history relationship
      */
-    public function getUuidAttribute(): string
+    public function statusHistory(): HasMany
     {
-        return $this->id;
-    }
-    
-    /**
-     * Get the order items
-     * Note: This is only for internal module use, not exposed via interfaces
-     */
-    public function items()
-    {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderStatusHistory::class, 'order_id');
     }
 
     /**
-     * Get the session that created this order.
+     * Promotions relationship
      */
-    public function session()
+    public function promotions(): HasMany
     {
-        return $this->belongsTo(OrderSession::class, 'session_id');
+        return $this->hasMany(OrderPromotion::class, 'order_id');
     }
 
     /**
-     * Get the payments for the order.
+     * Session relationship
      */
-    public function payments()
+    public function session(): HasOne
     {
-        return $this->hasMany(PaymentTransaction::class);
+        return $this->hasOne(OrderSession::class, 'converted_order_id');
     }
 
     /**
-     * Get the waiter for the order.
-     * Note: This relationship is commented out to follow strict module boundaries
-     * Use UserRepositoryInterface in services to get waiter details
+     * Get searchable array for Laravel Scout
      */
-    // public function waiter()
-    // {
-    //     return $this->belongsTo(\App\Models\User::class, 'waiter_id');
-    // }
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'order_number' => $this->order_number,
+            'customer_name' => $this->customer_name,
+            'customer_phone' => $this->customer_phone,
+            'customer_email' => $this->customer_email,
+            'status' => $this->status,
+            'type' => $this->type,
+            'total' => $this->total,
+            'location_id' => $this->location_id,
+            'created_at' => $this->created_at,
+        ];
+    }
 
     /**
      * Check if order can be modified
      */
     public function canBeModified(): bool
     {
-        // Use state object method
-        return $this->status->canBeModified();
+        return !in_array($this->status, ['completed', 'cancelled', 'refunded']);
     }
 
     /**
@@ -267,79 +161,6 @@ class Order extends Model
      */
     public function canBeCancelled(): bool
     {
-        // Use state object method
-        return $this->status->canBeCancelled();
-    }
-    
-    /**
-     * Check if order can add items
-     */
-    public function canAddItems(): bool
-    {
-        return $this->status->canAddItems();
-    }
-    
-    /**
-     * Check if payment can be processed
-     */
-    public function canProcessPayment(): bool
-    {
-        return $this->status->canProcessPayment();
-    }
-    
-    /**
-     * Check if order affects kitchen
-     */
-    public function affectsKitchen(): bool
-    {
-        return $this->status->affectsKitchen();
-    }
-    
-    /**
-     * Transition to a new state
-     */
-    public function transitionTo(string $stateClass): self
-    {
-        $this->status->transitionTo($stateClass);
-        return $this;
-    }
-
-    /**
-     * Get the indexable data array for the model.
-     * This is what gets sent to MeiliSearch for indexing.
-     */
-    public function toSearchableArray(): array
-    {
-        return [
-            'id' => $this->id,
-            'order_number' => $this->order_number,
-            'status' => $this->status,
-            'type' => $this->type,
-            'priority' => $this->priority,
-            'customer_name' => $this->customer_name,
-            'customer_phone' => $this->customer_phone,
-            'customer_email' => $this->customer_email,
-            'table_number' => $this->table_number,
-            'location_id' => $this->location_id,
-            'waiter_id' => $this->waiter_id,
-            'total' => $this->total,
-            'payment_status' => $this->payment_status,
-            'notes' => $this->notes,
-            'special_instructions' => $this->special_instructions,
-            'created_at' => $this->created_at?->timestamp,
-            'placed_at' => $this->placed_at?->timestamp,
-            'view_count' => $this->view_count ?? 0,
-        ];
-    }
-
-    /**
-     * Determine if the model should be searchable.
-     */
-    public function shouldBeSearchable(): bool
-    {
-        // Don't index draft orders
-        // Get the string value from the State object
-        $statusValue = $this->status instanceof OrderState ? $this->status->getValue() : $this->status;
-        return $statusValue !== 'draft';
+        return !in_array($this->status, ['completed', 'cancelled', 'refunded']);
     }
 }

@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Colame\Order\Contracts;
 
-use App\Core\Contracts\FilterableUuidRepositoryInterface;
 use Colame\Order\Data\OrderData;
 use Spatie\LaravelData\DataCollection;
 
 /**
- * Order repository interface for domain operations
+ * Order repository interface - Exact match to original module
  */
-interface OrderRepositoryInterface extends FilterableUuidRepositoryInterface
+interface OrderRepositoryInterface
 {
     /**
      * Find order by ID
@@ -77,4 +76,19 @@ interface OrderRepositoryInterface extends FilterableUuidRepositoryInterface
      * Get order statistics for a date range
      */
     public function getStatistics(int $locationId, \DateTimeInterface $from, \DateTimeInterface $to): array;
+
+    /**
+     * Paginate orders with filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 20): mixed;
+
+    /**
+     * Get orders for dashboard
+     */
+    public function getDashboardOrders(int $locationId, array $filters = []): DataCollection;
+
+    /**
+     * Get today's orders for a location
+     */
+    public function getTodaysOrders(int $locationId): DataCollection;
 }

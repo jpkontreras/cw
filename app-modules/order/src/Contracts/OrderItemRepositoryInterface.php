@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Contracts;
 
 use Colame\Order\Data\OrderItemData;
+use Spatie\LaravelData\DataCollection;
 
 /**
  * Order item repository interface
@@ -19,7 +20,7 @@ interface OrderItemRepositoryInterface
     /**
      * Get all items for an order
      */
-    public function getByOrder(int $orderId): array;
+    public function getByOrderId(string $orderId): DataCollection;
 
     /**
      * Create order item
@@ -32,22 +33,22 @@ interface OrderItemRepositoryInterface
     public function update(int $id, array $data): bool;
 
     /**
-     * Update order item status
-     */
-    public function updateStatus(int $id, string $status): bool;
-
-    /**
      * Delete order item
      */
     public function delete(int $id): bool;
 
     /**
-     * Get items by status for an order
+     * Update item status
      */
-    public function getByOrderAndStatus(int $orderId, string $status): array;
+    public function updateStatus(int $id, string $status): bool;
 
     /**
-     * Bulk update items status
+     * Update kitchen status
      */
-    public function bulkUpdateStatus(array $itemIds, string $status): int;
+    public function updateKitchenStatus(int $id, string $status): bool;
+
+    /**
+     * Get items by kitchen status
+     */
+    public function getByKitchenStatus(string $orderId, string $status): DataCollection;
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Colame\Order\Repositories;
 
 use App\Core\Traits\ValidatesPagination;
+use App\Core\Data\PaginatedResourceData;
 use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Data\OrderData;
 use Colame\Order\Models\Order;
@@ -14,11 +15,13 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
 
 /**
- * Order repository implementation
+ * Order repository implementation for event-sourced orders
+ * Read-only operations on projected read models
  */
 class OrderRepository implements OrderRepositoryInterface
 {
     use ValidatesPagination;
+
     /**
      * Find order by ID
      */
@@ -30,7 +33,7 @@ class OrderRepository implements OrderRepositoryInterface
             return null;
         }
 
-        return $this->modelToData($order, true);
+        return OrderData::fromModel($order);
     }
 
     /**
@@ -39,7 +42,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function findOrFail(string $id): OrderData
     {
         $order = Order::with(['items'])->findOrFail($id);
-        return $this->modelToData($order, true);
+        return OrderData::fromModel($order);
     }
 
     /**
@@ -47,7 +50,7 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function all(): DataCollection
     {
-        return OrderData::collect(Order::with(['items'])->get(), DataCollection::class);
+        return OrderData::collection(Order::with(['items'])->get());
     }
 
     /**
@@ -55,12 +58,11 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function getByStatus(string $status): DataCollection
     {
-        return OrderData::collect(
+        return OrderData::collection(
             Order::with(['items'])
                 ->where('status', $status)
                 ->orderBy('created_at', 'desc')
-                ->get(),
-            DataCollection::class
+                ->get()
         );
     }
 
@@ -69,11 +71,10 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function getByLocation(int $locationId): DataCollection
     {
-        return OrderData::collect(
+        return OrderData::collection(
             Order::where('location_id', $locationId)
                 ->orderBy('created_at', 'desc')
-                ->get(),
-            DataCollection::class
+                ->get()
         );
     }
 
@@ -82,59 +83,54 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function getByUser(int $userId): DataCollection
     {
-        return OrderData::collect(
+        return OrderData::collection(
             Order::where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
-                ->get(),
-            DataCollection::class
+                ->get()
         );
     }
 
     /**
      * Create new order
-     * @deprecated Use EventSourcedOrderService instead
-     * @throws \RuntimeException
+     * @throws \RuntimeException Event-sourced orders cannot be created directly
      */
     public function create(array $data): OrderData
     {
         throw new \RuntimeException(
-            'Direct order creation is not allowed. Use EventSourcedOrderService to create orders through event sourcing.'
+            'Orders must be created through event sourcing. Use OrderSession aggregate to initiate orders.'
         );
     }
 
     /**
      * Update order
-     * @deprecated Use EventSourcedOrderService instead
-     * @throws \RuntimeException
+     * @throws \RuntimeException Event-sourced orders cannot be updated directly
      */
     public function update(string $id, array $data): bool
     {
         throw new \RuntimeException(
-            'Direct order updates are not allowed. Use EventSourcedOrderService to modify orders through event sourcing.'
+            'Orders must be updated through event sourcing. Use OrderSession aggregate to modify orders.'
         );
     }
 
     /**
      * Update order status
-     * @deprecated Use EventSourcedOrderService instead
-     * @throws \RuntimeException
+     * @throws \RuntimeException Event-sourced orders cannot have status updated directly
      */
     public function updateStatus(string $id, string $status, ?string $reason = null): bool
     {
         throw new \RuntimeException(
-            'Direct status updates are not allowed. Use EventSourcedOrderService to transition order status through event sourcing.'
+            'Order status must be updated through event sourcing. Use OrderSession aggregate for status transitions.'
         );
     }
 
     /**
      * Delete order
-     * @deprecated Orders should not be deleted, only cancelled
-     * @throws \RuntimeException
+     * @throws \RuntimeException Orders should not be deleted
      */
     public function delete(string $id): bool
     {
         throw new \RuntimeException(
-            'Order deletion is not allowed. Orders should be cancelled instead of deleted to maintain audit trail.'
+            'Orders cannot be deleted. Use cancellation through event sourcing instead.'
         );
     }
 
@@ -161,7 +157,7 @@ class OrderRepository implements OrderRepositoryInterface
             ->orderBy('placed_at', 'asc')
             ->get();
         
-        return OrderData::collect($orders, DataCollection::class);
+        return OrderData::collection($orders);
     }
 
     /**
@@ -195,56 +191,178 @@ class OrderRepository implements OrderRepositoryInterface
     }
 
     /**
-     * Convert model to data transfer object
+     * Paginate orders with filters
      */
-    private function modelToData(Order $order, bool $includeItems = false): OrderData
+    public function paginateWithFilters(array $filters, int $perPage = 20): mixed
     {
-        if ($includeItems && !$order->relationLoaded('items')) {
-            $order->load('items');
-        }
+        $perPage = $this->validatePerPage($perPage);
         
-        return OrderData::fromModel($order);
+        $query = Order::query();
+        
+        // Always load items relation
+        $query->with(['items']);
+
+        // Apply filters
+        $this->applyFilters($query, $filters);
+
+        return $query->paginate($perPage);
+    }
+    
+    /**
+     * Get paginated orders with metadata
+     */
+    public function getPaginatedOrders(array $filters, int $perPage = 20): PaginatedResourceData
+    {
+        $paginator = $this->paginateWithFilters($filters, $perPage);
+        
+        // Generate metadata for the resource
+        $metadata = $this->getResourceMetadata();
+        
+        return PaginatedResourceData::fromPaginator(
+            $paginator,
+            OrderData::class,
+            $metadata
+        );
+    }
+    
+    /**
+     * Get resource metadata for data table
+     */
+    private function getResourceMetadata(): array
+    {
+        return [
+            'columns' => [
+                'orderNumber' => [
+                    'key' => 'orderNumber',
+                    'label' => 'Order #',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'status' => [
+                    'key' => 'status',
+                    'label' => 'Status',
+                    'type' => 'badge',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'draft', 'label' => 'Draft'],
+                            ['value' => 'started', 'label' => 'Started'],
+                            ['value' => 'placed', 'label' => 'Placed'],
+                            ['value' => 'confirmed', 'label' => 'Confirmed'],
+                            ['value' => 'preparing', 'label' => 'Preparing'],
+                            ['value' => 'ready', 'label' => 'Ready'],
+                            ['value' => 'completed', 'label' => 'Completed'],
+                            ['value' => 'cancelled', 'label' => 'Cancelled'],
+                        ],
+                    ],
+                ],
+                'type' => [
+                    'key' => 'type',
+                    'label' => 'Type',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'dine_in', 'label' => 'Dine In'],
+                            ['value' => 'takeout', 'label' => 'Takeout'],
+                            ['value' => 'delivery', 'label' => 'Delivery'],
+                        ],
+                    ],
+                ],
+                'customerName' => [
+                    'key' => 'customerName',
+                    'label' => 'Customer',
+                    'type' => 'text',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'totalAmount' => [
+                    'key' => 'totalAmount',
+                    'label' => 'Total',
+                    'type' => 'currency',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+                'paymentStatus' => [
+                    'key' => 'paymentStatus',
+                    'label' => 'Payment',
+                    'type' => 'badge',
+                    'sortable' => true,
+                    'visible' => true,
+                    'filter' => [
+                        'type' => 'select',
+                        'options' => [
+                            ['value' => 'pending', 'label' => 'Pending'],
+                            ['value' => 'paid', 'label' => 'Paid'],
+                            ['value' => 'refunded', 'label' => 'Refunded'],
+                        ],
+                    ],
+                ],
+                'createdAt' => [
+                    'key' => 'createdAt',
+                    'label' => 'Created',
+                    'type' => 'date',
+                    'sortable' => true,
+                    'visible' => true,
+                ],
+            ],
+            'searchable' => ['orderNumber', 'customerName', 'customerPhone'],
+            'defaultSort' => '-createdAt',
+            'actions' => ['view', 'edit', 'cancel'],
+        ];
     }
 
     /**
-     * Transform a model to DTO
-     * 
-     * Implementation of BaseRepositoryInterface::toData
+     * Get orders for dashboard
      */
-    public function toData(mixed $model): ?Data
+    public function getDashboardOrders(int $locationId, array $filters = []): DataCollection
     {
-        if (!$model instanceof Order) {
-            return null;
+        $query = Order::where('location_id', $locationId);
+        
+        // Apply dashboard-specific filters
+        if (!empty($filters['status'])) {
+            $query->whereIn('status', (array) $filters['status']);
         }
         
-        return $this->modelToData($model);
+        if (!empty($filters['type'])) {
+            $query->whereIn('type', (array) $filters['type']);
+        }
+        
+        // Default to recent orders
+        $query->orderBy('created_at', 'desc')
+              ->limit($filters['limit'] ?? 50);
+        
+        return OrderData::collection($query->get());
     }
 
     /**
-     * Get paginated entities
+     * Get today's orders for a location
      */
-    public function paginate(
-        int $perPage = 15,
-        array $columns = ['*'],
-        string $pageName = 'page',
-        ?int $page = null
-    ): LengthAwarePaginator {
-        return Order::query()
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage, $columns, $pageName, $page);
+    public function getTodaysOrders(int $locationId): DataCollection
+    {
+        return OrderData::collection(
+            Order::where('location_id', $locationId)
+                ->whereDate('created_at', today())
+                ->orderBy('created_at', 'desc')
+                ->get()
+        );
     }
 
     /**
      * Apply filters to query
      */
-    public function applyFilters(Builder $query, array $filters): Builder
+    private function applyFilters(Builder $query, array $filters): Builder
     {
         // Status filter
         if (!empty($filters['status'])) {
             if (is_array($filters['status'])) {
                 $query->whereIn('status', $filters['status']);
             } elseif (str_contains($filters['status'], ',')) {
-                // Handle comma-separated values
                 $statuses = array_map('trim', explode(',', $filters['status']));
                 $query->whereIn('status', $statuses);
             } else {
@@ -257,7 +375,6 @@ class OrderRepository implements OrderRepositoryInterface
             if (is_array($filters['type'])) {
                 $query->whereIn('type', $filters['type']);
             } elseif (str_contains($filters['type'], ',')) {
-                // Handle comma-separated values
                 $types = array_map('trim', explode(',', $filters['type']));
                 $query->whereIn('type', $types);
             } else {
@@ -267,19 +384,14 @@ class OrderRepository implements OrderRepositoryInterface
 
         // Location filter
         if (!empty($filters['locationId'])) {
-            if (is_array($filters['locationId'])) {
-                $query->whereIn('location_id', $filters['locationId']);
-            } else {
-                $query->where('location_id', $filters['locationId']);
-            }
+            $query->where('location_id', $filters['locationId']);
         }
 
-        // Date filter
+        // Date filters
         if (!empty($filters['date'])) {
             $this->applyDateFilter($query, $filters['date']);
         }
 
-        // Date range filter
         if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
             $query->whereBetween('created_at', [$filters['date_from'], $filters['date_to']]);
         }
@@ -295,135 +407,19 @@ class OrderRepository implements OrderRepositoryInterface
             });
         }
 
-        // Column-specific text filters
-        if (!empty($filters['orderNumber'])) {
-            $query->whereRaw('LOWER(order_number) LIKE LOWER(?)', ["%{$filters['orderNumber']}%"]);
-        }
-
-        if (!empty($filters['customerName'])) {
-            $query->whereRaw('LOWER(customer_name) LIKE LOWER(?)', ["%{$filters['customerName']}%"]);
-        }
-
         // Payment status filter
         if (!empty($filters['paymentStatus'])) {
-            if (is_array($filters['paymentStatus'])) {
-                $query->whereIn('payment_status', $filters['paymentStatus']);
-            } else {
-                $query->where('payment_status', $filters['paymentStatus']);
-            }
+            $query->where('payment_status', $filters['paymentStatus']);
         }
 
         // Sort
         if (!empty($filters['sort'])) {
             $this->applySorting($query, $filters['sort']);
         } else {
-            // Default sort
             $query->orderBy('created_at', 'desc');
         }
 
         return $query;
-    }
-
-    /**
-     * Get paginated entities with filters
-     */
-    public function paginateWithFilters(
-        array $filters = [],
-        int $perPage = 15,
-        array $columns = ['*'],
-        string $pageName = 'page',
-        ?int $page = null
-    ): LengthAwarePaginator {
-        // Validate perPage parameter
-        $perPage = $this->validatePerPage($perPage);
-        
-        $query = Order::query();
-        
-        // Always load items relation for order listing
-        $query->with(['items']);
-
-        $this->applyFilters($query, $filters);
-
-        return $query->paginate($perPage, $columns, $pageName, $page);
-    }
-
-    /**
-     * Get available filter options for a field
-     */
-    public function getFilterOptions(string $field): array
-    {
-        switch ($field) {
-            case 'status':
-                return [
-                    ['value' => 'draft', 'label' => 'Draft'],
-                    ['value' => 'placed', 'label' => 'Placed'],
-                    ['value' => 'confirmed', 'label' => 'Confirmed'],
-                    ['value' => 'preparing', 'label' => 'Preparing'],
-                    ['value' => 'ready', 'label' => 'Ready'],
-                    ['value' => 'delivering', 'label' => 'Delivering'],
-                    ['value' => 'delivered', 'label' => 'Delivered'],
-                    ['value' => 'completed', 'label' => 'Completed'],
-                    ['value' => 'cancelled', 'label' => 'Cancelled'],
-                    ['value' => 'refunded', 'label' => 'Refunded'],
-                ];
-                
-            case 'type':
-                return [
-                    ['value' => 'dine_in', 'label' => 'Dine In'],
-                    ['value' => 'takeout', 'label' => 'Takeout'],
-                    ['value' => 'delivery', 'label' => 'Delivery'],
-                    ['value' => 'catering', 'label' => 'Catering'],
-                ];
-                
-            case 'payment_status':
-                return [
-                    ['value' => 'pending', 'label' => 'Pending'],
-                    ['value' => 'partial', 'label' => 'Partial'],
-                    ['value' => 'paid', 'label' => 'Paid'],
-                    ['value' => 'refunded', 'label' => 'Refunded'],
-                ];
-                
-            default:
-                return [];
-        }
-    }
-
-    /**
-     * Get searchable fields
-     */
-    public function getSearchableFields(): array
-    {
-        return ['order_number', 'customer_name', 'customer_phone', 'customer_email'];
-    }
-
-    /**
-     * Get sortable fields
-     */
-    public function getSortableFields(): array
-    {
-        return [
-            'orderNumber',
-            'customerName',
-            'status',
-            'type',
-            'totalAmount',
-            'paymentStatus',
-            'createdAt',
-            'updatedAt',
-            'placedAt',
-            'completedAt',
-        ];
-    }
-
-    /**
-     * Get default sort configuration
-     */
-    public function getDefaultSort(): array
-    {
-        return [
-            'field' => 'created_at',
-            'direction' => 'desc',
-        ];
     }
 
     /**
@@ -459,7 +455,6 @@ class OrderRepository implements OrderRepositoryInterface
      */
     private function applySorting(Builder $query, string $sort): void
     {
-        // Parse sort string (e.g., "-createdAt,orderNumber")
         $sorts = explode(',', $sort);
         
         foreach ($sorts as $sortField) {
@@ -474,45 +469,8 @@ class OrderRepository implements OrderRepositoryInterface
                 $sortField = substr($sortField, 1);
             }
             
-            // laravel-data will handle camelCase to snake_case mapping
-            if (in_array($sortField, $this->getSortableFields())) {
-                // Convert camelCase to snake_case for database query
-                $dbField = \Illuminate\Support\Str::snake($sortField);
-                $query->orderBy($dbField, $direction);
-            }
+            $dbField = \Illuminate\Support\Str::snake($sortField);
+            $query->orderBy($dbField, $direction);
         }
-    }
-
-    /**
-     * Check if relations should be included
-     */
-    private function shouldIncludeRelations(array $filters): bool
-    {
-        return !empty($filters['include']) && in_array('items', (array) $filters['include']);
-    }
-
-    /**
-     * Search orders with term and filters
-     */
-    public function search(string $term, array $filters = []): LengthAwarePaginator
-    {
-        $query = Order::query();
-
-        // Apply search term
-        if (!empty($term)) {
-            $query->where(function (Builder $query) use ($term) {
-                $query->where('order_number', 'like', "%{$term}%")
-                      ->orWhere('customer_name', 'like', "%{$term}%")
-                      ->orWhere('customer_phone', 'like', "%{$term}%")
-                      ->orWhere('customer_email', 'like', "%{$term}%");
-            });
-        }
-
-        // Apply additional filters
-        $query = $this->applyFilters($query, $filters);
-
-        $perPage = $this->validatePerPage($filters['per_page'] ?? 20);
-        
-        return $query->paginate($perPage);
     }
 }

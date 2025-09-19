@@ -1,54 +1,30 @@
 <?php
 
+use Colame\Order\Http\Controllers\Api\OrderSlipController;
+use Colame\Order\Http\Controllers\Api\OrderSessionController;
+use Colame\Order\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
-use Colame\Order\Http\Controllers\Api\OrderFlowController;
 
-// Session-based order flow (new comprehensive tracking)
-Route::prefix('orders/session')->group(function () {
-    // Start new session (rate limited to prevent abuse)
-    Route::post('/start', [OrderFlowController::class, 'initiateSession'])
-        ->middleware('throttle:10,1'); // 10 requests per minute per IP
-    
-    // Session operations
-    Route::prefix('{orderUuid}')->group(function () {
-        // Cart operations
-        Route::post('/cart/add', [OrderFlowController::class, 'addToCart']);
-        Route::post('/cart/remove', [OrderFlowController::class, 'removeFromCart']);
-        Route::post('/cart/update', [OrderFlowController::class, 'updateCartItem']);
-        
-        // Session management
-        Route::get('/state', [OrderFlowController::class, 'getSessionState']);
-        Route::post('/recover', [OrderFlowController::class, 'recoverSession']);
-        Route::post('/save-draft', [OrderFlowController::class, 'saveDraft']);
-        
-        // Convert to order
-        Route::post('/convert', [OrderFlowController::class, 'convertToOrder']);
-    });
-});
+// API Routes for Orders Module
+// These routes are loaded under /api/v1/orders prefix
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Order Session Management
+    Route::post('/session/start', [OrderSessionController::class, 'start'])->name('session.start');
+    Route::post('/session/{uuid}/sync', [OrderSessionController::class, 'sync'])->name('session.sync');
+    Route::post('/session/{uuid}/add-item', [OrderSessionController::class, 'addItem'])->name('session.add-item');
+    Route::delete('/session/{uuid}/items/{itemIndex}', [OrderSessionController::class, 'removeItem'])->name('session.remove-item');
+    Route::post('/session/{uuid}/checkout', [OrderSessionController::class, 'checkout'])->name('session.checkout');
 
-// Legacy flow (kept for backward compatibility)
-Route::prefix('orders/flow')->group(function () {
-    // Start new order
-    Route::post('/start', [OrderFlowController::class, 'startOrder']);
-    
-    // Order operations
-    Route::prefix('{orderUuid}')->group(function () {
-        // Add/modify items
-        Route::post('/items', [OrderFlowController::class, 'addItems']);
-        
-        // Apply/remove promotions
-        Route::post('/promotion', [OrderFlowController::class, 'applyPromotion']);
-        
-        // Add tip
-        Route::post('/tip', [OrderFlowController::class, 'addTip']);
-        
-        // Confirm order
-        Route::post('/confirm', [OrderFlowController::class, 'confirmOrder']);
-        
-        // Cancel order
-        Route::post('/cancel', [OrderFlowController::class, 'cancelOrder']);
-        
-        // Get current state (for polling/recovery)
-        Route::get('/state', [OrderFlowController::class, 'getOrderState']);
-    });
+    // Order Management
+    Route::get('/', [OrderController::class, 'index'])->name('index');
+    Route::get('/{orderId}', [OrderController::class, 'show'])->name('show');
+    Route::post('/{orderId}/confirm', [OrderController::class, 'confirm'])->name('confirm');
+    Route::post('/{orderId}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+    Route::post('/{orderId}/status', [OrderController::class, 'changeStatus'])->name('change-status');
+    Route::get('/{orderId}/state-at-timestamp', [OrderController::class, 'getStateAtTimestamp'])->name('state-at-timestamp');
+
+    // Order Slip (barcode scanning)
+    Route::post('/slip/scan', [OrderSlipController::class, 'scan'])->name('slip.scan');
+    Route::post('/{orderId}/slip/print', [OrderSlipController::class, 'print'])->name('slip.print');
+    Route::get('/slip/print-queue', [OrderSlipController::class, 'getPrintQueue'])->name('slip.print-queue');
 });

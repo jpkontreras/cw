@@ -5,6 +5,7 @@ import type { Order, OrderDetailPageProps } from '@/modules/order';
 import { OrderNumberDisplay } from '@/modules/order/components/order-number-display';
 import { EventStream } from '@/modules/order/components/event-stream';
 import { OrderStateViewer } from '@/modules/order/components/order-state-viewer';
+import { EventDetailView } from '@/modules/order/components/event-detail-view';
 import { OrderActionRecorder } from '@/modules/order/components/order-action-recorder';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -77,7 +78,6 @@ export default function ShowOrder({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [eventStream] = useState<EventStreamData | null>(initialEventStreamData || null);
   const [selectedEvent, setSelectedEvent] = useState<OrderEvent | null>(null);
-  // const [currentEventIndex, setCurrentEventIndex] = useState(0); // Unused - was for timeline controls
   const [currentTimestamp, setCurrentTimestamp] = useState<Date | null>(null);
   const [orderState, setOrderState] = useState<Record<string, unknown> | null>(initialEventStreamData?.currentState || null);
   const [isActionRecorderOpen, setIsActionRecorderOpen] = useState(false);
@@ -86,77 +86,117 @@ export default function ShowOrder({
   const [stateData, setStateData] = useState<StateTransitionData | null>(initialStateData || null);
   
   const order = initialOrderData as Order;
-  
+
+  // Calculate state up to a specific event
+  const calculateStateAtEvent = useCallback((targetEvent: OrderEvent, events: OrderEvent[]) => {
+    // Start with initial state
+    let status = 'draft';
+    const items: any[] = [];
+    let customerName = null;
+    let customerPhone = null;
+    let itemCounter = 0; // Counter for unique IDs
+
+    // Find all events up to and including the target event
+    const targetIndex = events.findIndex(e => e.id === targetEvent.id);
+    const eventsToProcess = events.slice(targetIndex).reverse(); // Reverse to process chronologically
+
+    // Process each event to build up the state
+    for (const evt of eventsToProcess) {
+      const eventType = evt.type;
+      const props = evt.properties;
+
+      switch (eventType) {
+        case 'OrderStarted':
+        case 'SessionInitiated':
+          status = 'started';
+          break;
+
+        case 'ItemAddedToOrder':
+        case 'CartItemAdded':
+        case 'ItemAddedToCart':
+          // Add item to the order with unique ID
+          itemCounter++;
+          const itemId = props.itemId || props.item_id;
+          items.push({
+            id: itemId ? `item-${itemId}-${itemCounter}` : `item-${itemCounter}`,
+            itemId: itemId || itemCounter,
+            name: props.itemName || props.item_name || 'Item',
+            quantity: props.quantity || 1,
+            unitPrice: props.unitPrice || props.unit_price || 0,
+          });
+          break;
+
+        case 'ItemRemovedFromCart':
+        case 'CartItemRemoved':
+          // Remove last item (simplified)
+          if (items.length > 0) {
+            items.pop();
+          }
+          break;
+
+        case 'CustomerInfoEntered':
+          if (props.fields) {
+            customerName = props.fields.name || customerName;
+            customerPhone = props.fields.phone || customerPhone;
+          }
+          break;
+
+        case 'SessionConverted':
+        case 'OrderCheckedOut':
+          status = 'placed';
+          break;
+
+        case 'OrderStatusChanged':
+          // Update status from the event
+          status = props.toStatus || props.to_status || props.status || status;
+          break;
+      }
+    }
+
+    return {
+      status,
+      items,
+      customerName,
+      customerPhone,
+      _isHistorical: targetIndex > 0,
+      _eventCount: eventsToProcess.length,
+      _timestamp: targetEvent.createdAt,
+    };
+  }, []);
+
   // Initialize with provided data (events are in reverse order - latest first)
   useEffect(() => {
     if (initialEventStreamData && initialEventStreamData.events.length > 0) {
       const latestEvent = initialEventStreamData.events[0]; // First event is the latest
       setSelectedEvent(latestEvent);
-      // setCurrentEventIndex(0); // Unused - was for timeline controls
       setCurrentTimestamp(new Date(latestEvent.createdAt));
+
+      // Calculate initial state based on latest event
+      const calculatedState = calculateStateAtEvent(latestEvent, initialEventStreamData.events);
+      setOrderState({
+        ...initialEventStreamData.currentState,
+        ...calculatedState,
+      });
     }
-  }, [initialEventStreamData]);
-  
-  // Handle event selection
+  }, [initialEventStreamData, calculateStateAtEvent]);
+
+  // Handle event selection with time travel
   const handleEventSelect = useCallback((event: OrderEvent) => {
     setSelectedEvent(event);
-    const index = eventStream?.events.findIndex(e => e.id === event.id) ?? 0;
-    // setCurrentEventIndex(index); // Unused - was for timeline controls
-    setCurrentTimestamp(new Date(event.createdAt));
-    
-    // For now, we'll compute the state locally from the event stream
-    // This is more efficient than making a server request for each selection
-    // The server already provided us with the current state and all events
-    if (eventStream && index >= 0 && index < eventStream.events.length) {
-      // If selecting the latest event (first in array), use the current state
-      if (index === 0) {
-        setOrderState(eventStream.currentState);
-      } else {
-        // For historical events, we could compute the state at that point
-        // For now, just show the event data
-        setOrderState({
-          ...eventStream.currentState,
-          // Mark as historical view
-          _isHistorical: true,
-          // _eventIndex: index, // Unused - was for timeline controls
-        });
-      }
-    }
-  }, [eventStream]);
-  
-  // These were for timeline controls - keeping commented for potential future use
-  // const handleEventIndexChange = useCallback((index: number) => {
-  //   if (!eventStream) return;
-  //   
-  //   const event = eventStream.events[index];
-  //   if (event) {
-  //     handleEventSelect(event);
-  //   }
-  // }, [eventStream, handleEventSelect]);
-  // 
-  // const handleTimeTravel = useCallback(async (timestamp: Date) => {
-  //   setCurrentTimestamp(timestamp);
-  //   
-  //   // Find the event closest to this timestamp
-  //   if (eventStream) {
-  //     const targetTime = timestamp.getTime();
-  //     let closestEvent = eventStream.events[0];
-  //     let minDiff = Math.abs(new Date(closestEvent.createdAt).getTime() - targetTime);
-  //     
-  //     for (const event of eventStream.events) {
-  //       const eventTime = new Date(event.createdAt).getTime();
-  //       const diff = Math.abs(eventTime - targetTime);
-  //       if (diff < minDiff) {
-  //         minDiff = diff;
-  //         closestEvent = event;
-  //       }
-  //     }
-  //     
-  //     if (closestEvent) {
-  //       handleEventSelect(closestEvent);
-  //     }
-  //   }
-  // }, [eventStream, handleEventSelect]);
+    const eventTimestamp = new Date(event.createdAt);
+    setCurrentTimestamp(eventTimestamp);
+
+    if (!eventStream) return;
+
+    // Calculate the state at this point in history
+    const calculatedState = calculateStateAtEvent(event, eventStream.events);
+
+    // Merge with current state for other properties
+    setOrderState({
+      ...eventStream.currentState,
+      ...calculatedState,
+    });
+  }, [eventStream, calculateStateAtEvent]);
   
   // Handle refresh
   const handleRefresh = () => {
@@ -165,13 +205,6 @@ export default function ShowOrder({
       onFinish: () => setIsRefreshing(false),
     });
   };
-  
-  // Update state data when order status changes (only if we need to refresh)
-  useEffect(() => {
-    // The state data is provided by the server on page load
-    // We only need to update it if the order status changes through a page refresh
-    // For now, we rely on the server-provided data
-  }, [order.status]);
   
   // Get the icon component from the icon name
   const getIconComponent = (iconName: string): LucideIcon => {
@@ -199,8 +232,8 @@ export default function ShowOrder({
     return {
       value: nextState.value,
       label: nextState.action_label,
-      icon: getIconComponent(nextState.icon),
-      color: `text-${nextState.color}-600`
+      icon: getIconComponent(nextState.icon || 'check-circle'),
+      color: `text-${nextState.color || 'blue'}-600`
     };
   };
   
@@ -208,29 +241,13 @@ export default function ShowOrder({
   const handleQuickStatusChange = (newStatus: string) => {
     setIsChangingStatus(true);
     
-    // Special handling for confirming orders - check if we're transitioning to confirmed
-    const eventType = (newStatus === 'confirmed') ? 'confirm' : 'change_status';
-    
-    const payload: any = {
-      eventType: eventType,
-    };
-    
-    // Add appropriate data based on event type
-    if (eventType === 'confirm') {
-      // For confirmation, include payment method (default to cash)
-      payload.paymentMethod = order.paymentMethod || 'cash';
-    } else if (eventType === 'change_status') {
-      // For regular status changes
-      payload.newStatus = newStatus;
-      payload.reason = 'Quick status update';
-    }
-    
-    router.post(`/orders/${order.id}/events/add`, payload, {
+    router.post(`/orders/${order.id}/status`, {
+      status: newStatus,
+    }, {
       preserveScroll: true,
-      preserveState: false, // Allow state to refresh with new order data
+      preserveState: false,
       onSuccess: () => {
         setIsChangingStatus(false);
-        // Page will be refreshed with updated order data
       },
       onError: (errors) => {
         setIsChangingStatus(false);
@@ -245,7 +262,7 @@ export default function ShowOrder({
   
   return (
     <AppLayout>
-      <Head title={`Order ${order.orderNumber || 'Event Stream'}`} />
+      <Head title={`Order ${order.orderNumber || order.id}`} />
       
       <div className="flex h-screen flex-col">
         {/* Header - Responsive Padding */}
@@ -262,7 +279,7 @@ export default function ShowOrder({
             <div className="flex-1 sm:flex-initial">
               <OrderNumberDisplay order={order} size="lg" />
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                Event Log • {eventStream?.statistics.totalEvents || 0} events
+                Order Details • {eventStream?.statistics?.totalEvents || 0} events
               </p>
             </div>
           </div>
@@ -283,7 +300,7 @@ export default function ShowOrder({
                       className="hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      <span>Cancel Order</span>
+                      <span className="hidden sm:inline">Cancel Order</span>
                     </Button>
                   )}
                   
@@ -350,8 +367,8 @@ export default function ShowOrder({
         {/* Main Content - Responsive Layout */}
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           {/* Event Stream - Responsive Width */}
-          <div className="w-full lg:w-96 xl:w-[28rem] flex-shrink-0 border-b lg:border-b-0 lg:border-r">
-            {eventStream && eventStream.events.length > 0 ? (
+          <div className="w-full lg:w-auto lg:max-w-md flex-shrink-0 border-b lg:border-b-0 lg:border-r">
+            {eventStream && eventStream.events && eventStream.events.length > 0 ? (
               <EventStream
                 events={eventStream.events}
                 selectedEvent={selectedEvent}
@@ -365,7 +382,7 @@ export default function ShowOrder({
                     onClick={() => setIsActionRecorderOpen(true)}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Record Action
+                    Add Action
                   </Button>
                 }
               />
@@ -379,13 +396,42 @@ export default function ShowOrder({
             )}
           </div>
           
-          {/* Order State Viewer - Responsive */}
+          {/* Order Detail View - Shows event details when selected */}
           <div className="flex-1 overflow-hidden min-h-0">
-            <OrderStateViewer
-              orderState={orderState}
-              currentTimestamp={currentTimestamp || undefined}
-              className="h-full"
-            />
+            {selectedEvent ? (
+              <EventDetailView
+                event={selectedEvent}
+                orderState={{
+                  ...orderState,
+                  order: order,
+                  items: orderState?.items || order.items || [],
+                  customerName: orderState?.customerName || order.customerName,
+                  customerPhone: orderState?.customerPhone || order.customerPhone,
+                  status: orderState?.status || order.status,
+                  subtotal: orderState?.subtotal || order.subtotal || 0,
+                  total: orderState?.total || order.totalAmount || 0,
+                  discount: orderState?.promotionAmount || 0,
+                  tip: orderState?.tipAmount || 0,
+                  _isHistorical: orderState?._isHistorical || false,
+                  _eventCount: orderState?._eventCount,
+                }}
+                isHistorical={!!orderState?._isHistorical}
+                className="h-full"
+              />
+            ) : (
+              <OrderStateViewer
+                orderState={orderState || {
+                  order: order,
+                  items: order.items,
+                  user: order.user,
+                  location: order.orderLocation,
+                  payments: order.payments || [],
+                  offers: order.offers || [],
+                }}
+                currentTimestamp={currentTimestamp || undefined}
+                className="h-full"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -394,7 +440,7 @@ export default function ShowOrder({
       <OrderActionRecorder
         isOpen={isActionRecorderOpen}
         onClose={() => setIsActionRecorderOpen(false)}
-        orderUuid={order.uuid || ''}
+        orderUuid={order.uuid || order.id}
         orderId={typeof order.id === 'number' ? order.id : parseInt(order.id)}
         orderStatus={order.status}
         orderTotal={order.totalAmount || 0}

@@ -4,387 +4,149 @@ declare(strict_types=1);
 
 namespace Colame\Order\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Core\Traits\HandlesPaginationBounds;
-use Colame\Order\Contracts\OrderServiceInterface;
-use Colame\Order\Data\CreateOrderData;
-use Colame\Order\Data\UpdateOrderData;
-use Colame\Order\Exceptions\OrderException;
-use Colame\Order\Exceptions\OrderNotFoundException;
-use Illuminate\Http\JsonResponse;
+use Colame\Order\Services\OrderService;
+use Colame\Order\Data\ChangeOrderStatusData;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
+use Carbon\Carbon;
 
-/**
- * API controller for orders (JSON responses)
- */
-class OrderController extends Controller
+class OrderController
 {
-    use HandlesPaginationBounds;
     public function __construct(
-        private OrderServiceInterface $orderService
+        private OrderService $orderService
     ) {}
 
-    /**
-     * Display a listing of orders
-     */
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['status', 'type', 'location_id', 'date', 'search', 'sort', 'page']);
-        $perPage = (int) $request->input('per_page', 20);
-        
-        // Special case for kitchen display
-        if ($request->input('status') === 'kitchen') {
-            $locationId = $request->input('location_id', $request->user()->location_id ?? 1);
-            $orders = $this->orderService->getKitchenOrders($locationId);
-            
-            return response()->json([
-                'data' => $orders->toArray(),
-                'meta' => [
-                    'total' => $orders->count(),
-                    'location_id' => $locationId,
-                ],
-            ]);
-        }
-        
-        // Get paginated orders with filters and metadata
-        $paginatedData = $this->orderService->getPaginatedOrders($filters, $perPage);
-        $responseData = $paginatedData->toArray();
-        
-        // Handle out-of-bounds page numbers for API
-        if ($errorResponse = $this->handleOutOfBoundsPaginationApi($responseData['pagination'])) {
-            return $errorResponse;
-        }
-        
-        // Format response in JSON:API compliant structure
+        $filters = [
+            'status' => $request->input('status'),
+            'search' => $request->input('search'),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+        ];
+
+        $perPage = $request->input('per_page', 15);
+        $orders = $this->orderService->getPaginatedOrders($filters, $perPage);
+
         return response()->json([
-            'data' => $responseData['data'],
-            'meta' => array_merge(
-                $responseData['pagination'],
-                [
-                    'resource' => $responseData['metadata'],
-                ]
-            ),
-            'links' => [
-                'self' => request()->fullUrl(),
-                'first' => $responseData['pagination']['first_page_url'],
-                'last' => $responseData['pagination']['last_page_url'],
-                'prev' => $responseData['pagination']['prev_page_url'],
-                'next' => $responseData['pagination']['next_page_url'],
-            ],
+            'success' => true,
+            'data' => $orders->toArray()
         ]);
     }
 
-    /**
-     * Store a newly created order
-     */
-    public function store(Request $request): JsonResponse
+    public function show(string $orderId): JsonResponse
     {
-        try {
-            $data = CreateOrderData::from($request->all());
-            $order = $this->orderService->createOrder($data);
+        $order = $this->orderService->findOrderByIdOrNumber($orderId);
 
+        if (!$order) {
             return response()->json([
-                'data' => $order,
-                'message' => 'Order created successfully',
-            ], Response::HTTP_CREATED);
-        } catch (OrderException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'SERVER_ERROR',
-                    'message' => 'An unexpected error occurred',
-                ],
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
         }
-    }
 
-    /**
-     * Display the specified order
-     */
-    public function show(string $id): JsonResponse
-    {
-        try {
-            $orderWithRelations = $this->orderService->getOrderWithRelations($id);
-
-            if (!$orderWithRelations) {
-                throw new OrderNotFoundException("Order {$id} not found");
-            }
-
-            return response()->json([
-                'data' => $orderWithRelations,
-            ]);
-        } catch (OrderNotFoundException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
-        }
-    }
-
-    /**
-     * Update the specified order
-     */
-    public function update(Request $request, string $id): JsonResponse
-    {
-        try {
-            $data = UpdateOrderData::from($request->all());
-            $order = $this->orderService->updateOrder($id, $data);
-
-            return response()->json([
-                'data' => $order,
-                'message' => 'Order updated successfully',
-            ]);
-        } catch (OrderException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
-        }
-    }
-
-    /**
-     * Remove the specified order (soft delete)
-     */
-    public function destroy(string $id): JsonResponse
-    {
-        // In real implementation, would check permissions and business rules
         return response()->json([
-            'message' => 'Order deletion not implemented',
-        ], Response::HTTP_NOT_IMPLEMENTED);
+            'success' => true,
+            'data' => $order->toArray()
+        ]);
     }
 
-    /**
-     * Update order status
-     */
-    public function updateStatus(Request $request, string $id): JsonResponse
+    public function confirm(string $orderId): JsonResponse
     {
-        $request->validate([
-            'status' => ['required', 'string', 'in:confirmed,preparing,ready,completed'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
+        $order = $this->orderService->confirmOrder($orderId);
 
-        try {
-            $status = $request->input('status');
-            $order = match ($status) {
-                'confirmed' => $this->orderService->confirmOrder($id),
-                'preparing' => $this->orderService->startPreparingOrder($id),
-                'ready' => $this->orderService->markOrderReady($id),
-                'completed' => $this->orderService->completeOrder($id),
-            };
-
+        if (!$order) {
             return response()->json([
-                'data' => $order,
-                'message' => "Order status updated to {$status}",
-            ]);
-        } catch (OrderException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
+                'success' => false,
+                'message' => 'Order not found or cannot be confirmed'
+            ], 404);
         }
-    }
 
-    /**
-     * Cancel the order
-     */
-    public function cancel(Request $request, string $id): JsonResponse
-    {
-        $request->validate([
-            'reason' => ['required', 'string', 'min:5', 'max:500'],
-        ]);
-
-        try {
-            $order = $this->orderService->cancelOrder($id, $request->input('reason'));
-
-            return response()->json([
-                'data' => $order,
-                'message' => 'Order cancelled successfully',
-            ]);
-        } catch (OrderException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
-        }
-    }
-
-    /**
-     * Get order statistics
-     */
-    public function statistics(Request $request): JsonResponse
-    {
-        $request->validate([
-            'location_id' => ['required', 'integer'],
-            'from' => ['required', 'date'],
-            'to' => ['required', 'date', 'after_or_equal:from'],
-        ]);
-
-        // In real implementation, would call a statistics method
         return response()->json([
+            'success' => true,
             'data' => [
-                'total_orders' => 0,
-                'completed_orders' => 0,
-                'cancelled_orders' => 0,
-                'average_order_value' => 0,
-                'total_revenue' => 0,
-            ],
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'message' => 'Order confirmed successfully'
+            ]
         ]);
     }
 
-    /**
-     * Update order item status
-     */
-    public function updateItemStatus(Request $request, int $orderId, int $itemId): JsonResponse
+    public function cancel(Request $request, string $orderId): JsonResponse
     {
-        $request->validate([
-            'status' => ['required', 'string', 'in:pending,preparing,prepared,served,cancelled'],
+        $reason = $request->input('reason', 'Cancelled by user');
+        $order = $this->orderService->cancelOrder($orderId, $reason);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found or cannot be cancelled'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'message' => 'Order cancelled successfully'
+            ]
         ]);
+    }
+
+    public function changeStatus(Request $request, string $orderId): JsonResponse
+    {
+        $data = ChangeOrderStatusData::validateAndCreate($request);
+        $order = $this->orderService->changeOrderStatus($orderId, $data->status, $data->notes);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found or status change failed'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'message' => 'Order status updated successfully'
+            ]
+        ]);
+    }
+
+    public function getStateAtTimestamp(Request $request, string $orderId): JsonResponse
+    {
+        $timestamp = $request->input('timestamp');
+
+        if (!$timestamp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Timestamp parameter is required'
+            ], 400);
+        }
 
         try {
-            $success = $this->orderService->updateOrderItemStatus(
-                $orderId,
-                $itemId,
-                $request->input('status')
-            );
+            $carbonTimestamp = Carbon::parse($timestamp);
+            $state = $this->orderService->getOrderStateAtTimestamp($orderId, $carbonTimestamp);
 
-            if (!$success) {
+            if (!$state) {
                 return response()->json([
-                    'error' => [
-                        'code' => 'UPDATE_FAILED',
-                        'message' => 'Failed to update item status',
-                    ],
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                    'success' => false,
+                    'message' => 'Order not found or no state at given timestamp'
+                ], 404);
             }
 
             return response()->json([
-                'message' => 'Item status updated successfully',
-            ]);
-        } catch (OrderException $e) {
-            return response()->json([
-                'error' => $e->toArray(),
-            ], $e->getStatusCode());
-        }
-    }
-
-    /**
-     * Apply offers to order
-     */
-    public function applyOffers(Request $request, string $id): JsonResponse
-    {
-        $request->validate([
-            'offer_codes' => ['required', 'array', 'min:1'],
-            'offer_codes.*' => ['required', 'string'],
-        ]);
-
-        try {
-            $order = $this->orderService->applyOffers($id, $request->input('offer_codes'));
-
-            return response()->json([
-                'data' => $order,
-                'message' => 'Offers applied successfully',
+                'success' => true,
+                'data' => $state
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => [
-                    'code' => 'OFFER_APPLICATION_FAILED',
-                    'message' => $e->getMessage(),
-                ],
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-    }
-    
-    /**
-     * Get next possible states for an order with complete metadata
-     */
-    public function getNextStates(string $id): JsonResponse
-    {
-        try {
-            $order = Order::find($id);
-            
-            if (!$order) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'ORDER_NOT_FOUND',
-                        'message' => 'Order not found',
-                    ],
-                ], Response::HTTP_NOT_FOUND);
-            }
-            
-            // Get the current state information
-            $currentState = [
-                'value' => $order->status->getValue(),
-                'display_name' => $order->status->displayName(),
-                'color' => $order->status->color(),
-                'icon' => $order->status->icon(),
-                'can_be_modified' => $order->status->canBeModified(),
-                'can_be_cancelled' => $order->status->canBeCancelled(),
-            ];
-            
-            // Get the transitionable states - returns array of state names or classes
-            $nextStateClasses = $order->status->transitionableStates();
-            
-            // Map state names to full class names
-            $stateNameToClass = [
-                'draft' => \Colame\Order\States\DraftState::class,
-                'started' => \Colame\Order\States\StartedState::class,
-                'items_added' => \Colame\Order\States\ItemsAddedState::class,
-                'items_validated' => \Colame\Order\States\ItemsValidatedState::class,
-                'promotions_calculated' => \Colame\Order\States\PromotionsCalculatedState::class,
-                'price_calculated' => \Colame\Order\States\PriceCalculatedState::class,
-                'confirmed' => \Colame\Order\States\ConfirmedState::class,
-                'preparing' => \Colame\Order\States\PreparingState::class,
-                'ready' => \Colame\Order\States\ReadyState::class,
-                'delivering' => \Colame\Order\States\DeliveringState::class,
-                'delivered' => \Colame\Order\States\DeliveredState::class,
-                'completed' => \Colame\Order\States\CompletedState::class,
-                'cancelled' => \Colame\Order\States\CancelledState::class,
-                'refunded' => \Colame\Order\States\RefundedState::class,
-            ];
-            
-            // Map state classes to metadata
-            $nextStates = [];
-            foreach ($nextStateClasses as $stateClassOrName) {
-                // Check if it's a class name or a state name
-                $stateClass = class_exists($stateClassOrName) 
-                    ? $stateClassOrName 
-                    : ($stateNameToClass[$stateClassOrName] ?? null);
-                
-                if (!$stateClass || !class_exists($stateClass)) {
-                    continue;
-                }
-                
-                // Create a temporary instance to get metadata
-                $tempOrder = new \Colame\Order\Models\Order();
-                $tempOrder->status = $stateClass;
-                $stateInstance = new $stateClass($tempOrder);
-                
-                $nextStates[] = [
-                    'value' => $stateInstance::$name ?? strtolower(class_basename($stateClass)),
-                    'display_name' => $stateInstance->displayName(),
-                    'action_label' => $stateInstance->actionLabel(),
-                    'color' => $stateInstance->color(),
-                    'icon' => $stateInstance->icon(),
-                ];
-            }
-            
-            // Check if we can cancel from current state
-            $canCancel = $order->status->canTransitionTo(\Colame\Order\States\CancelledState::class);
-            
-            return response()->json([
-                'data' => [
-                    'current_state' => $currentState,
-                    'next_states' => $nextStates,
-                    'can_cancel' => $canCancel,
-                    'is_final_state' => empty($nextStates),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'STATE_FETCH_FAILED',
-                    'message' => $e->getMessage(),
-                ],
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'success' => false,
+                'message' => 'Invalid timestamp format'
+            ], 400);
         }
     }
 }

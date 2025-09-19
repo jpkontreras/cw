@@ -12,7 +12,6 @@ import { useMemo } from 'react';
 function OrderIndexContent({ view }: OrderListPageProps) {
   const { orders, pagination, metadata, locations, filters, stats } = view;
 
-  // Fast filter cards data
   const fastFilterCards = useMemo(
     () => [
       {
@@ -58,28 +57,23 @@ function OrderIndexContent({ view }: OrderListPageProps) {
   const toggleFastFilter = (filterCard: typeof fastFilterCards[0]) => {
     const params = new URLSearchParams(window.location.search);
     
-    // Check if this filter is currently active
     const isActive = Object.entries(filterCard.filters).every(([key, value]) => {
       const currentValue = params.get(key);
       return currentValue === value;
     });
     
     if (isActive) {
-      // Remove the filters if active
       Object.keys(filterCard.filters).forEach((key) => {
         params.delete(key);
       });
     } else {
-      // Apply the new filters if not active
       Object.entries(filterCard.filters).forEach(([key, value]) => {
         params.set(key, value);
       });
     }
     
-    // Reset to first page
     params.set('page', '1');
     
-    // Navigate with the new filters
     router.get(window.location.pathname, Object.fromEntries(params), {
       preserveState: true,
       preserveScroll: true,
@@ -94,10 +88,10 @@ function OrderIndexContent({ view }: OrderListPageProps) {
   return (
     <>
       <Page.Header
-        title="Orders"
-        subtitle="Manage and track all your restaurant orders"
+        title="Event-Sourced Orders"
+        subtitle="Manage and track all your restaurant orders with full event history"
         actions={
-          <Link href="/orders/create">
+          <Link href="/orders/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Order
@@ -113,7 +107,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
             title="No orders yet"
             description="When customers place orders, they'll appear here. Start by creating your first order or wait for customers to place orders."
             actions={
-              <Link href="/orders/create">
+              <Link href="/orders/new">
                 <Button size="lg">
                   <Plus className="mr-2 h-4 w-4" />
                   Create First Order
@@ -122,7 +116,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
             }
             helpText={
               <>
-                Learn more about <a href="#" className="text-primary hover:underline">managing orders</a>
+                Learn more about <a href="#" className="text-primary hover:underline">event-sourced orders</a>
               </>
             }
           />
@@ -181,7 +175,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
 export default function OrderIndex(props: OrderListPageProps) {
   return (
     <AppLayout>
-      <Head title="Orders" />
+      <Head title="Event-Sourced Orders" />
       <Page>
         <OrderIndexContent {...props} />
       </Page>

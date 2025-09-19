@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
@@ -26,7 +25,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeSc
         setStatus('idle');
 
         try {
-            const response = await fetch('/api/es-order/slip/scan', {
+            const response = await fetch('/api/v1/orders/slip/scan', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -59,7 +58,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeSc
                     onScanError(data.message || 'Failed to scan order');
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             setStatus('error');
             setMessage('Network error - please try again');
 
