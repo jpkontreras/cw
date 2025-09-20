@@ -101,14 +101,15 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
   const syncWithBackend = async () => {
     if (!sessionUuid) return;
-    
+
     // Don't sync if session is completed or we have an order UUID
     if (sessionStatus === 'completed' || orderUuid) {
       return;
     }
-    
+
     try {
-      await axios.post(`/api/v1/orders/session/${sessionUuid}/sync`, {
+      // Use web route instead of API route
+      await axios.post(`/orders/session/${sessionUuid}/sync`, {
         items: orderItems,
         customer_info: customerInfo,
         search_history: recentSearches,
@@ -243,11 +244,12 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
   const processOrder = async () => {
     if (!sessionUuid) return;
-    
+
     setSessionStatus('processing');
-    
+
     try {
-      const response = await axios.post(`/api/v1/orders/session/${sessionUuid}/checkout`, {
+      // Use web route instead of API route
+      const response = await axios.post(`/orders/session/${sessionUuid}/checkout`, {
         items: orderItems,
         customer_info: customerInfo,
       });
@@ -255,7 +257,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       if (response.data.success) {
         setOrderUuid(response.data.data.order_uuid);
         setSessionStatus('completed');
-        
+
         router.visit(`/orders/${response.data.data.order_uuid}`);
       }
     } catch (error) {

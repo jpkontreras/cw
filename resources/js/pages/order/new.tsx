@@ -3,7 +3,6 @@ import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { ArrowRight } from 'lucide-react';
-import axios from 'axios';
 
 export default function NewOrder() {
   const [isInitializingSession, setIsInitializingSession] = useState(false);
@@ -12,33 +11,31 @@ export default function NewOrder() {
   const handleOrderTypeSelection = async (type: 'dine_in' | 'takeout' | 'delivery') => {
     setIsInitializingSession(true);
     setError(null);
-    
-    try {
-      // Create new session using orders route
-      const response = await axios.post('/api/v1/orders/session/start', {
-        platform: 'web',
-        source: 'web',
-        order_type: type,
-      });
-      
-      if (response.data.success) {
-        const uuid = response.data.data.uuid;
-        
-        // Navigate to the orders session page
-        router.visit(`/orders/session/${uuid}`);
-      } else {
+
+    // Use Inertia router.post to submit to web route, not API
+    router.post('/orders/start', {
+      type: type,
+      // Add optional fields if needed
+      table_number: null,
+      customer_count: 1,
+    }, {
+      preserveState: false,
+      preserveScroll: false,
+      onStart: () => {
+        setIsInitializingSession(true);
+      },
+      onFinish: () => {
+        setIsInitializingSession(false);
+      },
+      onError: (errors) => {
+        console.error('Failed to start session:', errors);
         setError('Failed to create session. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('Failed to start session:', err);
-      setError(err.response?.data?.message || 'Failed to create session. Please try again.');
-    } finally {
-      setIsInitializingSession(false);
-    }
+      },
+    });
   };
 
   return (
-    <AppLayout containerClassName="overflow-visible">
+    <AppLayout>
       <Page>
         <Page.Header
           title="New Order"

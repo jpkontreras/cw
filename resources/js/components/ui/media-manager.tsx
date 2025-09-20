@@ -71,7 +71,8 @@ export function MediaManager({ open, onOpenChange, onSelect, value }: MediaManag
   const fetchImages = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/default-images')
+      // Use web route instead of API route
+      const response = await axios.get('/media/default-images')
       setImages(response.data.images)
       setLoading(false)
     } catch (error) {
