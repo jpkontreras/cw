@@ -1,23 +1,88 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
-import { ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Utensils,
+  ShoppingBag,
+  Truck,
+  Users,
+  Clock,
+  MapPin,
+  Phone,
+  User,
+  ArrowRight,
+  Home,
+  Hash,
+  Calendar,
+  AlertCircle,
+  ChefHat,
+  Coffee,
+  Sparkles
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface OrderTypeOption {
+  type: 'dine_in' | 'takeout' | 'delivery';
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  color: string;
+  bgColor: string;
+  features: string[];
+  estimatedTime?: string;
+}
 
 export default function NewOrder() {
   const [isInitializingSession, setIsInitializingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleOrderTypeSelection = async (type: 'dine_in' | 'takeout' | 'delivery') => {
+  const orderTypes: OrderTypeOption[] = [
+    {
+      type: 'dine_in',
+      icon: Utensils,
+      title: 'Dine In',
+      description: 'Eat at the restaurant',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 hover:bg-blue-100',
+      features: ['Order served to table', 'Dine-in menu', 'Restaurant seating']
+    },
+    {
+      type: 'takeout',
+      icon: ShoppingBag,
+      title: 'Takeout',
+      description: 'Order for pickup',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50 hover:bg-purple-100',
+      features: ['Pickup at counter', 'Packaged to go', 'Call when ready']
+    },
+    {
+      type: 'delivery',
+      icon: Truck,
+      title: 'Delivery',
+      description: 'Order for delivery',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 hover:bg-green-100',
+      features: ['Delivered to address', 'Driver assigned', 'Delivery tracking']
+    }
+  ];
+
+  const handleOrderTypeSelection = (type: 'dine_in' | 'takeout' | 'delivery') => {
+    // Proceed directly for all order types
+    submitOrder(type);
+  };
+
+  const submitOrder = async (type: string) => {
     setIsInitializingSession(true);
     setError(null);
 
-    // Use Inertia router.post to submit to web route, not API
     router.post('/orders/start', {
       type: type,
-      // Add optional fields if needed
-      table_number: null,
-      customer_count: 1,
     }, {
       preserveState: false,
       preserveScroll: false,
@@ -34,111 +99,98 @@ export default function NewOrder() {
     });
   };
 
+
   return (
     <AppLayout>
+      <Head title="New Order" />
       <Page>
         <Page.Header
-          title="New Order"
-          subtitle="Choose your service type to get started"
+          title="Start New Order"
+          subtitle="Choose how you'd like to enjoy your meal today"
         />
-        
+
         <Page.Content>
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-5xl mx-auto">
 
             {/* Error Alert */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Options Grid */}
-            <div className="grid gap-4 md:grid-cols-3 mb-8">
-              {/* Dine In Option */}
-              <button
-                onClick={() => handleOrderTypeSelection('dine_in')}
-                disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">Dine In</h3>
-                    <p className="text-sm text-gray-500 mt-1">Eat at restaurant</p>
-                  </div>
-                </div>
-              </button>
+            {/* Order Type Cards */}
+            <div className="grid gap-6 md:grid-cols-3">
+              {orderTypes.map((option) => {
+                const Icon = option.icon;
 
-              {/* Takeout Option */}
-              <button
-                onClick={() => handleOrderTypeSelection('takeout')}
-                disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">Takeout</h3>
-                    <p className="text-sm text-gray-500 mt-1">Pick up order</p>
-                  </div>
-                </div>
-              </button>
+                return (
+                  <Card
+                    key={option.type}
+                    className="transition-all duration-200 hover:shadow-lg"
+                  >
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {/* Icon */}
+                        <div className={cn(
+                          "w-14 h-14 rounded-lg flex items-center justify-center",
+                          option.bgColor
+                        )}>
+                          <Icon className={cn("h-7 w-7", option.color)} />
+                        </div>
 
-              {/* Delivery Option */}
-              <button
-                onClick={() => handleOrderTypeSelection('delivery')}
-                disabled={isInitializingSession}
-                className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-primary hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <svg className="w-8 h-8 text-gray-700 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">Delivery</h3>
-                    <p className="text-sm text-gray-500 mt-1">Home delivery</p>
-                  </div>
-                </div>
-              </button>
+                        {/* Title and Description */}
+                        <div>
+                          <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                            {option.title}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {option.description}
+                          </p>
+                        </div>
+
+                        {/* Features */}
+                        <div className="space-y-2 pt-2 border-t border-gray-100">
+                          {option.features.map((feature, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                              <span className="text-xs text-gray-600">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Action Button */}
+                        <Button
+                          className="w-full"
+                          onClick={() => handleOrderTypeSelection(option.type)}
+                          disabled={isInitializingSession}
+                        >
+                          Select {option.title}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="mt-4 bg-red-50 rounded-xl p-4 border border-red-200">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Loading State */}
+            {/* Loading State Overlay */}
             {isInitializingSession && (
-              <div className="mt-6">
-                <div className="bg-white rounded-xl p-4 border border-gray-100">
-                  <div className="flex items-center justify-center space-x-3">
-                    <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <Card className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <svg className="animate-spin h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <p className="text-sm text-gray-600">Initializing session...</p>
+                    <div>
+                      <p className="font-medium">Initializing your order...</p>
+                      <p className="text-sm text-gray-500">Please wait a moment</p>
+                    </div>
                   </div>
-                </div>
+                </Card>
               </div>
             )}
           </div>

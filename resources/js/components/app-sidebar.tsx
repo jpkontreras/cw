@@ -60,7 +60,7 @@ const mainNavItems: NavItem[] = [
       },
       {
         title: 'Kitchen Display',
-        href: '/orders/kitchen',
+        href: '/orders/kitchen-display',
         icon: ChefHat,
       },
     ],

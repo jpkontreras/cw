@@ -11,6 +11,8 @@ use Colame\Order\Contracts\OrderRepositoryInterface;
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderSession;
 use Colame\Order\Models\OrderStatusHistory;
+use Colame\Order\Services\OrderService;
+use Colame\Order\Exceptions\OrderNotFoundException;
 use Colame\Item\Contracts\ItemRepositoryInterface;
 use Colame\Taxonomy\Contracts\TaxonomyServiceInterface;
 use Colame\Location\Contracts\LocationServiceInterface;
@@ -21,6 +23,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Spatie\EventSourcing\StoredEvents\Models\EloquentStoredEvent;
 
 /**
@@ -39,8 +42,14 @@ class OrderController extends Controller
         private OrderRepositoryInterface $orderRepository,
         private ?ItemRepositoryInterface $itemRepository = null,
         private ?TaxonomyServiceInterface $taxonomyService = null,
-        private ?LocationServiceInterface $locationService = null
-    ) {}
+        private ?LocationServiceInterface $locationService = null,
+        private ?OrderService $orderService = null
+    ) {
+        // Initialize OrderService if not injected
+        if (!$this->orderService) {
+            $this->orderService = new OrderService($this->orderRepository);
+        }
+    }
     
     /**
      * Display a listing of orders
@@ -273,12 +282,23 @@ class OrderController extends Controller
                         $price = $item->price;
                     }
                     
+                    // Get item with relations to include images
+                    $itemWithRelations = $this->itemRepository->findWithRelations($item->id);
+                    $imagePath = null;
+
+                    if ($itemWithRelations && $itemWithRelations->images) {
+                        $primaryImage = $itemWithRelations->getPrimaryImage();
+                        if ($primaryImage) {
+                            $imagePath = $primaryImage->getImageUrl();
+                        }
+                    }
+
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
                         'description' => $item->description ?? '',
                         'price' => $price,
-                        'image' => $item->image ?? null,
+                        'image' => $imagePath,
                         'category' => $item->category ?? null,
                         'available' => $item->isAvailable ?? true,
                     ];
@@ -292,34 +312,39 @@ class OrderController extends Controller
         // If no items from repository, try direct database query
         if (empty($popularItems)) {
             try {
-                // Direct query to items table
+                // Direct query to items table with their primary images
                 $items = DB::table('items')
-                    ->where('is_active', 1)
-                    ->whereNull('deleted_at')
+                    ->leftJoin('item_images', function($join) {
+                        $join->on('items.id', '=', 'item_images.item_id')
+                             ->where('item_images.is_primary', '=', 1);
+                    })
+                    ->where('items.is_active', 1)
+                    ->whereNull('items.deleted_at')
+                    ->select('items.*', 'item_images.image_path')
                     ->limit(20)
                     ->get();
-                
+
                 $popularItems = $items->map(function ($item) {
                     // Calculate display price - prioritize sale_price if it exists and is greater than 0
                     $price = 0;
-                    
+
                     // Convert to float and check
                     $basePrice = floatval($item->base_price ?? 0);
                     $salePrice = floatval($item->sale_price ?? 0);
-                    
+
                     // Use sale price if it's greater than 0, otherwise use base price
                     if ($salePrice > 0) {
                         $price = $salePrice;
                     } elseif ($basePrice > 0) {
                         $price = $basePrice;
                     }
-                    
+
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
                         'description' => $item->description ?? '',
                         'price' => $price, // Already a float from floatval
-                        'image' => null, // Images would need to be fetched separately
+                        'image' => $item->image_path ? asset('storage/' . $item->image_path) : null,
                         'category' => $item->category ?? '',
                         'available' => (bool) $item->is_available,
                     ];
@@ -338,6 +363,115 @@ class OrderController extends Controller
             'tableNumber' => $session->table_number,
             'popularItems' => $popularItems,
             'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Display the operations center dashboard
+     */
+    public function operations(): Response
+    {
+        // Get current user's location
+        $locationId = auth()->user()->location_id ?? null;
+
+        // Get active orders for the location
+        $activeOrders = Order::with(['items'])
+            ->when($locationId, function ($query) use ($locationId) {
+                $query->where('location_id', $locationId);
+            })
+            ->whereIn('status', ['placed', 'confirmed', 'preparing', 'ready'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get order statistics
+        $stats = $this->getOrderStats($locationId ? ['locationId' => $locationId] : []);
+
+        // Get location info
+        $location = null;
+        if ($locationId && $this->locationService) {
+            try {
+                $locationData = $this->locationService->getLocation($locationId);
+                if ($locationData) {
+                    $location = is_array($locationData) ? $locationData : $locationData->toArray();
+                }
+            } catch (\Exception $e) {
+                // Location service might not be available
+            }
+        }
+
+        // Format orders for the view
+        $ordersData = $activeOrders->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'orderNumber' => $order->order_number,
+                'tableNumber' => $order->table_number,
+                'status' => $order->status,
+                'type' => $order->type,
+                'totalAmount' => $order->total,
+                'customerName' => $order->customer_name,
+                'createdAt' => $order->created_at,
+                'itemCount' => $order->items->count(),
+                'items' => $order->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->item_name,
+                        'quantity' => $item->quantity,
+                        'status' => $item->status,
+                        'kitchenStatus' => $item->kitchen_status,
+                    ];
+                })->toArray(),
+            ];
+        })->toArray();
+
+        // Generate hourly data for today
+        $hourlyData = [];
+        for ($hour = 0; $hour < 24; $hour++) {
+            $startTime = now()->startOfDay()->addHours($hour);
+            $endTime = $startTime->copy()->addHour();
+
+            $hourOrders = Order::when($locationId, function ($query) use ($locationId) {
+                    $query->where('location_id', $locationId);
+                })
+                ->whereBetween('created_at', [$startTime, $endTime])
+                ->get();
+
+            $hourlyData[] = [
+                'hour' => $hour . ':00',
+                'orders' => $hourOrders->count(),
+                'revenue' => $hourOrders->sum('total'),
+            ];
+        }
+
+        // Generate alerts for critical situations
+        $alerts = [];
+
+        // Check for delayed orders
+        $delayedOrders = $activeOrders->filter(function ($order) {
+            $created = new Carbon($order->created_at);
+            $diffMinutes = now()->diffInMinutes($created);
+            return $order->status === 'preparing' && $diffMinutes > 30;
+        });
+
+        if ($delayedOrders->count() > 0) {
+            $alerts[] = [
+                'id' => 'delayed-orders',
+                'type' => 'warning',
+                'title' => 'Delayed Orders',
+                'description' => $delayedOrders->count() . ' orders are taking longer than expected',
+                'timestamp' => now()->toISOString(),
+            ];
+        }
+
+        // Staff data - empty for now as staff module may not be available
+        $staff = [];
+
+        return Inertia::render('order/operations', [
+            'orders' => $ordersData,
+            'stats' => $stats,
+            'location' => $location,
+            'staff' => $staff,
+            'alerts' => $alerts,
+            'hourlyData' => $hourlyData,
         ]);
     }
 
@@ -759,41 +893,52 @@ class OrderController extends Controller
     }
     
     /**
-     * Change order status
+     * Change order status from Order Detail page - redirects after update
      */
     public function changeStatus(Request $request, string $orderId): RedirectResponse
     {
         $validated = $request->validate([
             'status' => 'required|string|in:placed,confirmed,preparing,ready,delivering,delivered,completed,cancelled',
         ]);
-        
-        $order = Order::find($orderId);
-        if (!$order || !$order->session_id) {
+
+        try {
+            $orderData = $this->orderService->changeOrderStatus(
+                $orderId,
+                $validated['status'],
+                'Manual status change from order detail'
+            );
+
+            return redirect()
+                ->route('orders.show', $orderId)
+                ->with('success', 'Order status updated to ' . $orderData->status);
+        } catch (OrderNotFoundException $e) {
             return back()->with('error', 'Order not found or missing session');
         }
-        
-        // Use event sourcing to change status
-        OrderSessionAggregate::retrieve($order->session_id)
-            ->changeOrderStatus(
-                orderId: $orderId,
-                toStatus: $validated['status'],
-                userId: auth()->id(),
-                reason: 'Manual status change'
-            )
-            ->persist();
-        
-        // Add to status history (this will also be handled by projector but we keep for consistency)
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'from_status' => $order->status,
-            'to_status' => $validated['status'],
-            'user_id' => auth()->id(),
-            'reason' => 'Manual status change',
+    }
+
+    /**
+     * Update status from Kitchen Display - returns JSON for seamless updates
+     */
+    public function updateKitchenStatus(Request $request, string $orderId): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:confirmed,preparing,ready,completed',
         ]);
-        
-        return redirect()
-            ->route('orders.show', $orderId)
-            ->with('success', 'Order status updated');
+
+        try {
+            $orderData = $this->orderService->changeOrderStatus(
+                $orderId,
+                $validated['status'],
+                'Kitchen Display update'
+            );
+
+            return response()->json([
+                'success' => true,
+                'order' => $orderData->toArray(),
+            ]);
+        } catch (OrderNotFoundException $e) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
     }
 
     /**
