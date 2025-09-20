@@ -156,8 +156,10 @@ class OrderRepository implements OrderRepositoryInterface
             ->with('items')
             ->orderBy('placed_at', 'asc')
             ->get();
-        
-        return OrderData::collection($orders);
+
+        // Convert each Order model to OrderData and keep as collection
+        $orderDataCollection = $orders->map(fn($order) => OrderData::fromModel($order));
+        return new DataCollection(OrderData::class, $orderDataCollection);
     }
 
     /**

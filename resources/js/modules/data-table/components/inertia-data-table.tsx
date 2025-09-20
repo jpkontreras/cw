@@ -26,6 +26,11 @@ interface InertiaDataTableProps<TData, TValue> extends DataTableProps<TData> {
 export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, columns, className, onRowClick, rowClickRoute }: InertiaDataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
+  const [openPopovers, setOpenPopovers] = React.useState<Record<string, boolean>>({});
+
+  // Use ref to access current state in memoized columns
+  const openPopoversRef = React.useRef(openPopovers);
+  openPopoversRef.current = openPopovers;
 
   // Simple navigation function
   const navigate = (params: Record<string, string | number>) => {
@@ -116,13 +121,16 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
                 <span className="font-medium">{col.label}</span>
 
                 {showFilterIcon && (
-                  <Popover modal={false}>
-                    <PopoverTrigger asChild>
-                      <Button variant={hasActiveFilter ? 'secondary' : 'ghost'} size="sm" className="h-5 w-5 p-0">
-                        <Search className={cn('h-3 w-3', hasActiveFilter && 'text-primary')} />
-                      </Button>
+                  <Popover>
+                    <PopoverTrigger
+                      className={cn(
+                        "h-5 w-5 p-0 inline-flex items-center justify-center rounded text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                        hasActiveFilter ? "bg-secondary text-secondary-foreground hover:bg-secondary/80" : "hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Search className={cn('h-3 w-3', hasActiveFilter && 'text-primary')} />
                     </PopoverTrigger>
-                    <PopoverContent className="w-80" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent className="w-80" align="start" sideOffset={5}>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="leading-none font-medium">{col.filter?.label || `Search ${col.label}`}</h4>
@@ -409,43 +417,37 @@ export function InertiaDataTable<TData, TValue>({ data, pagination, metadata, co
         {isSearchExpanded ? (
           // Expanded search view
           <div className="flex items-center gap-2">
-            {metadata?.filters
-              ?.filter((filter) => filter.filterType === 'search' && metadata?.defaultFilters?.includes(filter.key))
-              .map((filter) => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const currentValue = urlParams.get(filter.key) || '';
-                return (
-                  <React.Fragment key={filter.key}>
-                    <Input
-                      placeholder={filter.placeholder}
-                      defaultValue={currentValue}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSearchSubmit(filter.key, (e.target as HTMLInputElement).value);
-                        }
-                      }}
-                      className="flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const input = document.querySelector('.flex-1') as HTMLInputElement;
-                        handleSearchSubmit(filter.key, input?.value || '');
-                      }}
-                    >
-                      Search
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsSearchExpanded(false)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </React.Fragment>
-                );
-              })}
+            <Input
+              placeholder="Search orders..."
+              defaultValue={new URLSearchParams(window.location.search).get('search') || ''}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearchSubmit('search', (e.target as HTMLInputElement).value);
+                  setIsSearchExpanded(false);
+                }
+              }}
+              className="flex-1"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              onClick={() => {
+                const input = document.querySelector('input[placeholder="Search orders..."]') as HTMLInputElement;
+                if (input) {
+                  handleSearchSubmit('search', input.value);
+                  setIsSearchExpanded(false);
+                }
+              }}
+            >
+              Search
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSearchExpanded(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         ) : (
           // Collapsed toolbar view

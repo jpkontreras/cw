@@ -963,25 +963,70 @@ class OrderController extends Controller
      */
     private function getOrderStats(array $filters = []): array
     {
-        $query = Order::query();
-        
-        // Apply location filter if present
+        // Create base query for today's orders count (ignoring other filters)
+        $baseQuery = Order::query();
         if (!empty($filters['locationId'])) {
-            $query->where('location_id', $filters['locationId']);
+            $baseQuery->where('location_id', $filters['locationId']);
         }
-        
-        // Today's orders
-        $todayOrders = (clone $query)->whereDate('created_at', today())->count();
-        
-        // Active orders (not completed or cancelled)
-        $activeOrders = (clone $query)->whereIn('status', ['started', 'placed', 'confirmed', 'preparing', 'ready'])->count();
-        
-        // Ready to serve
-        $readyToServe = (clone $query)->where('status', 'ready')->count();
-        
-        // Pending payment
-        $pendingPayment = (clone $query)->where('payment_status', 'pending')->count();
-        
+
+        // Today's orders - always shows today regardless of other filters
+        $todayOrders = (clone $baseQuery)->whereDate('created_at', today())->count();
+
+        // Active orders - shows active orders in current view
+        $activeQuery = Order::query();
+
+        // Apply all filters from the repository's applyFilters logic
+        if (!empty($filters['locationId'])) {
+            $activeQuery->where('location_id', $filters['locationId']);
+        }
+
+        // Apply date filter if present
+        if (!empty($filters['date'])) {
+            switch ($filters['date']) {
+                case 'today':
+                    $activeQuery->whereDate('created_at', today());
+                    break;
+                case 'yesterday':
+                    $activeQuery->whereDate('created_at', today()->subDay());
+                    break;
+                case 'week':
+                    $activeQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'month':
+                    $activeQuery->whereMonth('created_at', now()->month)
+                                ->whereYear('created_at', now()->year);
+                    break;
+            }
+        }
+
+        // Apply status filter if present
+        if (!empty($filters['status'])) {
+            if (str_contains($filters['status'], ',')) {
+                $statuses = array_map('trim', explode(',', $filters['status']));
+                $activeQuery->whereIn('status', $statuses);
+            } else {
+                $activeQuery->where('status', $filters['status']);
+            }
+            // Count orders with the filtered status
+            $activeOrders = $activeQuery->count();
+        } else {
+            // Default: count non-completed/cancelled orders
+            $activeOrders = (clone $activeQuery)->whereIn('status', ['placed', 'confirmed', 'preparing', 'ready'])->count();
+        }
+
+        // Ready to serve - respects date filter
+        $readyQuery = clone $activeQuery;
+        $readyToServe = $readyQuery->where('status', 'ready')->count();
+
+        // Pending payment - respects all filters
+        $pendingQuery = clone $activeQuery;
+        if (!empty($filters['paymentStatus'])) {
+            $pendingQuery->where('payment_status', $filters['paymentStatus']);
+            $pendingPayment = $pendingQuery->count();
+        } else {
+            $pendingPayment = $pendingQuery->where('payment_status', 'pending')->count();
+        }
+
         return [
             'todayOrders' => $todayOrders,
             'activeOrders' => $activeOrders,

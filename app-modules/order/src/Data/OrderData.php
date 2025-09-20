@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Colame\Order\Data;
 
-use Spatie\LaravelData\Data;
+use App\Core\Data\BaseData;
 use Spatie\LaravelData\Lazy;
 use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Attributes\Validation\Required;
@@ -16,7 +16,7 @@ use Spatie\LaravelData\Transformers\DateTimeInterfaceTransformer;
 use Colame\Order\Models\Order;
 use Colame\Location\Contracts\LocationRepositoryInterface;
 
-class OrderData extends Data
+class OrderData extends BaseData
 {
     public function __construct(
         #[Uuid] public readonly string $id,
