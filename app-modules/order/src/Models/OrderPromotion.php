@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class OrderPromotion extends Model
 {
-    protected $table = 'order_es_promotions';
+    protected $table = 'order_promotions';
 
     protected $fillable = [
         'order_id',

@@ -18,7 +18,7 @@ class Order extends Model
 {
     use SoftDeletes, Searchable;
 
-    protected $table = 'order_es_orders';
+    protected $table = 'orders';
     protected $keyType = 'string';
     public $incrementing = false;
 

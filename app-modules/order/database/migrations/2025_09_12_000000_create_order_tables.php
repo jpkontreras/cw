@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Complete Order-ES Module Migration
+ * Complete Order Module Migration
  * Creates all tables needed for pure event-sourced order management
  */
 return new class extends Migration
@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // 1. ORDERS TABLE - Main order projection from events
-        Schema::create('order_es_orders', function (Blueprint $table) {
+        Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('session_id')->nullable()->index();
             $table->string('order_number')->nullable()->unique();
@@ -94,7 +94,7 @@ return new class extends Migration
         });
 
         // 2. ORDER ITEMS TABLE - Line items projection
-        Schema::create('order_es_order_items', function (Blueprint $table) {
+        Schema::create('order_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('order_id')->index();
             $table->unsignedBigInteger('item_id')->index();
@@ -141,12 +141,12 @@ return new class extends Migration
             // Foreign key
             $table->foreign('order_id')
                 ->references('id')
-                ->on('order_es_orders')
+                ->on('orders')
                 ->onDelete('cascade');
         });
 
         // 3. ORDER STATUS HISTORY TABLE - Audit trail
-        Schema::create('order_es_status_history', function (Blueprint $table) {
+        Schema::create('order_status_histories', function (Blueprint $table) {
             $table->id();
             $table->uuid('order_id')->index();
             $table->string('from_status', 50)->nullable();
@@ -160,12 +160,12 @@ return new class extends Migration
             
             $table->foreign('order_id')
                 ->references('id')
-                ->on('order_es_orders')
+                ->on('orders')
                 ->onDelete('cascade');
         });
 
         // 4. ORDER SESSIONS TABLE - Session tracking
-        Schema::create('order_es_sessions', function (Blueprint $table) {
+        Schema::create('order_sessions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->unsignedBigInteger('staff_id')->nullable()->index();
             $table->unsignedBigInteger('location_id')->index();
@@ -189,9 +189,9 @@ return new class extends Migration
     
     public function down(): void
     {
-        Schema::dropIfExists('order_es_sessions');
-        Schema::dropIfExists('order_es_status_history');
-        Schema::dropIfExists('order_es_order_items');
-        Schema::dropIfExists('order_es_orders');
+        Schema::dropIfExists('order_sessions');
+        Schema::dropIfExists('order_status_histories');
+        Schema::dropIfExists('order_items');
+        Schema::dropIfExists('orders');
     }
 };

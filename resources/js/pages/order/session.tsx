@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import Page from '@/layouts/page-layout';
 import { EmptyOrderState, OrderItemsView, SearchInput, SearchView, CartPopover, FilterBar } from '@/modules/order';
-import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/EventSourcedOrderContext';
+import { OrderProvider, useOrder, type SearchResult } from '@/modules/order/contexts/SessionOrderContext';
 import { ArrowLeft, ArrowRight, Activity } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -99,7 +99,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
   };
 
   const handleFinish = () => {
-    // Event-sourced order processing
+    // Order processing
     processOrder();
   };
 
@@ -114,7 +114,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
   return (
     <AppLayout containerClassName="overflow-visible">
       <Page>
-        {/* Event-Sourced Auto-save Indicator */}
+        {/* Auto-save Indicator */}
         {lastSavedAt && (
           <div className="fixed bottom-20 right-4 z-40 text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded flex items-center gap-1">
             <Activity className="h-3 w-3" />
@@ -158,7 +158,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
         )}
 
         <Page.Header
-          title="Event-Sourced Order Session"
+          title="Order Session"
           subtitle={currentStep === 0 ? "Select products to add to the order" : "Review and confirm order details"}
           actions={
             <div className="flex items-center gap-3">
@@ -337,7 +337,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                   <div className="min-w-0">
                     <div className="bg-white rounded-lg shadow-sm h-fit">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <h2 className="text-base font-bold text-gray-900">Event-Sourced Order Summary</h2>
+                        <h2 className="text-base font-bold text-gray-900">Order Summary</h2>
                         <p className="text-xs text-gray-600 mt-0.5">{getTotalItems()} products • {eventCount} events recorded</p>
                       </div>
                       <div className="p-3 max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -367,12 +367,10 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                   
                   {/* Right Column - Order Details */}
                   <div className="space-y-3">
-                    {/* Event Sourcing Info */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <div className="flex items-start gap-2">
                         <Activity className="h-4 w-4 text-blue-600 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-xs font-medium text-blue-900">Event-Sourced Order</p>
                           <p className="text-xs text-blue-700 mt-1">
                             All actions are recorded as events. {eventCount} events captured so far.
                           </p>
@@ -521,7 +519,7 @@ const OrderSessionContent: React.FC<OrderSessionContentProps> = ({ sessionUuid, 
                         disabled={!customerInfo.name || !customerInfo.orderType || !customerInfo.paymentMethod}
                       >
                         <Activity className="h-4 w-4 mr-2" />
-                        Create Event-Sourced Order
+                        Create Order
                       </Button>
                     </div>
                   </div>

@@ -48,7 +48,7 @@ final class OrderProjector extends Projector
         
         // Use DB directly to bypass any model issues
         // Convert to minor units based on currency (CLP: subunit=1, USD: subunit=100)
-        DB::table('order_es_order_items')->insert([
+        DB::table('order_items')->insert([
             'id' => $event->lineItemId,
             'order_id' => $event->orderId,
             'item_id' => $event->itemId,

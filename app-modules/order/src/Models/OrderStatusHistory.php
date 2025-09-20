@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class OrderStatusHistory extends Model
 {
-    protected $table = 'order_es_status_history';
+    protected $table = 'order_status_histories';
 
     protected $fillable = [
         'order_id',

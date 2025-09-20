@@ -20,5 +20,5 @@ use Illuminate\Support\Facades\Route;
 
 // Load versioned API routes
 Route::prefix('v1')->name('v1.')->group(function () {
-    require __DIR__.'/api/v1.php';
+    require __DIR__ . '/api/v1.php';
 });

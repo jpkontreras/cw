@@ -6,8 +6,7 @@ use Colame\Order\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
 
 // API Routes for Orders Module
-// These routes are loaded under /api/v1/orders prefix
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::prefix('api/v1/orders')->middleware(['api', 'auth:sanctum'])->group(function () {
     // Order Session Management
     Route::post('/session/start', [OrderSessionController::class, 'start'])->name('session.start');
     Route::post('/session/{uuid}/sync', [OrderSessionController::class, 'sync'])->name('session.sync');

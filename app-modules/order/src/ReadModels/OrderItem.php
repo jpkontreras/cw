@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
-    protected $table = 'order_es_order_items';
+    protected $table = 'order_items';
     
     public $incrementing = false;
     protected $keyType = 'string';

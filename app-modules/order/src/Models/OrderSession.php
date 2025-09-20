@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class OrderSession extends Model
 {
-    protected $table = 'order_es_sessions';
+    protected $table = 'order_sessions';
     protected $primaryKey = 'id';
     protected $keyType = 'string';
     public $incrementing = false;

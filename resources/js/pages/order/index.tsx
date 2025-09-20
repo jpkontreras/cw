@@ -88,8 +88,8 @@ function OrderIndexContent({ view }: OrderListPageProps) {
   return (
     <>
       <Page.Header
-        title="Event-Sourced Orders"
-        subtitle="Manage and track all your restaurant orders with full event history"
+        title="Orders"
+        subtitle="Manage and track all your restaurant orders"
         actions={
           <Link href="/orders/new">
             <Button>
@@ -116,7 +116,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
             }
             helpText={
               <>
-                Learn more about <a href="#" className="text-primary hover:underline">event-sourced orders</a>
+                Learn more about <a href="#" className="text-primary hover:underline">managing orders</a>
               </>
             }
           />
@@ -175,7 +175,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
 export default function OrderIndex(props: OrderListPageProps) {
   return (
     <AppLayout>
-      <Head title="Event-Sourced Orders" />
+      <Head title="Orders" />
       <Page>
         <OrderIndexContent {...props} />
       </Page>
