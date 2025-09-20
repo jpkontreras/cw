@@ -43,11 +43,14 @@ class ItemSearchController extends Controller
         
         if (!$results) {
             return response()->json([
-                'items' => [],
-                'total' => 0,
-                'query' => $query,
-                'suggestions' => [],
-                'facets' => [],
+                'success' => true,
+                'data' => [
+                    'items' => [],
+                    'total' => 0,
+                    'query' => $query,
+                    'suggestions' => [],
+                    'facets' => [],
+                ]
             ]);
         }
         
@@ -96,12 +99,15 @@ class ItemSearchController extends Controller
         });
         
         return response()->json([
-            'items' => $items,
-            'total' => $results->total,
-            'query' => $results->query,
-            'searchId' => $searchId ?? $results->searchId,
-            'suggestions' => $results->suggestions ?? [],
-            'facets' => $results->facets ?? [],
+            'success' => true,
+            'data' => [
+                'items' => $items,
+                'total' => $results->total,
+                'query' => $results->query,
+                'searchId' => $searchId ?? $results->searchId,
+                'suggestions' => $results->suggestions ?? [],
+                'facets' => $results->facets ?? [],
+            ]
         ]);
     }
     
@@ -157,8 +163,11 @@ class ItemSearchController extends Controller
         });
         
         return response()->json([
-            'items' => $transformed,
-            'total' => count($transformed),
+            'success' => true,
+            'data' => [
+                'items' => $transformed,
+                'total' => count($transformed),
+            ]
         ]);
     }
     

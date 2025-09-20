@@ -184,22 +184,43 @@ class ItemController extends Controller
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'q' => 'required|string|min:1',
+            'q' => 'nullable|string|min:1',  // Made optional for GET requests
             'location_id' => 'nullable|integer',
             'with_availability' => 'boolean',
             'with_price' => 'boolean',
             'limit' => 'nullable|integer|min:1|max:100',
         ]);
-        
+
+        // If no query provided, return empty results
+        if (empty($validated['q'])) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'items' => [],
+                    'total' => 0,
+                    'query' => '',
+                ],
+                'meta' => [
+                    'query' => '',
+                    'count' => 0,
+                ],
+            ]);
+        }
+
         $items = $this->itemService->searchItems($validated['q'], [
             'location_id' => $validated['location_id'] ?? null,
             'with_availability' => $validated['with_availability'] ?? false,
             'with_price' => $validated['with_price'] ?? false,
             'limit' => $validated['limit'] ?? 20,
         ]);
-        
+
         return response()->json([
-            'data' => $items,
+            'success' => true,
+            'data' => [
+                'items' => $items,
+                'total' => $items->count(),
+                'query' => $validated['q'],
+            ],
             'meta' => [
                 'query' => $validated['q'],
                 'count' => $items->count(),

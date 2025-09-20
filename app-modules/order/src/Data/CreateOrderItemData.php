@@ -19,6 +19,7 @@ class CreateOrderItemData extends BaseData
         public readonly int $quantity = 1,
         public readonly int $unitPrice = 0,
         public readonly ?string $notes = null,
+        public readonly ?string $specialInstructions = null,
         public readonly ?array $modifiers = null,
         public readonly ?array $metadata = null,
     ) {}
@@ -47,6 +48,7 @@ class CreateOrderItemData extends BaseData
             'quantity' => ['required', 'integer', 'min:1'],
             'unitPrice' => ['required', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'specialInstructions' => ['nullable', 'string', 'max:500'],
             'modifiers' => ['nullable', 'array'],
             'modifiers.*.id' => ['required_with:modifiers', 'integer'],
             'modifiers.*.name' => ['required_with:modifiers', 'string'],

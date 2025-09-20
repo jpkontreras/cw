@@ -153,7 +153,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
       setIsSearching(true);
 
       try {
-        const response = await axios.get('/api/items/search', {
+        const response = await axios.get('/items/search', {
           params: {
             q: query,
             ...filters,

@@ -9,7 +9,9 @@ use Colame\Order\Aggregates\OrderSession as OrderSessionAggregate;
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderSession;
 use Colame\Order\Models\OrderStatusHistory;
+use Colame\Order\Models\OrderItem;
 use Colame\Order\Data\OrderData;
+use Colame\Order\Data\CreateOrderData;
 use App\Core\Data\PaginatedResourceData;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
@@ -21,6 +23,90 @@ class OrderService
     public function __construct(
         private OrderRepositoryInterface $orderRepository
     ) {}
+
+    /**
+     * Create a new order directly (without session)
+     */
+    public function createOrder(CreateOrderData $data): OrderData
+    {
+        return DB::transaction(function () use ($data) {
+            // Generate order ID and order number
+            $orderId = Str::uuid()->toString();
+            $orderNumber = 'ORD-' . strtoupper(Str::random(8));
+
+            // Calculate totals
+            $subtotal = 0;
+            foreach ($data->items as $item) {
+                $subtotal += $item->unitPrice * $item->quantity;
+            }
+
+            $tax = (int) ($subtotal * 0.10); // 10% tax rate - should come from config
+            $total = $subtotal + $tax;
+
+            // Create order
+            $order = Order::create([
+                'id' => $orderId,
+                'order_number' => $orderNumber,
+                'user_id' => $data->userId ?? auth()->id(),
+                'location_id' => $data->sessionLocationId ?? 1, // Default location
+                'currency' => 'USD',
+                'status' => 'placed',
+                'type' => $data->type,
+                'priority' => 'normal',
+                'customer_name' => $data->customerName,
+                'customer_phone' => $data->customerPhone,
+                'customer_email' => $data->customerEmail,
+                'delivery_address' => $data->deliveryAddress,
+                'table_number' => $data->tableNumber,
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'tip' => 0,
+                'discount' => 0,
+                'total' => $total,
+                'payment_status' => 'pending',
+                'notes' => $data->notes,
+                'special_instructions' => $data->specialInstructions,
+                'metadata' => $data->metadata,
+                'view_count' => 0,
+                'modification_count' => 0,
+                'placed_at' => now(),
+            ]);
+
+            // Create order items
+            foreach ($data->items as $itemData) {
+                OrderItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'order_id' => $orderId,
+                    'item_id' => $itemData->itemId,
+                    'item_name' => $itemData->name ?? 'Item ' . $itemData->itemId,
+                    'base_item_name' => $itemData->name ?? 'Item ' . $itemData->itemId,
+                    'quantity' => $itemData->quantity,
+                    'base_price' => $itemData->unitPrice,
+                    'unit_price' => $itemData->unitPrice,
+                    'modifiers_total' => 0,
+                    'total_price' => $itemData->unitPrice * $itemData->quantity,
+                    'status' => 'pending',
+                    'kitchen_status' => 'pending',
+                    'notes' => $itemData->notes,
+                    'special_instructions' => $itemData->specialInstructions,
+                    'modifiers' => $itemData->modifiers ?? [],
+                    'modifier_count' => count($itemData->modifiers ?? []),
+                    'metadata' => [],
+                ]);
+            }
+
+            // Add initial status history
+            OrderStatusHistory::create([
+                'order_id' => $orderId,
+                'from_status' => null,
+                'to_status' => 'placed',
+                'user_id' => auth()->id(),
+                'reason' => 'Order created directly',
+            ]);
+
+            return OrderData::from($order->load(['items', 'statusHistory']));
+        });
+    }
 
     /**
      * Get paginated orders with filters

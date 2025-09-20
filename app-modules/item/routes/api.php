@@ -11,14 +11,14 @@ Route::prefix('api/v1')->middleware(['api', 'auth:sanctum'])->group(function () 
     Route::prefix('items')->group(function () {
         Route::get('/', [ItemController::class, 'index']);
         Route::post('/', [ItemController::class, 'store']);
+        Route::get('/search', [ItemController::class, 'search']);
+        Route::post('/bulk', [ItemController::class, 'bulk']);
         Route::get('/{id}', [ItemController::class, 'show']);
         Route::put('/{id}', [ItemController::class, 'update']);
         Route::patch('/{id}', [ItemController::class, 'update']);
         Route::delete('/{id}', [ItemController::class, 'destroy']);
-        Route::post('/search', [ItemController::class, 'search']);
         Route::get('/{id}/availability', [ItemController::class, 'checkAvailability']);
         Route::get('/{id}/price', [ItemController::class, 'calculatePrice']);
-        Route::post('/bulk', [ItemController::class, 'bulk']);
         
         // Item modifier groups
         Route::get('/{itemId}/modifiers', [ModifierController::class, 'getItemModifierGroups']);

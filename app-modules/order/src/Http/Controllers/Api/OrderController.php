@@ -6,6 +6,7 @@ namespace Colame\Order\Http\Controllers\Api;
 
 use Colame\Order\Services\OrderService;
 use Colame\Order\Data\ChangeOrderStatusData;
+use Colame\Order\Data\CreateOrderData;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
@@ -49,6 +50,18 @@ class OrderController
             'success' => true,
             'data' => $order->toArray()
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $data = CreateOrderData::validateAndCreate($request);
+        $order = $this->orderService->createOrder($data);
+
+        return response()->json([
+            'success' => true,
+            'data' => $order->toArray(),
+            'message' => 'Order created successfully'
+        ], 201);
     }
 
     public function confirm(string $orderId): JsonResponse

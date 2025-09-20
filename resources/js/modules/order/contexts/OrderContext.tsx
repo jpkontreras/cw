@@ -578,7 +578,11 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     if (popularItems.length === 0) {
       axios.get('/items/search/popular', { params: { limit: 12 } })
         .then(response => {
-          setPopularItems(response.data.items || response.data.data || []);
+          if (response.data.success && response.data.data) {
+            setPopularItems(response.data.data.items || []);
+          } else {
+            setPopularItems(response.data.items || []);
+          }
         })
         .catch(error => {
           console.error('Error loading popular items:', error);
