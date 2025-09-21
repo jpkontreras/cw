@@ -103,6 +103,7 @@ class ItemServiceProvider extends ServiceProvider
             // Register commands
             $this->commands([
                 \Colame\Item\Console\Commands\GenerateItemsCommand::class,
+                \Colame\Item\Console\Commands\SetupModifiersCommand::class,
             ]);
         }
     }

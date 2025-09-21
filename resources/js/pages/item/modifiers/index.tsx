@@ -47,7 +47,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -348,37 +347,6 @@ export default function ModifiersIndex({
     });
   };
 
-  const statsCards = [
-    {
-      title: 'Total Groups',
-      value: stats.total_groups,
-      icon: Layers,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-    },
-    {
-      title: 'Active Groups',
-      value: stats.active_groups,
-      icon: CheckCircle,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-    },
-    {
-      title: 'Total Modifiers',
-      value: stats.total_modifiers,
-      icon: Settings,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
-    },
-    {
-      title: 'Avg per Group',
-      value: stats.avg_modifiers_per_group.toFixed(1),
-      icon: Tag,
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-    },
-  ];
-
   // Check if modifier groups are empty
   const isEmpty = modifier_groups.length === 0;
 
@@ -432,36 +400,6 @@ export default function ModifiersIndex({
               }
             />
           ) : (
-            <>
-              {/* Stats Cards */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                {statsCards.map((stat, index) => {
-                  const Icon = stat.icon;
-                  return (
-                    <Card key={index}>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          {stat.title}
-                        </CardTitle>
-                        <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                          <Icon className={cn('h-4 w-4', stat.color)} />
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              <Tabs defaultValue="groups" className="w-full">
-            <TabsList>
-              <TabsTrigger value="groups">Modifier Groups</TabsTrigger>
-              <TabsTrigger value="popular">Popular Modifiers</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="groups" className="mt-6">
               <InertiaDataTable
                   columns={columns}
                   data={modifier_groups}
@@ -514,54 +452,6 @@ export default function ModifiersIndex({
                     ),
                   }}
                 />
-            </TabsContent>
-
-            <TabsContent value="popular" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Popular Modifiers</CardTitle>
-                  <CardDescription>
-                    Most frequently selected modifier options
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {popular_modifiers.length > 0 ? (
-                    <div className="space-y-4">
-                      {popular_modifiers.map((modifier, index) => (
-                        <div key={modifier.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{modifier.name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                From {modifier.group_name}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {modifier.times_selected} selections
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {formatCurrency(modifier.revenue_generated)} revenue
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No modifier usage data available yet</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-            </>
           )}
         </Page.Content>
       </Page>
