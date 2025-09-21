@@ -58,6 +58,7 @@ class OrderServiceProvider extends ServiceProvider
 		if ($this->app->runningInConsole()) {
 			$this->commands([
 				\Colame\Order\Console\Commands\FixOrderSessionIds::class,
+				\Colame\Order\Console\Commands\SyncCustomerDataCommand::class,
 			]);
 		}
 	}

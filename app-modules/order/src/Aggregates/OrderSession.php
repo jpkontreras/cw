@@ -368,7 +368,8 @@ final class OrderSession extends AggregateRoot
             type: $this->servingType ?? 'dine_in',
             orderNumber: $this->generateOrderNumber(),
             startedAt: new \DateTimeImmutable(),
-            sessionId: $this->uuid()
+            sessionId: $this->uuid(),
+            customerInfo: $this->customerInfo
         ));
         
         // Add items to order

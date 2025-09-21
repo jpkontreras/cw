@@ -15,6 +15,7 @@ final class OrderStarted extends ShouldBeStored
         public readonly string $type,
         public readonly string $orderNumber,
         public readonly \DateTimeImmutable $startedAt,
-        public readonly ?string $sessionId = null
+        public readonly ?string $sessionId = null,
+        public readonly ?array $customerInfo = null
     ) {}
 }

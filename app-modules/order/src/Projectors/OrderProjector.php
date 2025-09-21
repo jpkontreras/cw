@@ -12,7 +12,8 @@ use Colame\Order\Events\{
     OrderConfirmed,
     OrderCancelled,
     OrderSlipPrinted,
-    SlipScannedReady
+    SlipScannedReady,
+    CustomerInfoEntered
 };
 use Colame\Order\Models\Order;
 use Colame\Order\Models\OrderItem;
@@ -26,8 +27,43 @@ final class OrderProjector extends Projector
         // For backward compatibility: use aggregate UUID if sessionId is not set
         // The aggregate UUID IS the session ID for OrderSession aggregates
         $sessionId = $event->sessionId ?? $event->aggregateRootUuid();
-        
-        Order::create([
+
+        // Get customer data from the event itself (new way) or from previous events (backward compatibility)
+        $customerData = [];
+
+        // First check if the event has customer info directly (new events)
+        if (!empty($event->customerInfo)) {
+            if (isset($event->customerInfo['name'])) {
+                $customerData['customer_name'] = $event->customerInfo['name'];
+            }
+            if (isset($event->customerInfo['phone'])) {
+                $customerData['customer_phone'] = $event->customerInfo['phone'];
+            }
+            if (isset($event->customerInfo['email'])) {
+                $customerData['customer_email'] = $event->customerInfo['email'];
+            }
+        } else {
+            // Fallback: Check for customer info from a previous CustomerInfoEntered event (backward compatibility)
+            $customerInfoEvent = \Spatie\EventSourcing\StoredEvents\Models\EloquentStoredEvent::where('aggregate_uuid', $sessionId)
+                ->where('event_class', CustomerInfoEntered::class)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($customerInfoEvent) {
+                $fields = $customerInfoEvent->event_properties['fields'] ?? [];
+                if (isset($fields['name'])) {
+                    $customerData['customer_name'] = $fields['name'];
+                }
+                if (isset($fields['phone'])) {
+                    $customerData['customer_phone'] = $fields['phone'];
+                }
+                if (isset($fields['email'])) {
+                    $customerData['customer_email'] = $fields['email'];
+                }
+            }
+        }
+
+        Order::create(array_merge([
             'id' => $event->orderId,
             'session_id' => $sessionId,
             'order_number' => $event->orderNumber,
@@ -36,7 +72,7 @@ final class OrderProjector extends Projector
             'type' => $event->type,
             'status' => 'started',
             'started_at' => $event->startedAt,
-        ]);
+        ], $customerData));
     }
     
     public function onItemAddedToOrder(ItemAddedToOrder $event): void
@@ -171,6 +207,44 @@ final class OrderProjector extends Projector
             'kitchen_status' => 'completed',
             'ready_at' => $event->scannedAt,
         ]);
+    }
+
+    public function onCustomerInfoEntered(CustomerInfoEntered $event): void
+    {
+        // Extract customer fields from the event
+        $fields = $event->fields;
+
+        // Find the order by session_id
+        $order = Order::where('session_id', $event->sessionId)->first();
+
+        if ($order) {
+            // Update the order with customer information
+            $updateData = [];
+
+            if (isset($fields['name'])) {
+                $updateData['customer_name'] = $fields['name'];
+            }
+
+            if (isset($fields['phone'])) {
+                $updateData['customer_phone'] = $fields['phone'];
+            }
+
+            if (isset($fields['email'])) {
+                $updateData['customer_email'] = $fields['email'];
+            }
+
+            if (isset($fields['address'])) {
+                $updateData['delivery_address'] = $fields['address'];
+            }
+
+            if (isset($fields['notes'])) {
+                $updateData['notes'] = $fields['notes'];
+            }
+
+            if (!empty($updateData)) {
+                Order::where('id', $order->id)->update($updateData);
+            }
+        }
     }
 
     /**

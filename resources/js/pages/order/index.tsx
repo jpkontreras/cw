@@ -12,6 +12,18 @@ import { useMemo } from 'react';
 function OrderIndexContent({ view }: OrderListPageProps) {
   const { orders, pagination, metadata, locations, filters, stats } = view;
 
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    if (!filters) return false;
+    // Check for any non-empty filter values
+    return Object.entries(filters).some(([key, value]) => {
+      // Ignore page parameter as it's not a filter
+      if (key === 'page') return false;
+      // Check if the filter has a value
+      return value !== null && value !== undefined && value !== '';
+    });
+  }, [filters]);
+
   const fastFilterCards = useMemo(
     () => [
       {
@@ -101,7 +113,7 @@ function OrderIndexContent({ view }: OrderListPageProps) {
       />
 
       <Page.Content>
-        {orders && orders.length === 0 ? (
+        {orders && orders.length === 0 && !hasActiveFilters ? (
           <EmptyState
             icon={ShoppingCart}
             title="No orders yet"
