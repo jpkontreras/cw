@@ -347,4 +347,147 @@ class ItemController extends Controller
         return redirect()->back()
             ->with('success', "Successfully updated {$result['updated']} items");
     }
+
+    /**
+     * Show the AI Discovery interface for item creation
+     */
+    public function aiDiscovery(Request $request): Response
+    {
+        // Get location from Inertia shared data
+        $location = $request->user()?->currentLocation;
+        $currency = config('money.defaults.currency', 'CLP');
+
+        return Inertia::render('item/ai-discovery', [
+            'features' => [
+                'variants' => $this->features->isEnabled('item.variants'),
+                'modifiers' => $this->features->isEnabled('item.modifiers'),
+                'inventory' => $this->features->isEnabled('item.inventory_tracking'),
+                'ai_enabled' => config('openai.api_key') !== null,
+            ],
+            'regional_settings' => [
+                'location' => $location?->name ?? 'Chile',
+                'currency' => $currency,
+                'language' => app()->getLocale(),
+            ],
+        ]);
+    }
+
+    /**
+     * Start AI Discovery session via AJAX
+     */
+    public function startAiSession(Request $request)
+    {
+        $validated = $request->validate([
+            'item_name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'category' => 'nullable|string|max:100',
+            'cuisine_type' => 'nullable|string|max:100',
+            'price_tier' => 'nullable|in:low,medium,high',
+        ]);
+
+        // Get location from user context
+        $location = $request->user()?->currentLocation;
+        $currency = config('money.defaults.currency', 'CLP');
+
+        $context = [
+            'cuisine_type' => $validated['cuisine_type'] ?? 'general',
+            'location' => $location?->name ?? 'Chile',
+            'currency' => $currency,
+            'price_tier' => $validated['price_tier'] ?? 'medium',
+            'category' => $validated['category'] ?? null,
+        ];
+
+        $session = $this->itemService->startAiDiscovery(
+            $validated['item_name'],
+            $validated['description'] ?? null,
+            $context
+        );
+
+        if (!$session) {
+            return response()->json([
+                'error' => 'AI Discovery is not available. Please configure your OpenAI API key.',
+            ], 503);
+        }
+
+        // Extract the last assistant message from conversation history
+        $lastAssistantMessage = null;
+        if (!empty($session->conversationHistory)) {
+            foreach (array_reverse($session->conversationHistory) as $msg) {
+                if ($msg['role'] === 'assistant') {
+                    $lastAssistantMessage = $msg['content'];
+                    break;
+                }
+            }
+        }
+
+        return response()->json([
+            'session_id' => $session->sessionUuid,
+            'message' => $lastAssistantMessage ?? 'Hello! Let\'s explore your menu item.',
+            'extracted_data' => $session->extractedData,
+        ]);
+    }
+
+    /**
+     * Process AI Discovery response via AJAX
+     */
+    public function processAiResponse(Request $request)
+    {
+        $validated = $request->validate([
+            'session_id' => 'required|string',
+            'response' => 'required|string',
+            'selections' => 'nullable|array',
+        ]);
+
+        $context = $this->itemService->processAiResponse(
+            $validated['session_id'],
+            $validated['response'],
+            $validated['selections'] ?? null
+        );
+
+        if (!$context) {
+            return response()->json([
+                'error' => 'Failed to process response',
+            ], 500);
+        }
+
+        // Format response for frontend
+        return response()->json([
+            'next_question' => $context->nextPrompt ?? null,
+            'extracted_data' => $context->collectedData ?? [],
+            'current_phase' => $context->currentPhase ?? 'initial',
+            'ready_to_complete' => $context->currentPhase === 'confirmation',
+        ]);
+    }
+
+    /**
+     * Complete AI Discovery and create item
+     */
+    public function completeAiDiscovery(Request $request)
+    {
+        $validated = $request->validate([
+            'session_id' => 'required|string',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'base_price' => 'required|numeric|min:0',
+            'type' => 'required|in:product,service,combo',
+            'category' => 'nullable|string',
+        ]);
+
+        $item = $this->itemService->completeAiDiscoveryAndCreateItem(
+            $validated['session_id'],
+            $validated
+        );
+
+        if (!$item) {
+            return response()->json([
+                'error' => 'Failed to create item from AI discovery',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'item' => $item,
+            'redirect' => route('item.edit', $item->id),
+        ]);
+    }
 }

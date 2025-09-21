@@ -68,14 +68,9 @@ class ItemServiceProvider extends ServiceProvider
         if (file_exists(__DIR__ . '/../../routes/web.php')) {
             $this->loadRoutesFrom(__DIR__ . '/../../routes/web.php');
         }
-        
+
         if (file_exists(__DIR__ . '/../../routes/api.php')) {
             $this->loadRoutesFrom(__DIR__ . '/../../routes/api.php');
-        }
-        
-        // Load legacy route file if exists
-        if (file_exists(__DIR__ . '/../../routes/item-routes.php')) {
-            $this->loadRoutesFrom(__DIR__ . '/../../routes/item-routes.php');
         }
         
         // Register event listeners

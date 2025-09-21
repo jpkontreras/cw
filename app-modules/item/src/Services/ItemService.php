@@ -30,6 +30,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Colame\AiDiscovery\Contracts\AiDiscoveryInterface;
+use Colame\AiDiscovery\Contracts\FoodIntelligenceInterface;
 
 class ItemService extends BaseService implements ItemServiceInterface, ResourceMetadataInterface
 {
@@ -40,6 +42,8 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
         private InventoryRepositoryInterface $inventoryRepository,
         private RecipeRepositoryInterface $recipeRepository,
         FeatureFlagInterface $features,
+        private ?AiDiscoveryInterface $aiDiscovery = null,
+        private ?FoodIntelligenceInterface $foodIntelligence = null,
     ) {
         parent::__construct($features);
     }
@@ -865,5 +869,129 @@ class ItemService extends BaseService implements ItemServiceInterface, ResourceM
     public function getAllItems(): Collection
     {
         return collect($this->itemRepository->all())->map(fn($item) => ItemData::from($item));
+    }
+
+    /**
+     * Start AI Discovery session for item creation
+     * Returns DiscoverySessionData object or null
+     */
+    public function startAiDiscovery(string $itemName, ?string $description = null, array $context = []): mixed
+    {
+        if (!$this->aiDiscovery) {
+            return null;
+        }
+
+        try {
+            $session = $this->aiDiscovery->startDiscovery($itemName, $context, $description);
+            return $session; // Return the Data object, not array
+        } catch (\Exception $e) {
+            Log::error('Failed to start AI discovery', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Process AI Discovery response
+     * Returns ConversationContextData object or null
+     */
+    public function processAiResponse(string $sessionId, string $response, ?array $selections = null): mixed
+    {
+        if (!$this->aiDiscovery) {
+            return null;
+        }
+
+        try {
+            $context = $this->aiDiscovery->processUserResponse($sessionId, $response, $selections);
+            return $context;
+        } catch (\Exception $e) {
+            Log::error('Failed to process AI response', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Complete AI Discovery and create item with extracted data
+     */
+    public function completeAiDiscoveryAndCreateItem(string $sessionId, array $additionalData = []): ?ItemData
+    {
+        if (!$this->aiDiscovery) {
+            return null;
+        }
+
+        try {
+            // Complete the discovery session
+            $session = $this->aiDiscovery->completeDiscovery($sessionId);
+            $extractedData = $session->extractedData;
+
+            // Prepare item data from AI extraction
+            $itemData = array_merge([
+                'name' => $additionalData['name'] ?? 'New Item',
+                'description' => $additionalData['description'] ?? '',
+                'base_price' => $additionalData['base_price'] ?? 0,
+                'type' => $additionalData['type'] ?? 'product',
+                'category' => $additionalData['category'] ?? null,
+                'is_active' => true,
+                'is_available' => true,
+            ], $additionalData);
+
+            // Create the item
+            $item = $this->create($itemData);
+
+            // Add variants if extracted
+            if (!empty($extractedData->variants)) {
+                foreach ($extractedData->variants as $variant) {
+                    $this->itemRepository->createVariant($item->id, [
+                        'name' => $variant['name'],
+                        'price_adjustment' => $variant['priceAdjustment'] ?? 0,
+                        'is_default' => $variant['isDefault'] ?? false,
+                    ]);
+                }
+            }
+
+            // Add modifiers if extracted
+            if (!empty($extractedData->modifiers) && $this->modifierRepository) {
+                foreach ($extractedData->modifiers as $modifier) {
+                    // Create or get modifier group
+                    $group = $this->modifierRepository->createGroup([
+                        'name' => $modifier['groupName'],
+                        'selection_type' => $modifier['selectionType'] ?? 'multiple',
+                        'is_required' => $modifier['isRequired'] ?? false,
+                    ]);
+
+                    // Create modifier
+                    $this->modifierRepository->createModifier([
+                        'modifier_group_id' => $group->id,
+                        'name' => $modifier['name'],
+                        'price_adjustment' => $modifier['priceAdjustment'] ?? 0,
+                    ]);
+
+                    // Link to item
+                    $this->modifierRepository->attachGroupToItem($item->id, $group->id);
+                }
+            }
+
+            return $item;
+        } catch (\Exception $e) {
+            Log::error('Failed to complete AI discovery and create item', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Get AI-powered suggestions for an item
+     */
+    public function getAiSuggestions(string $itemName, ?string $category = null): ?array
+    {
+        if (!$this->foodIntelligence) {
+            return null;
+        }
+
+        try {
+            $analysis = $this->foodIntelligence->analyzeItemStructure($itemName, null, $category);
+            return $analysis;
+        } catch (\Exception $e) {
+            Log::error('Failed to get AI suggestions', ['error' => $e->getMessage()]);
+            return null;
+        }
     }
 }

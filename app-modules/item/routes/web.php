@@ -15,7 +15,13 @@ Route::middleware(['web', 'auth', 'onboarding.completed'])->group(function () {
         Route::get('/create', [ItemController::class, 'create'])->name('create');
         Route::post('/', [ItemController::class, 'store'])->name('store');
         Route::post('/bulk-update', [ItemController::class, 'bulkUpdate'])->name('bulk-update');
-        
+
+        // AI Discovery routes
+        Route::get('/ai-discovery', [ItemController::class, 'aiDiscovery'])->name('ai-discovery');
+        Route::post('/ai-discovery/start', [ItemController::class, 'startAiSession'])->name('ai-discovery.start');
+        Route::post('/ai-discovery/process', [ItemController::class, 'processAiResponse'])->name('ai-discovery.process');
+        Route::post('/ai-discovery/complete', [ItemController::class, 'completeAiDiscovery'])->name('ai-discovery.complete');
+
         // Item search routes (for AJAX/JSON responses) - nested under items
         Route::prefix('search')->name('search.')->group(function () {
             Route::get('/', [ItemSearchController::class, 'search'])->name('query');

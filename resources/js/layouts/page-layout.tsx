@@ -108,7 +108,7 @@ PageActions.displayName = 'Page.Actions';
 const PageContent = React.forwardRef<HTMLDivElement, PageContentProps>(({ children, className, noPadding = false }, ref) => {
   return (
     <main ref={ref} className={cn('flex-1 overflow-x-hidden overflow-y-auto', className)}>
-      <div className={cn(!noPadding && 'w-full px-8 py-6')}>{children}</div>
+      <div className={cn('h-full', !noPadding && 'w-full px-8 py-6')}>{children}</div>
     </main>
   );
 });

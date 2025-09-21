@@ -29,10 +29,10 @@ import {
 } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  AlertCircle, 
-  ArrowLeft, 
-  Save, 
+import {
+  AlertCircle,
+  ArrowLeft,
+  Save,
   Plus,
   X,
   Upload,
@@ -48,7 +48,8 @@ import {
   Clock,
   Calculator,
   Tag,
-  Images
+  Images,
+  Sparkles
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -193,6 +194,14 @@ export default function ItemCreate({ categories, item_types, features, available
           subtitle="Add a new product, service, or combo to your inventory"
           actions={
             <Page.Actions>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.visit('/items/ai-discovery')}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Use AI Discovery
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

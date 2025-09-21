@@ -26,17 +26,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  ChevronDown, 
-  Download, 
-  FileUp, 
-  MoreHorizontal, 
-  Package, 
+import {
+  ChevronDown,
+  Download,
+  FileUp,
+  MoreHorizontal,
+  Package,
   Plus,
   AlertCircle,
   TrendingUp,
   DollarSign,
-  Box
+  Box,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
@@ -413,15 +414,22 @@ function ItemsIndexContent({
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setExportDialogOpen(true)}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
-              
+
+              <Link href="/items/ai-discovery">
+                <Button variant="outline" size="sm">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI Discovery
+                </Button>
+              </Link>
+
               <Link href="/items/create">
                 <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
@@ -440,12 +448,20 @@ function ItemsIndexContent({
             title="No items in your inventory"
             description="Add products, services, or combos to start building your catalog. Your items will appear here once created."
             actions={
-              <Link href="/items/create">
-                <Button size="lg">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Item
-                </Button>
-              </Link>
+              <div className="flex gap-3">
+                <Link href="/items/ai-discovery">
+                  <Button size="lg" variant="outline">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Use AI Discovery
+                  </Button>
+                </Link>
+                <Link href="/items/create">
+                  <Button size="lg">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add First Item
+                  </Button>
+                </Link>
+              </div>
             }
             helpText={
               <>

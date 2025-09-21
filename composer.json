@@ -11,6 +11,7 @@
   "require": {
     "php": "^8.2",
     "akaunting/laravel-money": "^6.0",
+    "colame/ai-discovery": "*",
     "colame/business": "*",
     "colame/item": "*",
     "colame/location": "*",
@@ -33,6 +34,7 @@
     "laravel/tinker": "^2.10.1",
     "maatwebsite/excel": "^3.1",
     "meilisearch/meilisearch-php": "^1.15",
+    "openai-php/laravel": "^0.16.0",
     "robertboes/inertia-breadcrumbs": "^0.8.0",
     "spatie/laravel-activitylog": "^4.10",
     "spatie/laravel-data": "^4.17",
