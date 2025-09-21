@@ -214,7 +214,7 @@ export default function ItemCreate({ categories, item_types, features, available
         />
         
         <Page.Content>
-          <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
+          <form onSubmit={handleSubmit} className="max-w-5xl">
             {Object.keys(errors).length > 0 && (
               <Alert variant="destructive" className="mb-6">
                 <AlertCircle className="h-4 w-4" />
@@ -237,9 +237,9 @@ export default function ItemCreate({ categories, item_types, features, available
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="grid gap-6 md:grid-cols-3">
                     {/* Left side - 2/3 */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="md:col-span-2 space-y-6">
                       {/* Item Name */}
                       <div className="space-y-2">
                         <Label htmlFor="name">
